@@ -1,3 +1,4 @@
+from champ_stats_calculator import calculate_champion_and_draft_stats
 from elo_calculator import compute_team_elo_ratings
 from match_data_converter import prepare_oracles_elixir_pregame
 from player_stats_calculator import compute_player_and_mastery_stats
@@ -29,9 +30,14 @@ if __name__ == '__main__':
 
     compute_player_and_mastery_stats(
         filepath="dataset/pregame/pregame_dataset_with_elo.csv",
-        output_filepath="dataset/pregame/pregame_dataset_final_features.csv",
+        output_filepath="dataset/pregame/pregame_dataset_with_player_stats.csv",
         prior_weight=2.0,
         prior_prob=0.50
+    )
+
+    calculate_champion_and_draft_stats(
+        input_filepath="dataset/pregame/pregame_dataset_with_player_stats.csv",
+        output_filepath="dataset/pregame/pregame_dataset_final_features.csv"
     )
 
     train_lol_prediction_model(

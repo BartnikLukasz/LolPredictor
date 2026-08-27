@@ -17,7 +17,8 @@ def train_lol_prediction_model(
 ) -> tuple[xgb.XGBClassifier, pd.DataFrame]:
     """
     Trains and evaluates an XGBoost model on pre-game LoL match features
-    (including Elo, Player Mastery, Team H2H, Lane/P2P Matchups, Duo Synergies, and Roster Continuity)
+    (including Elo, Player Mastery, Team H2H, Lane/P2P Matchups, Duo Synergies,
+    Roster Continuity, and Category 3 Draft Composition & Synergies)
     and computes per-league performance metrics on the test set.
 
     Parameters:
@@ -58,6 +59,12 @@ def train_lol_prediction_model(
         if 'roster' in col or 'duo' in col
     ]
 
+    # Category 3: Patch Meta, Lane Counter-Picks, Champion Synergies & Composition Cohesion
+    draft_champ_features = [
+        col for col in df.columns
+        if 'patch' in col or 'counter' in col or 'synergy' in col or 'cohesion' in col or 'comp' in col
+    ]
+
     champ_features = [
         'blue_top_champion', 'blue_jng_champion', 'blue_mid_champion', 'blue_bot_champion', 'blue_sup_champion',
         'red_top_champion', 'red_jng_champion', 'red_mid_champion', 'red_bot_champion', 'red_sup_champion'
@@ -70,6 +77,7 @@ def train_lol_prediction_model(
         player_features +
         h2h_matchup_features +
         synergy_roster_features +
+        draft_champ_features +
         champ_features
     )
     feature_cols = [col for col in dict.fromkeys(feature_cols) if col in df.columns]
@@ -79,6 +87,7 @@ def train_lol_prediction_model(
     print(f" -> Player/Mastery:        {len(player_features)}")
     print(f" -> H2H & Lane Matchups:   {len(h2h_matchup_features)}")
     print(f" -> Duo & Roster Synergy:  {len(synergy_roster_features)}")
+    print(f" -> Category 3 Draft/Meta: {len(draft_champ_features)}")
     print(f" -> Categorical Champions: {len(champ_features)}")
 
     # 4. Preprocess Categorical Champion Features for XGBoost
@@ -113,14 +122,14 @@ def train_lol_prediction_model(
 
     # 6. Initialize XGBoost Classifier
     model = xgb.XGBClassifier(
-        n_estimators=500,
-        learning_rate=0.03,
+        n_estimators=1000,
+        learning_rate=0.01,
         max_depth=4,
         subsample=0.8,
         colsample_bytree=0.8,
         eval_metric='logloss',
         enable_categorical=True,
-        early_stopping_rounds=30,
+        early_stopping_rounds=60,
         random_state=42
     )
 
@@ -207,14 +216,8 @@ def train_lol_prediction_model(
 if __name__ == "__main__":
     dataset_path = "multi_year_pregame_dataset_final_features.csv"
 
-    # Example 1: Standard ratio split (20% test)
-    # model, feature_importance = train_lol_prediction_model(
-    #     filepath=dataset_path,
-    #     test_split_ratio=0.20
-    # )
-
-    # Example 2: Train on pre-2025 data, test strictly on 2025 onwards
+    # Set split date to 2026-04-01
     model, feature_importance = train_lol_prediction_model(
         filepath=dataset_path,
-        split_date="2025-01-01"
+        split_date="2026-04-01"
     )
