@@ -10,7 +10,7 @@ def prepare_oracles_elixir_pregame(
 ) -> pd.DataFrame:
     """
     Transforms multi-year Oracle's Elixir raw datasets into a unified single-row per match
-    pre-game dataset sorted chronologically across all years.
+    pre-game dataset sorted chronologically across all years, incorporating draft side/first pick info.
 
     Parameters:
         filepaths (str | list[str]): Path or list of paths to Oracle's Elixir CSV files.
@@ -22,7 +22,7 @@ def prepare_oracles_elixir_pregame(
     """
     if target_leagues is None:
         target_leagues = [
-            'LCK', 'LPL', 'LEC', 'LCS', 'LTA N', 'LTA North', 'LTA', 'EWC'
+            'LCK', 'LPL', 'LEC', 'LCS', 'LTA N', 'LTA North', 'LTA', 'EWC', "OGN",
             'FST', 'MSI', 'WLDs', 'WORLDS', 'LCP', 'VCS', 'LTA S', 'EU LCS', 'NA LCS', 'CBLOL', 'LMS'
         ]
 
@@ -78,14 +78,25 @@ def prepare_oracles_elixir_pregame(
     # Target Variable: 1 if Blue wins, 0 if Red wins
     match_df['blue_win'] = blue_teams['result'].astype(int).values
 
-    # Match metadata & side info
+    # Match metadata & team IDs
     match_df['blue_teamid'] = blue_teams['teamid'].values
     match_df['red_teamid'] = red_teams['teamid'].values
 
+    # --- Robust Extract & Clean of First Pick Column ---
     if 'firstPick' in blue_teams.columns:
-        match_df['blue_firstpick'] = blue_teams['firstPick'].fillna(0).astype(int).values
+        blue_fp = pd.to_numeric(blue_teams['firstPick'], errors='coerce')
+        red_fp = pd.to_numeric(red_teams['firstPick'], errors='coerce')
+
+        # Fallback cross-inferences for missing or NaN values
+        blue_fp = blue_fp.fillna(1.0 - red_fp).fillna(1.0).astype(int)
+        red_fp = red_fp.fillna(1.0 - blue_fp).fillna(0.0).astype(int)
+
+        match_df['blue_firstpick'] = blue_fp.values
+        match_df['red_firstpick'] = red_fp.values
     else:
-        match_df['blue_firstpick'] = 0
+        # Default fallback: Blue side = 1 (First Pick), Red side = 0 (Counter Pick)
+        match_df['blue_firstpick'] = 1
+        match_df['red_firstpick'] = 0
 
     # 5. Extract Draft Bans
     ban_cols = ['ban1', 'ban2', 'ban3', 'ban4', 'ban5']
@@ -121,7 +132,7 @@ def prepare_oracles_elixir_pregame(
     return match_df
 
 
-# Example usage combining 3 years of data:
+# Example usage combining multi-year datasets:
 if __name__ == "__main__":
     multi_year_files = [
         "2023_match_data.csv",

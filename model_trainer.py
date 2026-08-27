@@ -12,16 +12,19 @@ from sklearn.metrics import (
 
 def train_lol_prediction_model(
         filepath: str,
-        test_split_ratio: float = 0.20
+        test_split_ratio: float = 0.20,
+        split_date: str = None
 ) -> tuple[xgb.XGBClassifier, pd.DataFrame]:
     """
     Trains and evaluates an XGBoost model on pre-game LoL match features
-    (including Elo, Player Mastery, Team H2H, and Lane/P2P Matchups)
+    (including Elo, Player Mastery, Team H2H, Lane/P2P Matchups, Duo Synergies, and Roster Continuity)
     and computes per-league performance metrics on the test set.
 
     Parameters:
         filepath (str): Path to enriched CSV dataset.
-        test_split_ratio (float): Proportion of recent matches reserved for testing.
+        test_split_ratio (float): Proportion of recent matches reserved for testing (used if split_date is None).
+        split_date (str, optional): Cut-off date ('YYYY-MM-DD'). Matches before this date become
+                                    training data; matches on or after become testing data.
 
     Returns:
         tuple: (Trained XGBoost model, Feature Importance DataFrame)
@@ -45,10 +48,14 @@ def train_lol_prediction_model(
            col.endswith('_champ_winrate_pre')
     ]
 
-    # NEW: Detect Team H2H, Lane Matchups, and P2P H2H Features
     h2h_matchup_features = [
         col for col in df.columns
         if 'h2h' in col or 'lane_matchup' in col or 'p2p' in col
+    ]
+
+    synergy_roster_features = [
+        col for col in df.columns
+        if 'roster' in col or 'duo' in col
     ]
 
     champ_features = [
@@ -58,13 +65,20 @@ def train_lol_prediction_model(
     champ_features = [c for c in champ_features if c in df.columns]
 
     # Combine all feature groups into a unique list
-    feature_cols = elo_features + player_features + h2h_matchup_features + champ_features
+    feature_cols = (
+        elo_features +
+        player_features +
+        h2h_matchup_features +
+        synergy_roster_features +
+        champ_features
+    )
     feature_cols = [col for col in dict.fromkeys(feature_cols) if col in df.columns]
 
     print(f"Loaded {len(df)} matches. Total features selected for training: {len(feature_cols)}")
     print(f" -> Elo Features:          {len([f for f in elo_features if f in df.columns])}")
     print(f" -> Player/Mastery:        {len(player_features)}")
     print(f" -> H2H & Lane Matchups:   {len(h2h_matchup_features)}")
+    print(f" -> Duo & Roster Synergy:  {len(synergy_roster_features)}")
     print(f" -> Categorical Champions: {len(champ_features)}")
 
     # 4. Preprocess Categorical Champion Features for XGBoost
@@ -74,8 +88,17 @@ def train_lol_prediction_model(
     for col in champ_features:
         X[col] = X[col].astype('category')
 
-    # 5. Chronological Train / Test Split (Sequential, not random)
-    split_idx = int(len(df) * (1 - test_split_ratio))
+    # 5. Chronological Train / Test Split
+    if split_date:
+        split_dt = pd.to_datetime(split_date)
+        split_mask = df['date'] >= split_dt
+        if not split_mask.any():
+            raise ValueError(f"No matches found on or after split_date '{split_date}'.")
+        if split_mask.all():
+            raise ValueError(f"All matches are on or after split_date '{split_date}'. No training data available.")
+        split_idx = int(split_mask.idxmax())
+    else:
+        split_idx = int(len(df) * (1 - test_split_ratio))
 
     X_train, y_train = X.iloc[:split_idx], y[:split_idx]
     X_test, y_test = X.iloc[split_idx:], y[split_idx:]
@@ -184,7 +207,14 @@ def train_lol_prediction_model(
 if __name__ == "__main__":
     dataset_path = "multi_year_pregame_dataset_final_features.csv"
 
+    # Example 1: Standard ratio split (20% test)
+    # model, feature_importance = train_lol_prediction_model(
+    #     filepath=dataset_path,
+    #     test_split_ratio=0.20
+    # )
+
+    # Example 2: Train on pre-2025 data, test strictly on 2025 onwards
     model, feature_importance = train_lol_prediction_model(
         filepath=dataset_path,
-        test_split_ratio=0.20
+        split_date="2025-01-01"
     )
