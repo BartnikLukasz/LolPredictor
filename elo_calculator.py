@@ -7,19 +7,18 @@ def compute_team_elo_ratings(
         output_filepath: str = None,
         init_rating: float = 1500.0,
         k_factor: float = 32.0,
-        first_pick_bonus: float = 20.0,
+        blue_side_bonus: float = 20.0,
         season_soft_reset_factor: float = 0.5
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
-    Computes dynamic pre-match Elo ratings and win probabilities for LoL esports teams,
-    dynamically applying draft advantage to whichever team holds First Pick.
+    Computes dynamic pre-match Elo ratings and win probabilities for LoL esports teams.
 
     Parameters:
         filepath (str): Path to input CSV (output of the pre-game dataset script).
         output_filepath (str, optional): Destination path for the enriched dataset.
         init_rating (float): Baseline Elo rating for new/unseen teams (default: 1500.0).
         k_factor (float): Magnitude multiplier for post-match rating updates (default: 32.0).
-        first_pick_bonus (float): Elo rating advantage added to the First Pick team's expected score (default: 20.0).
+        blue_side_bonus (float): Elo rating advantage added to Blue side expected score (default: 20.0).
         season_soft_reset_factor (float): Reversion factor towards 1500 when crossing calendar years (default: 0.5).
 
     Returns:
@@ -51,9 +50,6 @@ def compute_team_elo_ratings(
         red_team = row['red_teamid']
         blue_win = row['blue_win']
 
-        # Determine First Pick advantage allocation (default to Blue if column missing)
-        blue_has_first_pick = row.get('blue_firstpick', 1) == 1
-
         # Fetch pre-game ratings (default to init_rating if first time seeing team)
         r_blue = ratings.get(blue_team, init_rating)
         r_red = ratings.get(red_team, init_rating)
@@ -62,14 +58,12 @@ def compute_team_elo_ratings(
         blue_elo_pre.append(r_blue)
         red_elo_pre.append(r_red)
 
-        # Calculate pre-match expected Blue win probability using dynamic First Pick bonus
-        effective_bonus = first_pick_bonus if blue_has_first_pick else -first_pick_bonus
-        r_blue_effective = r_blue + effective_bonus
-
+        # Calculate pre-match expected Blue win probability (including Blue side bonus)
+        r_blue_effective = r_blue + blue_side_bonus
         exp_blue = 1.0 / (1.0 + 10.0 ** ((r_red - r_blue_effective) / 400.0))
         blue_expected_win_prob.append(exp_blue)
 
-        # Post-match rating update (unbiased expected win probability without temporary draft bonus)
+        # Post-match rating update (unbiased expected win probability without side bonus)
         exp_blue_raw = 1.0 / (1.0 + 10.0 ** ((r_red - r_blue) / 400.0))
         score_blue = 1.0 if blue_win == 1 else 0.0
 
@@ -97,15 +91,16 @@ def compute_team_elo_ratings(
 
 
 if __name__ == "__main__":
-    input_file = "multi_year_pregame_dataset.csv"
-    output_file = "multi_year_pregame_dataset_with_elo.csv"
+    # Example execution using dataset created by step 1
+    input_file = "2025_pregame_dataset_major_regions.csv"
+    output_file = "2025_pregame_dataset_with_elo.csv"
 
     enriched_df, team_leaderboard = compute_team_elo_ratings(
         filepath=input_file,
         output_filepath=output_file,
         init_rating=1500.0,
         k_factor=32.0,
-        first_pick_bonus=20.0,
+        blue_side_bonus=20.0,
         season_soft_reset_factor=0.5
     )
 
