@@ -1,3 +1,5 @@
+import os
+import json
 import pandas as pd
 import numpy as np
 import xgboost as xgb
@@ -13,19 +15,22 @@ from sklearn.metrics import (
 def train_lol_prediction_model(
         filepath: str,
         test_split_ratio: float = 0.20,
-        split_date: str = None
+        split_date: str = None,
+        params_filepath: str = "best_params.json"
 ) -> tuple[xgb.XGBClassifier, pd.DataFrame]:
     """
     Trains and evaluates an XGBoost model on pre-game LoL match features
     (including Elo, Player Mastery, Team H2H, Lane/P2P Matchups, Duo Synergies,
-    Roster Continuity, and Category 3 Draft Composition & Synergies)
-    and computes per-league performance metrics on the test set.
+    Roster Continuity, and Category 3 Draft Composition & Synergies).
+
+    Loads tuned hyperparameters from params_filepath if present; otherwise defaults.
 
     Parameters:
         filepath (str): Path to enriched CSV dataset.
         test_split_ratio (float): Proportion of recent matches reserved for testing (used if split_date is None).
         split_date (str, optional): Cut-off date ('YYYY-MM-DD'). Matches before this date become
                                     training data; matches on or after become testing data.
+        params_filepath (str): Path to best_params.json created by hyperparameter_tuner.py.
 
     Returns:
         tuple: (Trained XGBoost model, Feature Importance DataFrame)
@@ -59,7 +64,6 @@ def train_lol_prediction_model(
         if 'roster' in col or 'duo' in col
     ]
 
-    # Category 3: Patch Meta, Lane Counter-Picks, Champion Synergies & Composition Cohesion
     draft_champ_features = [
         col for col in df.columns
         if 'patch' in col or 'counter' in col or 'synergy' in col or 'cohesion' in col or 'comp' in col
@@ -120,20 +124,27 @@ def train_lol_prediction_model(
     print(f"Test Period:  {test_dates.min().strftime('%Y-%m-%d')} to {test_dates.max().strftime('%Y-%m-%d')} ({len(X_test)} matches)")
     print("-" * 55)
 
-    # 6. Initialize XGBoost Classifier
-    model = xgb.XGBClassifier(
-        n_estimators=1000,
-        learning_rate=0.01,
-        max_depth=4,
-        subsample=0.8,
-        colsample_bytree=0.8,
-        eval_metric='logloss',
-        enable_categorical=True,
-        early_stopping_rounds=60,
-        random_state=42
-    )
+    # 6. Load Hyperparameters dynamically
+    if os.path.exists(params_filepath):
+        print(f"\n[CONFIG] Found '{params_filepath}'. Loading optimized hyperparameters...")
+        with open(params_filepath, 'r') as f:
+            model_params = json.load(f)
+    else:
+        print(f"\n[CONFIG] '{params_filepath}' not found. Using default XGBoost hyperparameters...")
+        model_params = {
+            'n_estimators': 1000,
+            'learning_rate': 0.01,
+            'max_depth': 4,
+            'subsample': 0.8,
+            'colsample_bytree': 0.8,
+            'eval_metric': 'logloss',
+            'enable_categorical': True,
+            'early_stopping_rounds': 30,
+            'random_state': 42
+        }
 
-    # 7. Train Model with Validation Early Stopping
+    # 7. Initialize & Train XGBoost Classifier
+    model = xgb.XGBClassifier(**model_params)
     model.fit(
         X_train, y_train,
         eval_set=[(X_test, y_test)],
@@ -216,7 +227,6 @@ def train_lol_prediction_model(
 if __name__ == "__main__":
     dataset_path = "multi_year_pregame_dataset_final_features.csv"
 
-    # Set split date to 2026-04-01
     model, feature_importance = train_lol_prediction_model(
         filepath=dataset_path,
         split_date="2026-04-01"
