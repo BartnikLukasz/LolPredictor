@@ -10,7 +10,8 @@ def prepare_oracles_elixir_pregame(
 ) -> pd.DataFrame:
     """
     Transforms multi-year Oracle's Elixir raw datasets into a unified single-row per match
-    pre-game dataset sorted chronologically across all years, incorporating draft side/first pick info.
+    pre-game dataset sorted chronologically across all years, incorporating draft side/first pick info,
+    team names, and player names.
 
     Parameters:
         filepaths (str | list[str]): Path or list of paths to Oracle's Elixir CSV files.
@@ -82,6 +83,12 @@ def prepare_oracles_elixir_pregame(
     match_df['blue_teamid'] = blue_teams['teamid'].values
     match_df['red_teamid'] = red_teams['teamid'].values
 
+    # --- Extract Team Names (handling variations across years) ---
+    team_name_col = next((col for col in ['teamname', 'team'] if col in blue_teams.columns), None)
+    if team_name_col:
+        match_df['blue_team'] = blue_teams[team_name_col].values
+        match_df['red_team'] = red_teams[team_name_col].values
+
     # --- Robust Extract & Clean of First Pick Column ---
     if 'firstPick' in blue_teams.columns:
         blue_fp = pd.to_numeric(blue_teams['firstPick'], errors='coerce')
@@ -105,8 +112,9 @@ def prepare_oracles_elixir_pregame(
             match_df[f'blue_{col}'] = blue_teams[col].values
             match_df[f'red_{col}'] = red_teams[col].values
 
-    # 6. Pivot 10 individual player picks and IDs by position
+    # 6. Pivot 10 individual player picks, IDs, and player names by position
     roles = ['top', 'jng', 'mid', 'bot', 'sup']
+    player_name_col = next((col for col in ['playername', 'player'] if col in player_rows.columns), None)
 
     for side in ['Blue', 'Red']:
         side_prefix = side.lower()
@@ -122,6 +130,9 @@ def prepare_oracles_elixir_pregame(
             match_df[f'{side_prefix}_{role}_playerid'] = role_df['playerid'].values
             match_df[f'{side_prefix}_{role}_champion'] = role_df['champion'].values
 
+            if player_name_col and player_name_col in role_df.columns:
+                match_df[f'{side_prefix}_{role}_player'] = role_df[player_name_col].values
+
     # 7. Sort chronologically across all combined years
     match_df = match_df.sort_values('date').reset_index(drop=True)
 
@@ -130,17 +141,3 @@ def prepare_oracles_elixir_pregame(
         print(f"Successfully processed {len(match_df)} matches across target leagues. Saved to {output_filepath}")
 
     return match_df
-
-
-# Example usage combining multi-year datasets:
-if __name__ == "__main__":
-    multi_year_files = [
-        "2023_match_data.csv",
-        "2024_match_data.csv",
-        "2025_match_data.csv"
-    ]
-
-    df_multi_year = prepare_oracles_elixir_pregame(
-        filepaths=multi_year_files,
-        output_filepath="multi_year_pregame_dataset.csv"
-    )
