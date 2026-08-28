@@ -1,10 +1,13 @@
 import json
 import os
+import requests
 import pandas as pd
 import streamlit as st
 from live_feature_engine import LiveFeatureEngine
 
 st.set_page_config(page_title="LoL Match Predictor", layout="wide")
+
+ODDS_ENDPOINT_URL = "http://127.0.0.1:5000/odds"
 
 
 @st.cache_resource
@@ -75,6 +78,32 @@ def prob_to_american_odds(prob: float) -> str:
     else:
         odds = int(round(100 * (1 - prob) / prob))
         return f"+{odds}"
+
+
+def send_odds_to_endpoint(blue_team: str, red_team: str, p_blue: float, p_red: float):
+    """Sends calculated fair odds and model probabilities to external endpoint."""
+    fair_dec_blue = round(1.0 / p_blue, 2) if p_blue > 0 else 0.0
+    fair_dec_red = round(1.0 / p_red, 2) if p_red > 0 else 0.0
+
+    payload = {
+        "odds": {
+            blue_team: fair_dec_blue,
+            red_team: fair_dec_red
+        },
+        "model_probs": {
+            blue_team: round(p_blue, 4),
+            red_team: round(p_red, 4)
+        }
+    }
+
+    try:
+        response = requests.post(ODDS_ENDPOINT_URL, json=payload, timeout=2)
+        if response.status_code in [200, 201]:
+            st.toast("Dispatched odds to prediction monitor!", icon="📡")
+        else:
+            st.toast(f"Odds endpoint returned status code {response.status_code}", icon="⚠️")
+    except requests.exceptions.RequestException:
+        st.toast(f"Could not reach endpoint ({ODDS_ENDPOINT_URL})", icon="⚠️")
 
 
 engine, team_rosters, champion_list = load_predictor_assets()
@@ -198,6 +227,14 @@ if st.button("Calculate Match Probabilities", type="primary", use_container_widt
 
     results = engine.predict_match(draft_payload)
     h2h_data = get_historical_team_metrics(engine.df_hist, blue_team, red_team)
+
+    # Automatically post odds and probabilities to http://127.0.0.1:5000/odds
+    send_odds_to_endpoint(
+        blue_team=blue_team,
+        red_team=red_team,
+        p_blue=results['blue_win_probability'],
+        p_red=results['red_win_probability']
+    )
 
     # Top Level Win Probability Header
     res_b, res_r = st.columns(2)
