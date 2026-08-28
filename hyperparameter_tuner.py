@@ -98,7 +98,7 @@ def optimize_xgboost_hyperparameters(
     # 4. Objective function for Optuna
     def objective(trial: optuna.Trial) -> float:
         params = {
-            'n_estimators': 1000,
+            'n_estimators': 2000,
             'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.08, log=True),
             'max_depth': trial.suggest_int('max_depth', 3, 6),
             'subsample': trial.suggest_float('subsample', 0.6, 0.95),
@@ -157,6 +157,6 @@ if __name__ == "__main__":
     optimize_xgboost_hyperparameters(
         filepath=dataset_path,
         split_date="2026-04-01",
-        n_trials=200,
+        n_trials=400,
         output_json_path="best_params.json"
     )

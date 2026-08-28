@@ -25,6 +25,58 @@ def load_predictor_assets():
     return engine_obj, roster_data, champions_list
 
 
+def get_historical_team_metrics(df_hist, blue_team, red_team):
+    """Computes direct H2H history and recent form (last 10 matches) from df_hist."""
+    h2h_matches = df_hist[
+        ((df_hist['blue_team'] == blue_team) & (df_hist['red_team'] == red_team)) |
+        ((df_hist['blue_team'] == red_team) & (df_hist['red_team'] == blue_team))
+    ].sort_values('date', ascending=False)
+
+    total_h2h = len(h2h_matches)
+    blue_h2h_wins = 0
+    if total_h2h > 0:
+        for _, row in h2h_matches.iterrows():
+            if row['blue_team'] == blue_team and row['blue_win'] == 1:
+                blue_h2h_wins += 1
+            elif row['red_team'] == blue_team and row['blue_win'] == 0:
+                blue_h2h_wins += 1
+
+    blue_matches = df_hist[(df_hist['blue_team'] == blue_team) | (df_hist['red_team'] == blue_team)].sort_values('date', ascending=False).head(10)
+    red_matches = df_hist[(df_hist['blue_team'] == red_team) | (df_hist['red_team'] == red_team)].sort_values('date', ascending=False).head(10)
+
+    blue_recent_wins = sum(
+        (row['blue_win'] == 1 if row['blue_team'] == blue_team else row['blue_win'] == 0)
+        for _, row in blue_matches.iterrows()
+    )
+    red_recent_wins = sum(
+        (row['blue_win'] == 1 if row['red_team'] == red_team else row['blue_win'] == 0)
+        for _, row in red_matches.iterrows()
+    )
+
+    return {
+        'total_h2h': total_h2h,
+        'blue_h2h_wins': blue_h2h_wins,
+        'red_h2h_wins': total_h2h - blue_h2h_wins,
+        'blue_h2h_wr': round((blue_h2h_wins / total_h2h * 100), 1) if total_h2h > 0 else 50.0,
+        'blue_recent_wr': round((blue_recent_wins / max(len(blue_matches), 1) * 100), 1),
+        'red_recent_wr': round((red_recent_wins / max(len(red_matches), 1) * 100), 1),
+        'blue_recent_games': len(blue_matches),
+        'red_recent_games': len(red_matches)
+    }
+
+
+def prob_to_american_odds(prob: float) -> str:
+    """Converts a probability (0.0 - 1.0) into American odds format."""
+    if prob <= 0 or prob >= 1:
+        return "N/A"
+    if prob >= 0.5:
+        odds = int(round(-100 * prob / (1 - prob)))
+        return f"{odds}"
+    else:
+        odds = int(round(100 * (1 - prob) / prob))
+        return f"+{odds}"
+
+
 engine, team_rosters, champion_list = load_predictor_assets()
 
 st.title("League of Legends Pre-Game Match Predictor")
@@ -145,19 +197,22 @@ if st.button("Calculate Match Probabilities", type="primary", use_container_widt
     }
 
     results = engine.predict_match(draft_payload)
+    h2h_data = get_historical_team_metrics(engine.df_hist, blue_team, red_team)
 
-    # Top Level Win Probability
+    # Top Level Win Probability Header
     res_b, res_r = st.columns(2)
     res_b.metric(f"{blue_team} Win Probability", f"{results['blue_win_percentage']}%")
     res_r.metric(f"{red_team} Win Probability", f"{results['red_win_percentage']}%")
     st.progress(results['blue_win_probability'])
 
-    st.markdown("### 📊 Model Feature Breakdown")
+    st.markdown("### 📊 Model Feature & Match Analysis")
 
-    tab_elo, tab_players, tab_draft = st.tabs([
+    tab_elo, tab_players, tab_draft, tab_h2h, tab_odds = st.tabs([
         "⚡ Elo & Series Context",
-        "👤 Player Win Rate Head-to-Head",
-        "⚔️ Draft & Champion Factors"
+        "👤 Player Mastery & Experience",
+        "⚔️ Draft & Meta Impact",
+        "🛡️ Team H2H & Recent Form",
+        "🎲 Implied Odds & Value Calculator"
     ])
 
     # --- TAB 1: Elo Rating & Series Context Impact ---
@@ -178,7 +233,7 @@ if st.button("Calculate Match Probabilities", type="primary", use_container_widt
             f"{elo_data['elo_implied_blue_winrate']}%"
         )
 
-        st.markdown("**Series Context Inputs**")
+        st.markdown("**Series Context Details**")
         sc1, sc2, sc3 = st.columns(3)
         sc1.metric("Game Number", f"Game {s_data['game_number']}")
         sc2.metric(f"{blue_team} Series Lead", f"{s_data['blue_series_lead']} games")
@@ -215,17 +270,25 @@ if st.button("Calculate Match Probabilities", type="primary", use_container_widt
 
         st.table(pd.DataFrame(player_rows))
 
-    # --- TAB 3: Draft & Champion Factors ---
+    # --- TAB 3: Draft & Meta Impact ---
     with tab_draft:
         d_data = results['draft_metrics']
-        dm1, dm2, dm3 = st.columns(3)
+        elo_prob = results['elo_metrics']['elo_implied_blue_winrate']
+        final_prob = results['blue_win_percentage']
+        draft_swing = round(final_prob - elo_prob, 2)
 
-        dm1.metric(f"{blue_team} Draft Avg Champ WR", f"{d_data['avg_blue_c_wr']}%")
-        dm2.metric(f"{red_team} Draft Avg Champ WR", f"{d_data['avg_red_c_wr']}%")
-        dm3.metric("Draft Champ WR Advantage", f"{d_data['c_wr_diff']}%", delta=f"{d_data['c_wr_diff']}%")
+        dm1, dm2, dm3, dm4 = st.columns(4)
+        dm1.metric(f"{blue_team} Avg Champ WR", f"{d_data['avg_blue_c_wr']}%")
+        dm2.metric(f"{red_team} Avg Champ WR", f"{d_data['avg_red_c_wr']}%")
+        dm3.metric("Draft Champ Edge", f"{d_data['c_wr_diff']}%", delta=f"{d_data['c_wr_diff']}%")
+        dm4.metric(
+            "Draft Winrate Swing",
+            f"{draft_swing}%",
+            delta=f"{draft_swing}%",
+            help="Difference between post-draft model prediction and pre-draft Elo implied odds."
+        )
 
-        st.markdown("**Champion Pick Breakdown**")
-
+        st.markdown("**Role Pick Comparison**")
         champ_rows = []
         for r in results['role_breakdown']:
             b_cwr = round(r['blue_c_wr'] * 100, 1)
@@ -235,11 +298,76 @@ if st.button("Calculate Match Probabilities", type="primary", use_container_widt
 
             champ_rows.append({
                 "Role": r['role'],
-                f"{blue_team} Champion": r['blue_champ'],
+                f"{blue_team} Pick": r['blue_champ'],
                 "Blue Champ WR": f"{b_cwr}%",
-                f"{red_team} Champion": r['red_champ'],
+                f"{red_team} Pick": r['red_champ'],
                 "Red Champ WR": f"{r_cwr}%",
                 "Draft Edge": cadv
             })
 
         st.table(pd.DataFrame(champ_rows))
+
+    # --- TAB 4: Team H2H & Recent Form ---
+    with tab_h2h:
+        h1, h2, h3, h4 = st.columns(4)
+        h1.metric("Historical H2H Matches", f"{h2h_data['total_h2h']}")
+        h2.metric(f"{blue_team} H2H Record", f"{h2h_data['blue_h2h_wins']}W - {h2h_data['red_h2h_wins']}L")
+        h3.metric(f"{blue_team} Recent Form (Last 10)", f"{h2h_data['blue_recent_wr']}%")
+        h4.metric(f"{red_team} Recent Form (Last 10)", f"{h2h_data['red_recent_wr']}%")
+
+        if h2h_data['total_h2h'] > 0:
+            st.markdown(f"**Direct Head-to-Head Breakdown ({blue_team} vs {red_team})**")
+            st.info(f"{blue_team} holds a **{h2h_data['blue_h2h_wr']}%** winrate across {h2h_data['total_h2h']} historical match(es) against {red_team}.")
+        else:
+            st.warning("No previous head-to-head matches found in the historical dataset for this exact pairing.")
+
+    # --- TAB 5: Implied Odds & Value Calculator ---
+    with tab_odds:
+        p_blue = results['blue_win_probability']
+        p_red = results['red_win_probability']
+
+        fair_dec_blue = round(1.0 / p_blue, 2) if p_blue > 0 else 0
+        fair_dec_red = round(1.0 / p_red, 2) if p_red > 0 else 0
+        fair_ame_blue = prob_to_american_odds(p_blue)
+        fair_ame_red = prob_to_american_odds(p_red)
+
+        st.markdown("#### 🎯 Fair Model Odds")
+        o1, o2 = st.columns(2)
+
+        with o1:
+            st.markdown(f"**{blue_team} Fair Odds**")
+            st.write(f"- Decimal Odds: **{fair_dec_blue}**")
+            st.write(f"- American Odds: **{fair_ame_blue}**")
+
+        with o2:
+            st.markdown(f"**{red_team} Fair Odds**")
+            st.write(f"- Decimal Odds: **{fair_dec_red}**")
+            st.write(f"- American Odds: **{fair_ame_red}**")
+
+        st.markdown("---")
+        st.markdown("#### 💰 Value / Edge Calculator vs Bookmaker")
+
+        bk1, bk2 = st.columns(2)
+        with bk1:
+            bm_blue_odds = st.number_input(
+                f"{blue_team} Bookmaker Odds (Decimal)",
+                min_value=1.01,
+                max_value=20.0,
+                value=float(fair_dec_blue) if fair_dec_blue > 0 else 2.0,
+                step=0.05
+            )
+        with bk2:
+            bm_red_odds = st.number_input(
+                f"{red_team} Bookmaker Odds (Decimal)",
+                min_value=1.01,
+                max_value=20.0,
+                value=float(fair_dec_red) if fair_dec_red > 0 else 2.0,
+                step=0.05
+            )
+
+        ev_blue = round(((p_blue * bm_blue_odds) - 1.0) * 100, 2)
+        ev_red = round(((p_red * bm_red_odds) - 1.0) * 100, 2)
+
+        val1, val2 = st.columns(2)
+        val1.metric(f"{blue_team} Expected Value (EV)", f"{ev_blue}%", delta=f"{ev_blue}%")
+        val2.metric(f"{red_team} Expected Value (EV)", f"{ev_red}%", delta=f"{ev_red}%")
