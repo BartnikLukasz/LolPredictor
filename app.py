@@ -1,5 +1,6 @@
 import json
 import os
+from datetime import datetime
 import requests
 import pandas as pd
 import streamlit as st
@@ -8,6 +9,33 @@ from live_feature_engine import LiveFeatureEngine
 st.set_page_config(page_title="LoL Match Predictor", layout="wide")
 
 ODDS_ENDPOINT_URL = "http://127.0.0.1:5000/odds"
+TRACKING_FILE = "live_accuracy_tracking.json"
+
+
+# --- TRACKING FILE HELPER FUNCTIONS ---
+def load_tracking_data(filepath: str = TRACKING_FILE) -> dict:
+    """Loads tracking data from JSON, or initializes structure if file doesn't exist."""
+    if not os.path.exists(filepath):
+        return {
+            "total_games": 0,
+            "correct_predictions": 0,
+            "logs": []
+        }
+    try:
+        with open(filepath, "r") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, IOError):
+        return {
+            "total_games": 0,
+            "correct_predictions": 0,
+            "logs": []
+        }
+
+
+def save_tracking_data(data: dict, filepath: str = TRACKING_FILE):
+    """Saves updated tracking dictionary back to the single JSON file."""
+    with open(filepath, "w") as f:
+        json.dump(data, f, indent=4)
 
 
 @st.cache_resource
@@ -107,6 +135,30 @@ def send_odds_to_endpoint(blue_team: str, red_team: str, p_blue: float, p_red: f
 
 
 engine, team_rosters, champion_list = load_predictor_assets()
+
+# --- SIDEBAR: LIVE ACCURACY MONITOR & MANUAL COUNTER ADJUSTER ---
+st.sidebar.title("🎯 Live Accuracy Tracker")
+
+tracking_data = load_tracking_data()
+total_g = tracking_data.get("total_games", 0)
+correct_p = tracking_data.get("correct_predictions", 0)
+acc_rate = (correct_p / total_g * 100) if total_g > 0 else 0.0
+
+st.sidebar.metric("Live Accuracy Rate", f"{acc_rate:.1f}%")
+st.sidebar.metric("Record", f"{correct_p} Correct / {total_g} Total")
+
+st.sidebar.markdown("---")
+with st.sidebar.expander("⚙️ Manual Count Override"):
+    st.caption("Adjust counters directly if you missed logging a game live.")
+    manual_total = st.number_input("Total Live Games", min_value=0, value=int(total_g), step=1)
+    manual_correct = st.number_input("Correct Predictions", min_value=0, value=int(correct_p), step=1)
+
+    if st.button("Save Manual Counts", use_container_width=True):
+        tracking_data["total_games"] = int(manual_total)
+        tracking_data["correct_predictions"] = int(manual_correct)
+        save_tracking_data(tracking_data)
+        st.toast("Tracking counts updated successfully!", icon="💾")
+        st.rerun()
 
 st.title("League of Legends Pre-Game Match Predictor")
 
@@ -210,7 +262,7 @@ with c4:
 
 st.markdown("---")
 
-# --- 3. Calculation & Visual Breakdown Metrics ---
+# --- 3. Calculation Logic ---
 if st.button("Calculate Match Probabilities", type="primary", use_container_width=True):
     draft_payload = {
         "blue_team": blue_team,
@@ -228,7 +280,7 @@ if st.button("Calculate Match Probabilities", type="primary", use_container_widt
     results = engine.predict_match(draft_payload)
     h2h_data = get_historical_team_metrics(engine.df_hist, blue_team, red_team)
 
-    # Automatically post odds and probabilities to http://127.0.0.1:5000/odds
+    # Automatically post odds to endpoint
     send_odds_to_endpoint(
         blue_team=blue_team,
         red_team=red_team,
@@ -236,11 +288,80 @@ if st.button("Calculate Match Probabilities", type="primary", use_container_widt
         p_red=results['red_win_probability']
     )
 
+    # Store calculation session state so outcome can be logged without losing prediction UI
+    st.session_state["active_prediction"] = {
+        "blue_team": blue_team,
+        "red_team": red_team,
+        "blue_win_probability": results['blue_win_probability'],
+        "red_win_probability": results['red_win_probability'],
+        "predicted_winner": blue_team if results['blue_win_probability'] >= 0.5 else red_team,
+        "results": results,
+        "h2h_data": h2h_data
+    }
+
+# --- 4. Render Prediction Results & Live Match Result Logger ---
+if "active_prediction" in st.session_state:
+    active_pred = st.session_state["active_prediction"]
+    results = active_pred["results"]
+    h2h_data = active_pred["h2h_data"]
+
     # Top Level Win Probability Header
     res_b, res_r = st.columns(2)
-    res_b.metric(f"{blue_team} Win Probability", f"{results['blue_win_percentage']}%")
-    res_r.metric(f"{red_team} Win Probability", f"{results['red_win_percentage']}%")
+    res_b.metric(f"{active_pred['blue_team']} Win Probability", f"{results['blue_win_percentage']}%")
+    res_r.metric(f"{active_pred['red_team']} Win Probability", f"{results['red_win_percentage']}%")
     st.progress(results['blue_win_probability'])
+
+    # --- LIVE GAME OUTCOME LOGGING CONTAINER ---
+    with st.container(border=True):
+        st.subheader("📝 Record Live Game Result")
+        st.write(f"Model Predicted Winner: **{active_pred['predicted_winner']}**")
+
+        act_col1, act_col2 = st.columns([3, 1])
+
+        with act_col1:
+            actual_winner = st.radio(
+                "Select Actual Game Winner:",
+                options=[active_pred['blue_team'], active_pred['red_team']],
+                horizontal=True,
+                key="actual_winner_radio"
+            )
+
+        with act_col2:
+            st.write("")  # Spacing alignment
+            if st.button("Save & Log Result", type="secondary", use_container_width=True):
+                is_correct = (actual_winner == active_pred['predicted_winner'])
+
+                current_track_data = load_tracking_data()
+
+                # 1. Update counters
+                current_track_data["total_games"] = current_track_data.get("total_games", 0) + 1
+                if is_correct:
+                    current_track_data["correct_predictions"] = current_track_data.get("correct_predictions", 0) + 1
+
+                # 2. Append match log entry
+                log_entry = {
+                    "datetime": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "blue_team": active_pred['blue_team'],
+                    "red_team": active_pred['red_team'],
+                    "blue_win_probability": active_pred['blue_win_probability'],
+                    "red_win_probability": active_pred['red_win_probability'],
+                    "predicted_winner": active_pred['predicted_winner'],
+                    "actual_winner": actual_winner,
+                    "is_correct": is_correct
+                }
+                current_track_data.setdefault("logs", []).append(log_entry)
+
+                # 3. Save to single file
+                save_tracking_data(current_track_data)
+
+                st.toast(
+                    f"Result Logged! Winner: {actual_winner} ({'Correct ✅' if is_correct else 'Incorrect ❌'})",
+                    icon="🎯"
+                )
+
+                # Clear prediction state and reload sidebar metrics
+                del st.session_state["active_prediction"]
+                st.rerun()
 
     st.markdown("### 📊 Model Feature & Match Analysis")
 
@@ -258,8 +379,8 @@ if st.button("Calculate Match Probabilities", type="primary", use_container_widt
         s_data = results['series_metrics']
 
         e1, e2, e3, e4 = st.columns(4)
-        e1.metric(f"{blue_team} Elo", f"{elo_data['blue_elo']}")
-        e2.metric(f"{red_team} Elo", f"{elo_data['red_elo']}")
+        e1.metric(f"{active_pred['blue_team']} Elo", f"{elo_data['blue_elo']}")
+        e2.metric(f"{active_pred['red_team']} Elo", f"{elo_data['red_elo']}")
         e3.metric(
             "Effective Elo Diff (inc. First Pick)",
             f"{elo_data['elo_diff']}",
@@ -273,8 +394,8 @@ if st.button("Calculate Match Probabilities", type="primary", use_container_widt
         st.markdown("**Series Context Details**")
         sc1, sc2, sc3 = st.columns(3)
         sc1.metric("Game Number", f"Game {s_data['game_number']}")
-        sc2.metric(f"{blue_team} Series Lead", f"{s_data['blue_series_lead']} games")
-        sc3.metric(f"{blue_team} Previous Game Win", "Yes" if s_data['blue_prev_win'] == 1 else ("No" if s_data['game_number'] > 1 else "N/A"))
+        sc2.metric(f"{active_pred['blue_team']} Series Lead", f"{s_data['blue_series_lead']} games")
+        sc3.metric(f"{active_pred['blue_team']} Previous Game Win", "Yes" if s_data['blue_prev_win'] == 1 else ("No" if s_data['game_number'] > 1 else "N/A"))
 
         st.caption("The XGBoost model incorporates raw team Elo, first-pick advantage, and series state (momentum and match number) to calculate the baseline probability before draft features.")
 
@@ -283,8 +404,8 @@ if st.button("Calculate Match Probabilities", type="primary", use_container_widt
         p_data = results['player_metrics']
         pm1, pm2, pm3 = st.columns(3)
 
-        pm1.metric(f"{blue_team} Avg Player Winrate", f"{p_data['avg_blue_p_wr']}%")
-        pm2.metric(f"{red_team} Avg Player Winrate", f"{p_data['avg_red_p_wr']}%")
+        pm1.metric(f"{active_pred['blue_team']} Avg Player Winrate", f"{p_data['avg_blue_p_wr']}%")
+        pm2.metric(f"{active_pred['red_team']} Avg Player Winrate", f"{p_data['avg_red_p_wr']}%")
         pm3.metric("Player Winrate Advantage", f"{p_data['p_wr_diff']}%", delta=f"{p_data['p_wr_diff']}%")
 
         st.markdown("**Role-by-Role Player Comparison**")
@@ -298,9 +419,9 @@ if st.button("Calculate Match Probabilities", type="primary", use_container_widt
 
             player_rows.append({
                 "Role": r['role'],
-                f"{blue_team} Player": r['blue_player'],
+                f"{active_pred['blue_team']} Player": r['blue_player'],
                 "Blue WR": f"{b_wr}% ({r['blue_p_games']}g)",
-                f"{red_team} Player": r['red_player'],
+                f"{active_pred['red_team']} Player": r['red_player'],
                 "Red WR": f"{r_wr}% ({r['red_p_games']}g)",
                 "Advantage": adv
             })
@@ -315,8 +436,8 @@ if st.button("Calculate Match Probabilities", type="primary", use_container_widt
         draft_swing = round(final_prob - elo_prob, 2)
 
         dm1, dm2, dm3, dm4 = st.columns(4)
-        dm1.metric(f"{blue_team} Avg Champ WR", f"{d_data['avg_blue_c_wr']}%")
-        dm2.metric(f"{red_team} Avg Champ WR", f"{d_data['avg_red_c_wr']}%")
+        dm1.metric(f"{active_pred['blue_team']} Avg Champ WR", f"{d_data['avg_blue_c_wr']}%")
+        dm2.metric(f"{active_pred['red_team']} Avg Champ WR", f"{d_data['avg_red_c_wr']}%")
         dm3.metric("Draft Champ Edge", f"{d_data['c_wr_diff']}%", delta=f"{d_data['c_wr_diff']}%")
         dm4.metric(
             "Draft Winrate Swing",
@@ -335,9 +456,9 @@ if st.button("Calculate Match Probabilities", type="primary", use_container_widt
 
             champ_rows.append({
                 "Role": r['role'],
-                f"{blue_team} Pick": r['blue_champ'],
+                f"{active_pred['blue_team']} Pick": r['blue_champ'],
                 "Blue Champ WR": f"{b_cwr}%",
-                f"{red_team} Pick": r['red_champ'],
+                f"{active_pred['red_team']} Pick": r['red_champ'],
                 "Red Champ WR": f"{r_cwr}%",
                 "Draft Edge": cadv
             })
@@ -348,13 +469,13 @@ if st.button("Calculate Match Probabilities", type="primary", use_container_widt
     with tab_h2h:
         h1, h2, h3, h4 = st.columns(4)
         h1.metric("Historical H2H Matches", f"{h2h_data['total_h2h']}")
-        h2.metric(f"{blue_team} H2H Record", f"{h2h_data['blue_h2h_wins']}W - {h2h_data['red_h2h_wins']}L")
-        h3.metric(f"{blue_team} Recent Form (Last 10)", f"{h2h_data['blue_recent_wr']}%")
-        h4.metric(f"{red_team} Recent Form (Last 10)", f"{h2h_data['red_recent_wr']}%")
+        h2.metric(f"{active_pred['blue_team']} H2H Record", f"{h2h_data['blue_h2h_wins']}W - {h2h_data['red_h2h_wins']}L")
+        h3.metric(f"{active_pred['blue_team']} Recent Form (Last 10)", f"{h2h_data['blue_recent_wr']}%")
+        h4.metric(f"{active_pred['red_team']} Recent Form (Last 10)", f"{h2h_data['red_recent_wr']}%")
 
         if h2h_data['total_h2h'] > 0:
-            st.markdown(f"**Direct Head-to-Head Breakdown ({blue_team} vs {red_team})**")
-            st.info(f"{blue_team} holds a **{h2h_data['blue_h2h_wr']}%** winrate across {h2h_data['total_h2h']} historical match(es) against {red_team}.")
+            st.markdown(f"**Direct Head-to-Head Breakdown ({active_pred['blue_team']} vs {active_pred['red_team']})**")
+            st.info(f"{active_pred['blue_team']} holds a **{h2h_data['blue_h2h_wr']}%** winrate across {h2h_data['total_h2h']} historical match(es) against {active_pred['red_team']}.")
         else:
             st.warning("No previous head-to-head matches found in the historical dataset for this exact pairing.")
 
@@ -372,12 +493,12 @@ if st.button("Calculate Match Probabilities", type="primary", use_container_widt
         o1, o2 = st.columns(2)
 
         with o1:
-            st.markdown(f"**{blue_team} Fair Odds**")
+            st.markdown(f"**{active_pred['blue_team']} Fair Odds**")
             st.write(f"- Decimal Odds: **{fair_dec_blue}**")
             st.write(f"- American Odds: **{fair_ame_blue}**")
 
         with o2:
-            st.markdown(f"**{red_team} Fair Odds**")
+            st.markdown(f"**{active_pred['red_team']} Fair Odds**")
             st.write(f"- Decimal Odds: **{fair_dec_red}**")
             st.write(f"- American Odds: **{fair_ame_red}**")
 
@@ -387,7 +508,7 @@ if st.button("Calculate Match Probabilities", type="primary", use_container_widt
         bk1, bk2 = st.columns(2)
         with bk1:
             bm_blue_odds = st.number_input(
-                f"{blue_team} Bookmaker Odds (Decimal)",
+                f"{active_pred['blue_team']} Bookmaker Odds (Decimal)",
                 min_value=1.01,
                 max_value=20.0,
                 value=float(fair_dec_blue) if fair_dec_blue > 0 else 2.0,
@@ -395,7 +516,7 @@ if st.button("Calculate Match Probabilities", type="primary", use_container_widt
             )
         with bk2:
             bm_red_odds = st.number_input(
-                f"{red_team} Bookmaker Odds (Decimal)",
+                f"{active_pred['red_team']} Bookmaker Odds (Decimal)",
                 min_value=1.01,
                 max_value=20.0,
                 value=float(fair_dec_red) if fair_dec_red > 0 else 2.0,
@@ -406,5 +527,5 @@ if st.button("Calculate Match Probabilities", type="primary", use_container_widt
         ev_red = round(((p_red * bm_red_odds) - 1.0) * 100, 2)
 
         val1, val2 = st.columns(2)
-        val1.metric(f"{blue_team} Expected Value (EV)", f"{ev_blue}%", delta=f"{ev_blue}%")
-        val2.metric(f"{red_team} Expected Value (EV)", f"{ev_red}%", delta=f"{ev_red}%")
+        val1.metric(f"{active_pred['blue_team']} Expected Value (EV)", f"{ev_blue}%", delta=f"{ev_blue}%")
+        val2.metric(f"{active_pred['red_team']} Expected Value (EV)", f"{ev_red}%", delta=f"{ev_red}%")

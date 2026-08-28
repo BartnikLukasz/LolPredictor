@@ -1,0 +1,76 @@
+{
+    "total_games": 7,
+    "correct_predictions": 3,
+    "logs": [
+        {
+            "datetime": "2026-08-28 16:08:55",
+            "blue_team": "BNK FEARX",
+            "red_team": "HANJIN BRION",
+            "blue_win_probability": 0.48224836587905884,
+            "red_win_probability": 0.5177516341209412,
+            "predicted_winner": "HANJIN BRION",
+            "actual_winner": "BNK FEARX",
+            "is_correct": false
+        },
+        {
+            "datetime": "2026-08-28 16:10:09",
+            "blue_team": "BNK FEARX",
+            "red_team": "HANJIN BRION",
+            "blue_win_probability": 0.546554684638977,
+            "red_win_probability": 0.45344531536102295,
+            "predicted_winner": "BNK FEARX",
+            "actual_winner": "HANJIN BRION",
+            "is_correct": false
+        },
+        {
+            "datetime": "2026-08-28 16:11:32",
+            "blue_team": "HANJIN BRION",
+            "red_team": "BNK FEARX",
+            "blue_win_probability": 0.5873759388923645,
+            "red_win_probability": 0.4126240611076355,
+            "predicted_winner": "HANJIN BRION",
+            "actual_winner": "HANJIN BRION",
+            "is_correct": true
+        },
+        {
+            "datetime": "2026-08-28 16:12:24",
+            "blue_team": "HANJIN BRION",
+            "red_team": "BNK FEARX",
+            "blue_win_probability": 0.5831973552703857,
+            "red_win_probability": 0.41680264472961426,
+            "predicted_winner": "HANJIN BRION",
+            "actual_winner": "BNK FEARX",
+            "is_correct": false
+        },
+        {
+            "datetime": "2026-08-28 17:58:05",
+            "blue_team": "Team Heretics",
+            "red_team": "Shifters",
+            "blue_win_probability": 0.605130672454834,
+            "red_win_probability": 0.394869327545166,
+            "predicted_winner": "Team Heretics",
+            "actual_winner": "Shifters",
+            "is_correct": false
+        },
+        {
+            "datetime": "2026-08-28 19:15:15",
+            "blue_team": "Shifters",
+            "red_team": "Team Heretics",
+            "blue_win_probability": 0.5308034420013428,
+            "red_win_probability": 0.4691965579986572,
+            "predicted_winner": "Shifters",
+            "actual_winner": "Shifters",
+            "is_correct": true
+        },
+        {
+            "datetime": "2026-08-28 19:30:02",
+            "blue_team": "Fnatic",
+            "red_team": "Team Vitality",
+            "blue_win_probability": 0.5088290572166443,
+            "red_win_probability": 0.4911709427833557,
+            "predicted_winner": "Fnatic",
+            "actual_winner": "Fnatic",
+            "is_correct": true
+        }
+    ]
+}

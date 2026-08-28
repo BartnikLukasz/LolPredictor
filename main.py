@@ -1,4 +1,5 @@
 from champ_stats_calculator import calculate_champion_and_draft_stats
+from download_latest_data import download_latest_match_data
 from elo_calculator import compute_team_elo_ratings
 from match_data_converter import prepare_oracles_elixir_pregame
 from player_stats_calculator import compute_player_and_mastery_stats
@@ -8,6 +9,8 @@ import numpy as np
 import json
 
 if __name__ == '__main__':
+
+    # download_latest_match_data()
     # prepare_oracles_elixir_pregame(["dataset/match/2014_match_data.csv",
     #                                 "dataset/match/2015_match_data.csv",
     #                                 "dataset/match/2016_match_data.csv",
@@ -34,7 +37,7 @@ if __name__ == '__main__':
     compute_player_and_mastery_stats(
         filepath="dataset/pregame/pregame_dataset_with_elo.csv",
         output_filepath="dataset/pregame/pregame_dataset_with_player_stats.csv",
-        prior_weight=2.0,
+        prior_weight=1.0,
         prior_prob=0.50
     )
 
@@ -90,3 +93,5 @@ if __name__ == '__main__':
         json.dump(roster_dict, f, indent=4)
 
     print("[ARTIFACT] Saved team rosters to 'team_rosters.json'")
+
+    print(team_leaderboard)
