@@ -18,6 +18,7 @@ def optimize_xgboost_hyperparameters(
     """
     Runs Bayesian Hyperparameter Optimization (Optuna) on the XGBoost model
     using exact chronological train/test splitting based on split_date.
+    Includes series context features (game_number, blue_series_lead, blue_prev_win).
     Saves the optimal hyperparameters to a JSON file.
     """
     # 1. Load dataset & sort chronologically
@@ -29,6 +30,8 @@ def optimize_xgboost_hyperparameters(
 
     # 2. Identify feature subsets (Identical feature selection logic as model_trainer.py)
     elo_features = ['elo_diff', 'blue_elo_pre', 'red_elo_pre', 'blue_elo_win_prob', 'blue_firstpick']
+
+    series_features = ['game_number', 'blue_series_lead', 'blue_prev_win']
 
     player_features = [
         col for col in df.columns
@@ -61,6 +64,7 @@ def optimize_xgboost_hyperparameters(
 
     feature_cols = (
         elo_features +
+        series_features +
         player_features +
         h2h_matchup_features +
         synergy_roster_features +
@@ -87,6 +91,7 @@ def optimize_xgboost_hyperparameters(
     print("      XGBOOST HYPERPARAMETER OPTIMIZATION (OPTUNA)      ")
     print("=" * 60)
     print(f"Dataset Loaded: {len(df)} matches | Features: {len(feature_cols)}")
+    print(f"Series Features Included: {[f for f in series_features if f in df.columns]}")
     print(f"Train Set: {len(X_train)} matches | Test Set: {len(X_test)} matches (>= {split_date})")
     print(f"Running {n_trials} optimization trials... Please wait.\n")
 
@@ -152,6 +157,6 @@ if __name__ == "__main__":
     optimize_xgboost_hyperparameters(
         filepath=dataset_path,
         split_date="2026-04-01",
-        n_trials=50,
+        n_trials=200,
         output_json_path="best_params.json"
     )

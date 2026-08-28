@@ -20,8 +20,8 @@ def train_lol_prediction_model(
 ) -> tuple[xgb.XGBClassifier, pd.DataFrame]:
     """
     Trains and evaluates an XGBoost model on pre-game LoL match features
-    (including Elo, Player Mastery, Team H2H, Lane/P2P Matchups, Duo Synergies,
-    Roster Continuity, and Category 3 Draft Composition & Synergies).
+    (including Elo, Series Momentum/Lead, Player Mastery, Team H2H, Lane/P2P Matchups,
+    Duo Synergies, Roster Continuity, and Category 3 Draft Composition & Synergies).
 
     Loads tuned hyperparameters from params_filepath if present; otherwise defaults.
 
@@ -45,6 +45,8 @@ def train_lol_prediction_model(
 
     # 3. Identify feature subsets
     elo_features = ['elo_diff', 'blue_elo_pre', 'red_elo_pre', 'blue_elo_win_prob', 'blue_firstpick']
+
+    series_features = ['game_number', 'blue_series_lead', 'blue_prev_win']
 
     player_features = [
         col for col in df.columns
@@ -78,6 +80,7 @@ def train_lol_prediction_model(
     # Combine all feature groups into a unique list
     feature_cols = (
         elo_features +
+        series_features +
         player_features +
         h2h_matchup_features +
         synergy_roster_features +
@@ -88,6 +91,7 @@ def train_lol_prediction_model(
 
     print(f"Loaded {len(df)} matches. Total features selected for training: {len(feature_cols)}")
     print(f" -> Elo Features:          {len([f for f in elo_features if f in df.columns])}")
+    print(f" -> Series Context:        {len([f for f in series_features if f in df.columns])}")
     print(f" -> Player/Mastery:        {len(player_features)}")
     print(f" -> H2H & Lane Matchups:   {len(h2h_matchup_features)}")
     print(f" -> Duo & Roster Synergy:  {len(synergy_roster_features)}")

@@ -29,7 +29,7 @@ engine, team_rosters, champion_list = load_predictor_assets()
 
 st.title("League of Legends Pre-Game Match Predictor")
 
-# --- 1. Team & First Pick Selection ---
+# --- 1. Team & Series Context Selection ---
 col_blue_header, col_red_header = st.columns(2)
 
 with col_blue_header:
@@ -50,12 +50,43 @@ with col_red_header:
         key="red_team_select"
     )
 
-first_pick_side = st.radio(
-    "First Pick Side",
-    options=["Blue", "Red"],
-    index=0,
-    horizontal=True
-)
+st.markdown("##### 🎮 Match & Series Context")
+s1, s2, s3, s4 = st.columns(4)
+
+with s1:
+    first_pick_side = st.radio(
+        "First Pick Side",
+        options=["Blue", "Red"],
+        index=0,
+        horizontal=True
+    )
+
+with s2:
+    game_number = st.number_input(
+        "Game Number in Series",
+        min_value=1,
+        max_value=7,
+        value=1,
+        step=1
+    )
+
+with s3:
+    blue_series_lead = st.number_input(
+        f"{blue_team} Series Lead",
+        min_value=-3,
+        max_value=3,
+        value=0,
+        step=1,
+        help="Positive = Blue leading, Negative = Red leading"
+    )
+
+with s4:
+    blue_prev_win_raw = st.selectbox(
+        f"Did {blue_team} Win Previous Game?",
+        options=["N/A (Game 1)", "Yes", "No"],
+        index=0
+    )
+    blue_prev_win = 1 if blue_prev_win_raw == "Yes" else 0
 
 st.markdown("---")
 
@@ -74,7 +105,6 @@ with c1:
     st.markdown("**Blue Players**")
     for i, role in enumerate(roles):
         val = blue_default[i] if i < len(blue_default) else ""
-        # Adding blue_team to the key forces Streamlit to reload 'val' when team changes
         p = st.text_input(f"Blue {role} Player", value=val, key=f"bp_{blue_team}_{i}")
         blue_players.append(p)
 
@@ -88,7 +118,6 @@ with c3:
     st.markdown("**Red Players**")
     for i, role in enumerate(roles):
         val = red_default[i] if i < len(red_default) else ""
-        # Adding red_team to the key forces Streamlit to reload 'val' when team changes
         p = st.text_input(f"Red {role} Player", value=val, key=f"rp_{red_team}_{i}")
         red_players.append(p)
 
@@ -109,7 +138,10 @@ if st.button("Calculate Match Probabilities", type="primary", use_container_widt
         "red_players": red_players,
         "blue_champs": blue_champs,
         "red_champs": red_champs,
-        "blue_firstpick": 1 if first_pick_side == "Blue" else 0
+        "blue_firstpick": 1 if first_pick_side == "Blue" else 0,
+        "game_number": game_number,
+        "blue_series_lead": blue_series_lead,
+        "blue_prev_win": blue_prev_win
     }
 
     results = engine.predict_match(draft_payload)
@@ -123,16 +155,17 @@ if st.button("Calculate Match Probabilities", type="primary", use_container_widt
     st.markdown("### 📊 Model Feature Breakdown")
 
     tab_elo, tab_players, tab_draft = st.tabs([
-        "⚡ Elo Rating Impact",
+        "⚡ Elo & Series Context",
         "👤 Player Win Rate Head-to-Head",
         "⚔️ Draft & Champion Factors"
     ])
 
-    # --- TAB 1: Elo Rating Impact ---
+    # --- TAB 1: Elo Rating & Series Context Impact ---
     with tab_elo:
         elo_data = results['elo_metrics']
-        e1, e2, e3, e4 = st.columns(4)
+        s_data = results['series_metrics']
 
+        e1, e2, e3, e4 = st.columns(4)
         e1.metric(f"{blue_team} Elo", f"{elo_data['blue_elo']}")
         e2.metric(f"{red_team} Elo", f"{elo_data['red_elo']}")
         e3.metric(
@@ -145,7 +178,13 @@ if st.button("Calculate Match Probabilities", type="primary", use_container_widt
             f"{elo_data['elo_implied_blue_winrate']}%"
         )
 
-        st.caption("The XGBoost model combines raw team Elo ratings with first-pick advantage (+10 Elo pts) to generate the baseline win probability before draft adjustments.")
+        st.markdown("**Series Context Inputs**")
+        sc1, sc2, sc3 = st.columns(3)
+        sc1.metric("Game Number", f"Game {s_data['game_number']}")
+        sc2.metric(f"{blue_team} Series Lead", f"{s_data['blue_series_lead']} games")
+        sc3.metric(f"{blue_team} Previous Game Win", "Yes" if s_data['blue_prev_win'] == 1 else ("No" if s_data['game_number'] > 1 else "N/A"))
+
+        st.caption("The XGBoost model incorporates raw team Elo, first-pick advantage, and series state (momentum and match number) to calculate the baseline probability before draft features.")
 
     # --- TAB 2: Player Win Rate Head-to-Head ---
     with tab_players:

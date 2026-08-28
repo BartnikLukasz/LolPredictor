@@ -115,7 +115,12 @@ class LiveFeatureEngine:
         row['blue_elo_win_prob'] = blue_win_prob
         row['blue_firstpick'] = blue_fp
 
-        # 2. Champion Picks
+        # 2. Series Context Features
+        row['game_number'] = draft_payload.get('game_number', 1)
+        row['blue_series_lead'] = draft_payload.get('blue_series_lead', 0)
+        row['blue_prev_win'] = draft_payload.get('blue_prev_win', 0)
+
+        # 3. Champion Picks
         blue_champs = draft_payload.get('blue_champs', ['', '', '', '', ''])
         red_champs = draft_payload.get('red_champs', ['', '', '', '', ''])
 
@@ -123,7 +128,7 @@ class LiveFeatureEngine:
             row[f'blue_{role}_champion'] = blue_champs[idx] if idx < len(blue_champs) else ''
             row[f'red_{role}_champion'] = red_champs[idx] if idx < len(red_champs) else ''
 
-        # 3. Player & Mastery Lookups
+        # 4. Player & Mastery Lookups
         blue_players = draft_payload.get('blue_players', ['', '', '', '', ''])
         red_players = draft_payload.get('red_players', ['', '', '', '', ''])
 
@@ -148,7 +153,7 @@ class LiveFeatureEngine:
             row[f'red_{role}_champ_games_pre'] = rc_stat['games']
             row[f'red_{role}_champ_winrate_pre'] = rc_stat['winrate']
 
-        # 4. Construct Output DataFrame
+        # 5. Construct Output DataFrame
         live_df = pd.DataFrame([row])
 
         for col in self.expected_features:
@@ -217,6 +222,11 @@ class LiveFeatureEngine:
             'red_win_probability': proba_red,
             'blue_win_percentage': round(proba_blue * 100, 2),
             'red_win_percentage': round(proba_red * 100, 2),
+            'series_metrics': {
+                'game_number': draft_payload.get('game_number', 1),
+                'blue_series_lead': draft_payload.get('blue_series_lead', 0),
+                'blue_prev_win': draft_payload.get('blue_prev_win', 0)
+            },
             'elo_metrics': {
                 'blue_elo': round(b_elo, 1),
                 'red_elo': round(r_elo, 1),
@@ -251,7 +261,10 @@ if __name__ == "__main__":
             "red_players": ["Kiin", "Canyon", "Chovy", "Ruler", "Duro"],
             "blue_champs": ["Aatrox", "Sejuani", "Ahri", "Jinx", "Nautilus"],
             "red_champs": ["K'Sante", "Vi", "Azir", "Varus", "Rakan"],
-            "blue_firstpick": 1
+            "blue_firstpick": 1,
+            "game_number": 3,
+            "blue_series_lead": 1,
+            "blue_prev_win": 1
         }
 
         result = engine.predict_match(sample_draft)

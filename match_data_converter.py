@@ -11,7 +11,7 @@ def prepare_oracles_elixir_pregame(
     """
     Transforms multi-year Oracle's Elixir raw datasets into a unified single-row per match
     pre-game dataset sorted chronologically across all years, incorporating draft side/first pick info,
-    team names, and player names.
+    team names, player names, and intra-series tracking features (BO3/BO5 momentum & leads).
 
     Parameters:
         filepaths (str | list[str]): Path or list of paths to Oracle's Elixir CSV files.
@@ -133,11 +133,73 @@ def prepare_oracles_elixir_pregame(
             if player_name_col and player_name_col in role_df.columns:
                 match_df[f'{side_prefix}_{role}_player'] = role_df[player_name_col].values
 
-    # 7. Sort chronologically across all combined years
+    # 7. Calculate Intra-Series Features (game_number, blue_series_lead, blue_prev_win)
+    if 'matchid' in blue_teams.columns and blue_teams['matchid'].notna().any():
+        match_df['series_id'] = blue_teams['matchid'].values
+    else:
+        # Fallback series identifier: YYYY-MM-DD + league + sorted team pair
+        dates_str = match_df['date'].dt.strftime('%Y-%m-%d')
+        leagues_str = match_df['league'].astype(str)
+        teams_sorted = [
+            "_vs_".join(sorted([str(b), str(r)]))
+            for b, r in zip(match_df['blue_team'], match_df['red_team'])
+        ]
+        match_df['series_id'] = dates_str + "_" + leagues_str + "_" + pd.Series(teams_sorted, index=match_df.index)
+
+    # Sort chronologically across all combined years before calculating running series state
     match_df = match_df.sort_values('date').reset_index(drop=True)
+
+    game_numbers = np.zeros(len(match_df), dtype=int)
+    blue_series_leads = np.zeros(len(match_df), dtype=int)
+    blue_prev_wins = np.zeros(len(match_df), dtype=float)
+
+    # Compute series metrics per match grouping
+    for _, group_indices in match_df.groupby('series_id', sort=False).groups.items():
+        scores = {}
+        last_winner = None
+
+        for i, idx in enumerate(group_indices):
+            b_team = match_df.at[idx, 'blue_team']
+            r_team = match_df.at[idx, 'red_team']
+
+            b_score = scores.get(b_team, 0)
+            r_score = scores.get(r_team, 0)
+
+            game_numbers[idx] = i + 1
+            blue_series_leads[idx] = b_score - r_score
+
+            if i == 0:
+                blue_prev_wins[idx] = 0.5  # Neutral baseline for Game 1
+            else:
+                blue_prev_wins[idx] = 1.0 if last_winner == b_team else 0.0
+
+            # Update running scores for subsequent games in this series
+            winner = b_team if match_df.at[idx, 'blue_win'] == 1 else r_team
+            scores[winner] = scores.get(winner, 0) + 1
+            last_winner = winner
+
+    match_df['game_number'] = game_numbers
+    match_df['blue_series_lead'] = blue_series_leads
+    match_df['blue_prev_win'] = blue_prev_wins
+
+    match_df = match_df.drop(columns=['series_id'])
 
     if output_filepath:
         match_df.to_csv(output_filepath, index=False)
         print(f"Successfully processed {len(match_df)} matches across target leagues. Saved to {output_filepath}")
 
     return match_df
+
+
+# Example usage combining multi-year datasets:
+if __name__ == "__main__":
+    multi_year_files = [
+        "2023_match_data.csv",
+        "2024_match_data.csv",
+        "2025_match_data.csv"
+    ]
+
+    df_multi_year = prepare_oracles_elixir_pregame(
+        filepaths=multi_year_files,
+        output_filepath="multi_year_pregame_dataset.csv"
+    )

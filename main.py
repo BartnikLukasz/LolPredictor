@@ -47,7 +47,7 @@ if __name__ == '__main__':
 
     model, feature_importance = train_lol_prediction_model(
         filepath=dataset_path,
-        split_date="2026-08-25"
+        split_date="2026-04-01"
     )
 
     # 2. Save the trained XGBoost model artifact
