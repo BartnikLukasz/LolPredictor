@@ -11,20 +11,20 @@ import json
 if __name__ == '__main__':
 
     # download_latest_match_data()
-    # prepare_oracles_elixir_pregame(["dataset/match/2014_match_data.csv",
-    #                                 "dataset/match/2015_match_data.csv",
-    #                                 "dataset/match/2016_match_data.csv",
-    #                                 "dataset/match/2017_match_data.csv",
-    #                                 "dataset/match/2018_match_data.csv",
-    #                                 "dataset/match/2019_match_data.csv",
-    #                                 "dataset/match/2020_match_data.csv",
-    #                                 "dataset/match/2021_match_data.csv",
-    #                                 "dataset/match/2022_match_data.csv",
-    #                                 "dataset/match/2023_match_data.csv",
-    #                                 "dataset/match/2024_match_data.csv",
-    #                                 "dataset/match/2025_match_data.csv",
-    #                                 "dataset/match/2026_match_data.csv"],
-    #                                "dataset/pregame/pregame.csv")
+    prepare_oracles_elixir_pregame(["dataset/match/2014_match_data.csv",
+                                    "dataset/match/2015_match_data.csv",
+                                    "dataset/match/2016_match_data.csv",
+                                    "dataset/match/2017_match_data.csv",
+                                    "dataset/match/2018_match_data.csv",
+                                    "dataset/match/2019_match_data.csv",
+                                    "dataset/match/2020_match_data.csv",
+                                    "dataset/match/2021_match_data.csv",
+                                    "dataset/match/2022_match_data.csv",
+                                    "dataset/match/2023_match_data.csv",
+                                    "dataset/match/2024_match_data.csv",
+                                    "dataset/match/2025_match_data.csv",
+                                    "dataset/match/2026_match_data.csv"],
+                                   "dataset/pregame/pregame.csv")
 
     enriched_df, team_leaderboard = compute_team_elo_ratings(
         filepath="dataset/pregame/pregame.csv",

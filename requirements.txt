@@ -5,3 +5,4 @@ requests
 xgboost
 scikit-learn
 gdown
+upstash-redis

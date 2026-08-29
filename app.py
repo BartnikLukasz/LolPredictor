@@ -5,6 +5,7 @@ import requests
 import pandas as pd
 import streamlit as st
 from live_feature_engine import LiveFeatureEngine
+from upstash_redis import Redis
 
 st.set_page_config(page_title="LoL Match Predictor", layout="wide")
 
@@ -12,30 +13,33 @@ ODDS_ENDPOINT_URL = "http://127.0.0.1:5000/odds"
 TRACKING_FILE = "live_accuracy_tracking.json"
 
 
-# --- TRACKING FILE HELPER FUNCTIONS ---
-def load_tracking_data(filepath: str = TRACKING_FILE) -> dict:
-    """Loads tracking data from JSON, or initializes structure if file doesn't exist."""
-    if not os.path.exists(filepath):
+# Initialize Redis connection via Streamlit Secrets
+@st.cache_resource
+def get_redis_client():
+    return Redis(
+        url=st.secrets["UPSTASH_REDIS_REST_URL"],
+        token=st.secrets["UPSTASH_REDIS_REST_TOKEN"]
+    )
+
+redis = get_redis_client()
+TRACKING_KEY = "live_accuracy_tracking"
+
+def load_tracking_data() -> dict:
+    """Fetches tracking JSON from Upstash Redis."""
+    raw_data = redis.get(TRACKING_KEY)
+    if not raw_data:
         return {
             "total_games": 0,
             "correct_predictions": 0,
             "logs": []
         }
-    try:
-        with open(filepath, "r") as f:
-            return json.load(f)
-    except (json.JSONDecodeError, IOError):
-        return {
-            "total_games": 0,
-            "correct_predictions": 0,
-            "logs": []
-        }
+    if isinstance(raw_data, str):
+        return json.loads(raw_data)
+    return raw_data  # Upstash automatically parses JSON dicts
 
-
-def save_tracking_data(data: dict, filepath: str = TRACKING_FILE):
-    """Saves updated tracking dictionary back to the single JSON file."""
-    with open(filepath, "w") as f:
-        json.dump(data, f, indent=4)
+def save_tracking_data(data: dict):
+    """Saves updated tracking dict back to Upstash Redis."""
+    redis.set(TRACKING_KEY, json.dumps(data))
 
 
 @st.cache_resource
