@@ -1,5 +1,8 @@
+from catboost_model_trainer import train_catboost
 from champ_stats_calculator import calculate_champion_and_draft_stats
 from download_latest_data import download_latest_match_data
+from elasticnet_model_trainer import train_elasticnet_model
+from elastictree_model_trainer import train_elastictree
 from elo_calculator import compute_team_elo_ratings
 from match_data_converter import prepare_oracles_elixir_pregame
 from player_stats_calculator import compute_player_and_mastery_stats
@@ -49,54 +52,66 @@ if __name__ == '__main__':
 
     dataset_path = "dataset/pregame/pregame_dataset_final_features.csv"
 
-    model, feature_importance = train_lol_prediction_model(
-        filepath=dataset_path,
-        split_date="2026-04-01",
-        full_train=True
-    )
+    # model, feature_importance = train_lol_prediction_model(
+    #     filepath=dataset_path,
+    #     split_date="2026-04-01",
+    #     full_train=True
+    # )
+    #
+    # train_secondary_model(dataset_path=dataset_path,
+    #                       test_start_date='2026-04-01',
+    #                       full_train=True)
+    #
+    # train_catboost(filepath=dataset_path,
+    #                split_date='2026-04-01',
+    #                full_train=True)
+    #
+    # train_elastictree(filepath=dataset_path,
+    #                   split_date="2026-04-01",
+    #                   full_train=True)
+    #
+    # train_elasticnet_model(filepath=dataset_path,
+    #                        split_date="2026-04-01",
+    #                        full_train=True)
 
-    train_secondary_model(dataset_path=dataset_path,
-                          test_start_date='2026-04-01',
-                          full_train=True)
-
-    # 2. Save the trained XGBoost model artifact
-    model.save_model("models/xgboost_model.json")
-    print("\n[ARTIFACT] Saved model to 'xgboost_model.json'")
-
-    # 3. Extract active rosters dynamically from the dataset and save to JSON
-    df = pd.read_csv(dataset_path, low_memory=False)
-
-    roster_dict = {}
-
-    # Get unique teams across blue and red side columns
-    teams = set(df['blue_team'].dropna().unique()).union(set(df['red_team'].dropna().unique()))
-
-    for team in teams:
-        # Grab the most recent match for this team
-        latest_match = df[(df['blue_team'] == team) | (df['red_team'] == team)].iloc[-1]
-
-        if latest_match['blue_team'] == team:
-            roster = [
-                latest_match.get('blue_top_player', ''),
-                latest_match.get('blue_jng_player', ''),
-                latest_match.get('blue_mid_player', ''),
-                latest_match.get('blue_bot_player', ''),
-                latest_match.get('blue_sup_player', '')
-            ]
-        else:
-            roster = [
-                latest_match.get('red_top_player', ''),
-                latest_match.get('red_jng_player', ''),
-                latest_match.get('red_mid_player', ''),
-                latest_match.get('red_bot_player', ''),
-                latest_match.get('red_sup_player', '')
-            ]
-
-        roster_dict[team] = roster
-
-    with open("team_rosters.json", "w") as f:
-        json.dump(roster_dict, f, indent=4)
-
-    print("[ARTIFACT] Saved team rosters to 'team_rosters.json'")
+    # # 2. Save the trained XGBoost model artifact
+    # model.save_model("models/xgboost_model.json")
+    # print("\n[ARTIFACT] Saved model to 'xgboost_model.json'")
+    #
+    # # 3. Extract active rosters dynamically from the dataset and save to JSON
+    # df = pd.read_csv(dataset_path, low_memory=False)
+    #
+    # roster_dict = {}
+    #
+    # # Get unique teams across blue and red side columns
+    # teams = set(df['blue_team'].dropna().unique()).union(set(df['red_team'].dropna().unique()))
+    #
+    # for team in teams:
+    #     # Grab the most recent match for this team
+    #     latest_match = df[(df['blue_team'] == team) | (df['red_team'] == team)].iloc[-1]
+    #
+    #     if latest_match['blue_team'] == team:
+    #         roster = [
+    #             latest_match.get('blue_top_player', ''),
+    #             latest_match.get('blue_jng_player', ''),
+    #             latest_match.get('blue_mid_player', ''),
+    #             latest_match.get('blue_bot_player', ''),
+    #             latest_match.get('blue_sup_player', '')
+    #         ]
+    #     else:
+    #         roster = [
+    #             latest_match.get('red_top_player', ''),
+    #             latest_match.get('red_jng_player', ''),
+    #             latest_match.get('red_mid_player', ''),
+    #             latest_match.get('red_bot_player', ''),
+    #             latest_match.get('red_sup_player', '')
+    #         ]
+    #
+    #     roster_dict[team] = roster
+    #
+    # with open("team_rosters.json", "w") as f:
+    #     json.dump(roster_dict, f, indent=4)
+    #
+    # print("[ARTIFACT] Saved team rosters to 'team_rosters.json'")
     #
     # print(team_leaderboard)

@@ -8,3 +8,4 @@ gdown
 upstash-redis
 joblib
 lightgbm
+catboost

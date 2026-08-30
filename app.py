@@ -19,7 +19,10 @@ TRACKING_KEY = "live_accuracy_tracking"
 # To add a new engine, train it, place the .pkl in models/, and add an entry here:
 MODEL_REGISTRY = {
     "XGBoost": "models/xgboost_model.json",
-    "LightGBM": "models/lightgbm_model.pkl"
+    "LightGBM": "models/lightgbm_model.pkl",
+    "CatBoost": "models/catboost_model.pkl",
+    "ElasticTree": "models/elastictree_model.pkl",
+    "ElasticNet": "models/elasticnet_model.joblib",
 }
 
 
@@ -67,13 +70,30 @@ def load_predictor_assets():
 
             # Load Native XGBoost JSON
             if model_path.endswith(".json"):
-                model = xgb.XGBClassifier()  # Or xgb.Booster() depending on training API
+                model = xgb.XGBClassifier()
                 model.load_model(model_path)
                 eng.model = model
+
             # Load standard Pickle/Joblib
             else:
                 artifact = joblib.load(model_path)
-                eng.model = artifact["model"] if isinstance(artifact, dict) and "model" in artifact else artifact
+
+                if isinstance(artifact, dict):
+                    # Priority 1: Full pipeline stored under 'pipeline' key
+                    if "pipeline" in artifact:
+                        eng.model = artifact["pipeline"]
+                    # Priority 2: Model + Preprocessor stored separately in dict
+                    elif "model" in artifact and "preprocessor" in artifact:
+                        from sklearn.pipeline import Pipeline
+                        eng.model = Pipeline([
+                            ('preprocessor', artifact["preprocessor"]),
+                            ('model', artifact["model"])
+                        ])
+                    else:
+                        eng.model = artifact.get("model", artifact)
+                else:
+                    # Raw object (full Pipeline or model)
+                    eng.model = artifact
 
             engines[model_name] = eng
         else:
@@ -398,15 +418,15 @@ def render_model_dashboard(model_name: str, results: dict, active_pred: dict, h2
 
                 # Build model prediction details across all active models
                 models_log_list = []
-                primary_is_correct = False
+                xgb_is_correct = False
 
                 for m_name, m_res in all_model_results.items():
                     m_pred_winner = b_team if m_res['blue_win_probability'] >= 0.5 else r_team
                     m_is_correct = (actual_winner == m_pred_winner)
 
-                    # Track primary model (or XGBoost) win accuracy status for quick alert text
-                    if m_name == model_name:
-                        primary_is_correct = m_is_correct
+                    # Always evaluate XGBoost correctness for global accuracy tracking
+                    if m_name == "XGBoost":
+                        xgb_is_correct = m_is_correct
 
                     models_log_list.append({
                         "model_used": m_name,
@@ -417,9 +437,14 @@ def render_model_dashboard(model_name: str, results: dict, active_pred: dict, h2
                         "is_correct": m_is_correct
                     })
 
-                # Update global counts based on primary model output
+                # Fallback to current model if XGBoost isn't present in model results
+                if "XGBoost" not in all_model_results:
+                    curr_pred = b_team if results['blue_win_probability'] >= 0.5 else r_team
+                    xgb_is_correct = (actual_winner == curr_pred)
+
+                # Update global counts strictly based on XGBoost output
                 current_track_data["total_games"] = current_track_data.get("total_games", 0) + 1
-                if primary_is_correct:
+                if xgb_is_correct:
                     current_track_data["correct_predictions"] = current_track_data.get("correct_predictions", 0) + 1
 
                 # Top-level log record containing nested model list
@@ -434,7 +459,7 @@ def render_model_dashboard(model_name: str, results: dict, active_pred: dict, h2
                 save_tracking_data(current_track_data)
 
                 st.toast(
-                    f"Result Logged! Winner: {actual_winner} ({'Correct ✅' if primary_is_correct else 'Incorrect ❌'})",
+                    f"Result Logged! XGBoost Prediction: ({'Correct ✅' if xgb_is_correct else 'Incorrect ❌'})",
                     icon="🎯"
                 )
 
