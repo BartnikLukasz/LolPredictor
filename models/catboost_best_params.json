@@ -1,0 +1,11 @@
+{
+    "learning_rate": 0.020601695987382974,
+    "depth": 4,
+    "l2_leaf_reg": 1.1250093666719105,
+    "random_strength": 9.188542286458345,
+    "bagging_temperature": 0.9888462074940965,
+    "iterations": 1000,
+    "eval_metric": "Logloss",
+    "early_stopping_rounds": 30,
+    "random_seed": 42
+}

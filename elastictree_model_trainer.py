@@ -204,7 +204,7 @@ def train_elastictree(
         "metrics": {"accuracy": acc, "roc_auc": auc, "log_loss": loss}
     }
 
-    joblib.dump(artifact, output_model_path)
+    joblib.dump(artifact, output_model_path, compress=3)
     print(f"\n💾 Trained ElasticTree Pipeline saved to '{output_model_path}'!")
 
 
