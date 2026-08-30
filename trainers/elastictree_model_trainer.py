@@ -3,26 +3,30 @@ import json
 import joblib
 import pandas as pd
 import numpy as np
-from catboost import CatBoostClassifier, Pool
+from sklearn.ensemble import ExtraTreesClassifier
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.impute import SimpleImputer
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
 from sklearn.metrics import accuracy_score, log_loss, roc_auc_score, classification_report
 
 # --- PATH CONFIGURATION ---
-DATASET_PATH = "dataset/pregame/pregame_dataset_final_features.csv"
-PARAMS_PATH = "models/catboost_best_params.json"
-MODEL_OUTPUT_PATH = "models/catboost_model.pkl"
+DATASET_PATH = "../dataset/pregame/pregame_dataset_final_features.csv"
+PARAMS_PATH = "../models/elastictree_best_params.json"
+MODEL_OUTPUT_PATH = "../models/elastictree_model.pkl"
 TARGET_COL = "blue_win"
 
 
 def load_best_params(params_path: str) -> dict:
-    """Loads CatBoost hyperparameters from JSON if present, otherwise returns defaults."""
+    """Loads ExtraTrees hyperparameters from JSON if present, otherwise returns defaults."""
     default_params = {
-        "iterations": 1000,
-        "learning_rate": 0.03,
-        "depth": 5,
-        "l2_leaf_reg": 4.0,
-        "eval_metric": "Logloss",
-        "random_seed": 42,
-        "verbose": 100
+        "n_estimators": 500,
+        "max_depth": 12,
+        "min_samples_split": 5,
+        "min_samples_leaf": 2,
+        "max_features": "sqrt",
+        "random_state": 42,
+        "n_jobs": -1
     }
 
     if os.path.exists(params_path):
@@ -39,8 +43,8 @@ def load_best_params(params_path: str) -> dict:
     return default_params
 
 
-def extract_feature_matrix(df: pd.DataFrame):
-    """Extracts identical feature subsets used across XGBoost, LightGBM, and CatBoost engines."""
+def select_feature_columns(df: pd.DataFrame):
+    """Extracts identical feature lists for numeric and categorical columns."""
     elo_features = ['elo_diff', 'blue_elo_pre', 'red_elo_pre', 'blue_elo_win_prob', 'blue_firstpick']
     series_features = ['game_number', 'blue_series_lead', 'blue_prev_win']
 
@@ -84,17 +88,13 @@ def extract_feature_matrix(df: pd.DataFrame):
     )
     feature_cols = [col for col in dict.fromkeys(feature_cols) if col in df.columns]
 
-    X = df[feature_cols].copy()
+    cat_cols = champ_features
+    num_cols = [c for c in feature_cols if c not in cat_cols]
 
-    # Cast champion categorical columns explicitly to string for CatBoost
-    cat_features = [c for c in champ_features if c in X.columns]
-    for col in cat_features:
-        X[col] = X[col].fillna("Unknown").astype(str)
-
-    return X, cat_features
+    return feature_cols, num_cols, cat_cols
 
 
-def train_catboost(
+def train_elastictree(
         filepath: str = DATASET_PATH,
         split_date: str = "2026-04-01",
         full_train: bool = False,
@@ -114,16 +114,16 @@ def train_catboost(
     df['date'] = pd.to_datetime(df['date'])
     df = df.sort_values('date').reset_index(drop=True)
 
-    # 2. Extract Feature Matrix
-    X, cat_features = extract_feature_matrix(df)
+    # 2. Extract Feature Subsets (Raw un-encoded DataFrames)
+    feature_cols, num_cols, cat_cols = select_feature_columns(df)
+    X = df[feature_cols].copy()
     y = df[TARGET_COL].values
 
-    # 3. Handling Split vs Full Dataset Training
+    # 3. Splitting Strategy
     print("=" * 60)
-    print("                CATBOOST MODEL TRAINING                 ")
+    print("              ELASTICTREE MODEL TRAINING                ")
     print("=" * 60)
-    print(f"Dataset Loaded: {len(df)} matches | Features: {len(X.columns)}")
-    print(f"Categorical Features ({len(cat_features)}): {cat_features}")
+    print(f"Dataset Loaded: {len(df)} matches | Raw Features: {len(feature_cols)}")
 
     if full_train:
         print("🌐 Mode: FULL DATASET TRAINING (Ignoring split date)")
@@ -142,33 +142,44 @@ def train_catboost(
         print(f"Validation Set: {len(X_val)} matches (>= {split_date})")
     print("=" * 60)
 
-    # 4. Load Params and Train
+    # 4. Construct Preprocessing & Model Pipeline
+    num_transformer = Pipeline([
+        ('imputer', SimpleImputer(strategy='median'))
+    ])
+
+    cat_transformer = Pipeline([
+        ('imputer', SimpleImputer(strategy='constant', fill_value='Unknown')),
+        ('encoder', OneHotEncoder(handle_unknown='ignore', sparse_output=False))
+    ])
+
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ('num', num_transformer, num_cols),
+            ('cat', cat_transformer, cat_cols)
+        ]
+    )
+
     params = load_best_params(params_path)
-    early_stopping_rounds = params.pop("early_stopping_rounds", 30)
+    tree_model = ExtraTreesClassifier(**params)
 
-    model = CatBoostClassifier(**params)
-    train_pool = Pool(X_train, y_train, cat_features=cat_features if cat_features else None)
+    # Wrap preprocessor and classifier in a single Pipeline
+    full_pipeline = Pipeline([
+        ('preprocessor', preprocessor),
+        ('model', tree_model)
+    ])
 
-    print("\n🚀 Starting CatBoost Training...")
-    if full_train or X_val is None:
-        model.fit(train_pool)
-        eval_pool = train_pool
-        eval_y = y_train
-        eval_label = "TRAINING (FULL DATASET)"
-    else:
-        val_pool = Pool(X_val, y_val, cat_features=cat_features if cat_features else None)
-        model.fit(
-            train_pool,
-            eval_set=val_pool,
-            early_stopping_rounds=early_stopping_rounds,
-            use_best_model=True
-        )
-        eval_pool = val_pool
-        eval_y = y_val
-        eval_label = "VALIDATION"
+    print("\n🚀 Starting ElasticTree (Pipeline) Training...")
+    full_pipeline.fit(X_train, y_train)
 
     # 5. Evaluate Metrics
-    eval_preds_prob = model.predict_proba(eval_pool)[:, 1]
+    if full_train or X_val is None:
+        eval_X, eval_y = X_train, y_train
+        eval_label = "TRAINING (FULL DATASET)"
+    else:
+        eval_X, eval_y = X_val, y_val
+        eval_label = "VALIDATION"
+
+    eval_preds_prob = full_pipeline.predict_proba(eval_X)[:, 1]
     eval_preds_binary = (eval_preds_prob >= 0.5).astype(int)
 
     acc = accuracy_score(eval_y, eval_preds_binary)
@@ -184,24 +195,24 @@ def train_catboost(
     print("-" * 60)
     print(classification_report(eval_y, eval_preds_binary, digits=4))
 
-    # 6. Save Artifact
+    # 6. Save Full Pipeline Artifact
     os.makedirs(os.path.dirname(output_model_path), exist_ok=True)
     artifact = {
-        "model": model,
-        "feature_names": list(X.columns),
-        "cat_features": cat_features,
+        "pipeline": full_pipeline,
+        "model": full_pipeline,  # Assigned to both keys for backward compatibility with app.py
+        "feature_cols": feature_cols,
         "metrics": {"accuracy": acc, "roc_auc": auc, "log_loss": loss}
     }
 
-    joblib.dump(artifact, output_model_path)
-    print(f"\n💾 Trained CatBoost model saved to '{output_model_path}'!")
+    joblib.dump(artifact, output_model_path, compress=3)
+    print(f"\n💾 Trained ElasticTree Pipeline saved to '{output_model_path}'!")
 
 
 if __name__ == "__main__":
-    train_catboost(
+    train_elastictree(
         filepath=DATASET_PATH,
         split_date="2026-04-01",
-        full_train=False,  # Set to True for production model building
+        full_train=False,
         params_path=PARAMS_PATH,
         output_model_path=MODEL_OUTPUT_PATH
     )

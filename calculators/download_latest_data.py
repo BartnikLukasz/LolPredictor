@@ -8,7 +8,7 @@ import gdown
 
 FOLDER_ID = "1gLSw0RLjBbtaNy0dgnGQDAZOHIgCe-HH"
 FOLDER_URL = f"https://drive.google.com/drive/folders/{FOLDER_ID}"
-TARGET_PATH = "dataset/match/2026_match_data.csv"
+TARGET_PATH = "../dataset/match/2026_match_data.csv"
 
 
 def is_updated_today(path: str) -> bool:

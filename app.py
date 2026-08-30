@@ -16,7 +16,6 @@ ODDS_ENDPOINT_URL = "http://127.0.0.1:5000/odds"
 TRACKING_KEY = "live_accuracy_tracking"
 
 # --- EXTENSIBLE MODEL REGISTRY ---
-# To add a new engine, train it, place the .pkl in models/, and add an entry here:
 MODEL_REGISTRY = {
     "XGBoost": "models/xgboost_model.json",
     "LightGBM": "models/lightgbm_model.pkl",
@@ -57,6 +56,66 @@ def save_tracking_data(data: dict):
     redis.set(TRACKING_KEY, json.dumps(data))
 
 
+def compute_model_accuracies(tracking_data: dict, min_confidence_pct: float = 50.0) -> pd.DataFrame:
+    """Calculates accuracy percentages and sample sizes per model filtered by minimum win probability confidence."""
+    model_stats = {}
+    threshold = min_confidence_pct / 100.0
+
+    for log in tracking_data.get("logs", []):
+        # Multi-model logs format
+        if "models" in log and isinstance(log["models"], list):
+            for m in log["models"]:
+                name = m.get("model_used")
+                if not name:
+                    continue
+
+                # Determine model confidence (highest predicted probability)
+                p_blue = m.get("blue_win_probability", 0.5)
+                p_red = m.get("red_win_probability", 0.5)
+                confidence = max(p_blue, p_red)
+
+                if confidence < threshold:
+                    continue
+
+                if name not in model_stats:
+                    model_stats[name] = {"correct": 0, "total": 0}
+                model_stats[name]["total"] += 1
+                if m.get("is_correct"):
+                    model_stats[name]["correct"] += 1
+        # Legacy single-model log format (defaulting to XGBoost)
+        else:
+            name = "XGBoost"
+            p_blue = log.get("blue_win_probability", 0.5)
+            p_red = log.get("red_win_probability", 0.5)
+            confidence = max(p_blue, p_red)
+
+            if confidence < threshold:
+                continue
+
+            if name not in model_stats:
+                model_stats[name] = {"correct": 0, "total": 0}
+            model_stats[name]["total"] += 1
+            if log.get("is_correct"):
+                model_stats[name]["correct"] += 1
+
+    rows = []
+    for model_name, stats in model_stats.items():
+        tot = stats["total"]
+        corr = stats["correct"]
+        acc = (corr / tot * 100) if tot > 0 else 0.0
+        rows.append({
+            "Model": model_name,
+            "Accuracy (%)": round(acc, 1),
+            "Correct": corr,
+            "Total": tot
+        })
+
+    df_acc = pd.DataFrame(rows)
+    if not df_acc.empty:
+        df_acc = df_acc.sort_values(by="Accuracy (%)", ascending=False).reset_index(drop=True)
+    return df_acc
+
+
 @st.cache_resource
 def load_predictor_assets():
     dataset_path = "dataset/pregame/pregame_dataset_final_features.csv"
@@ -79,10 +138,8 @@ def load_predictor_assets():
                 artifact = joblib.load(model_path)
 
                 if isinstance(artifact, dict):
-                    # Priority 1: Full pipeline stored under 'pipeline' key
                     if "pipeline" in artifact:
                         eng.model = artifact["pipeline"]
-                    # Priority 2: Model + Preprocessor stored separately in dict
                     elif "model" in artifact and "preprocessor" in artifact:
                         from sklearn.pipeline import Pipeline
                         eng.model = Pipeline([
@@ -92,7 +149,6 @@ def load_predictor_assets():
                     else:
                         eng.model = artifact.get("model", artifact)
                 else:
-                    # Raw object (full Pipeline or model)
                     eng.model = artifact
 
             engines[model_name] = eng
@@ -128,12 +184,8 @@ def get_historical_team_metrics(df_hist, blue_team, red_team):
             elif row['red_team'] == blue_team and row['blue_win'] == 0:
                 blue_h2h_wins += 1
 
-    blue_matches = df_hist[(df_hist['blue_team'] == blue_team) | (df_hist['red_team'] == blue_team)].sort_values('date',
-                                                                                                                 ascending=False).head(
-        10)
-    red_matches = df_hist[(df_hist['blue_team'] == red_team) | (df_hist['red_team'] == red_team)].sort_values('date',
-                                                                                                              ascending=False).head(
-        10)
+    blue_matches = df_hist[(df_hist['blue_team'] == blue_team) | (df_hist['red_team'] == blue_team)].sort_values('date', ascending=False).head(10)
+    red_matches = df_hist[(df_hist['blue_team'] == red_team) | (df_hist['red_team'] == red_team)].sort_values('date', ascending=False).head(10)
 
     blue_recent_wins = sum(
         (row['blue_win'] == 1 if row['blue_team'] == blue_team else row['blue_win'] == 0)
@@ -201,7 +253,6 @@ def create_ensemble_result(model_results_dict: dict) -> dict:
     avg_blue_prob = sum(res['blue_win_probability'] for res in single_models) / len(single_models)
     avg_red_prob = 1.0 - avg_blue_prob
 
-    # Clone base structure from primary model
     ensemble_res = copy.deepcopy(single_models[0])
     ensemble_res['blue_win_probability'] = round(avg_blue_prob, 4)
     ensemble_res['red_win_probability'] = round(avg_red_prob, 4)
@@ -225,6 +276,9 @@ acc_rate = (correct_p / total_g * 100) if total_g > 0 else 0.0
 st.sidebar.metric("Live Accuracy Rate", f"{acc_rate:.1f}%")
 st.sidebar.metric("Record", f"{correct_p} Correct / {total_g} Total")
 
+if st.sidebar.button("📊 View Model Accuracy Chart", use_container_width=True):
+    st.session_state["show_accuracy_chart"] = not st.session_state.get("show_accuracy_chart", False)
+
 st.sidebar.markdown("---")
 with st.sidebar.expander("⚙️ Manual Count Override"):
     st.caption("Adjust counters directly if you missed logging a game live.")
@@ -239,6 +293,42 @@ with st.sidebar.expander("⚙️ Manual Count Override"):
         st.rerun()
 
 st.title("League of Legends Pre-Game Match Predictor")
+
+# --- MODEL ACCURACY COLUMN CHART CONTAINER ---
+if st.session_state.get("show_accuracy_chart", False):
+    with st.container(border=True):
+        st.subheader("📊 Live Accuracy by Model")
+
+        col_slider, col_info = st.columns([2, 1])
+        with col_slider:
+            min_conf = st.slider(
+                "Minimum Model Win Probability Confidence (%)",
+                min_value=50,
+                max_value=100,
+                value=50,
+                step=5,
+                help="Filters accuracy data to games where a model predicted a win probability equal to or greater than this percentage."
+            )
+        with col_info:
+            st.write("")
+            st.caption(f"Showing performance for predictions made with **≥{min_conf}%** confidence.")
+
+        df_accuracy = compute_model_accuracies(tracking_data, min_confidence_pct=min_conf)
+
+        if not df_accuracy.empty:
+            chart_col, table_col = st.columns([3, 2])
+            with chart_col:
+                st.bar_chart(
+                    df_accuracy,
+                    x="Model",
+                    y="Accuracy (%)",
+                    height=300
+                )
+            with table_col:
+                st.markdown("**Model Breakdown**")
+                st.dataframe(df_accuracy, use_container_width=True, hide_index=True)
+        else:
+            st.info(f"No predictions found meeting the minimum confidence threshold of {min_conf}%.")
 
 # --- 1. Team & Series Context Selection ---
 col_blue_header, col_red_header = st.columns(2)
@@ -424,7 +514,6 @@ def render_model_dashboard(model_name: str, results: dict, active_pred: dict, h2
                     m_pred_winner = b_team if m_res['blue_win_probability'] >= 0.5 else r_team
                     m_is_correct = (actual_winner == m_pred_winner)
 
-                    # Always evaluate XGBoost correctness for global accuracy tracking
                     if m_name == "XGBoost":
                         xgb_is_correct = m_is_correct
 
@@ -437,17 +526,14 @@ def render_model_dashboard(model_name: str, results: dict, active_pred: dict, h2
                         "is_correct": m_is_correct
                     })
 
-                # Fallback to current model if XGBoost isn't present in model results
                 if "XGBoost" not in all_model_results:
                     curr_pred = b_team if results['blue_win_probability'] >= 0.5 else r_team
                     xgb_is_correct = (actual_winner == curr_pred)
 
-                # Update global counts strictly based on XGBoost output
                 current_track_data["total_games"] = current_track_data.get("total_games", 0) + 1
                 if xgb_is_correct:
                     current_track_data["correct_predictions"] = current_track_data.get("correct_predictions", 0) + 1
 
-                # Top-level log record containing nested model list
                 log_entry = {
                     "datetime": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                     "blue_team": b_team,
@@ -643,7 +729,6 @@ if "active_prediction" in st.session_state:
 
     st.markdown("## 🤖 Prediction Engine Selector")
 
-    # Build Top-Level Model Selector Tabs dynamically
     model_names = list(model_results.keys())
     model_tabs = st.tabs([f"📌 {m}" if m != "Even Split" else "⚖️ Even Split" for m in model_names])
 

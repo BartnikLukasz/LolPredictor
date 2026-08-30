@@ -177,15 +177,15 @@ def train_elasticnet_model(
 
 
 if __name__ == "__main__":
-    dataset_path = "dataset/pregame/pregame_dataset_final_features.csv"
+    dataset_path = "../dataset/pregame/pregame_dataset_final_features.csv"
 
     # Train with chronological split
     train_elasticnet_model(
         filepath=dataset_path,
         split_date="2026-04-01",
         full_train=False,
-        params_json_path="models/elasticnet_best_params.json",
-        model_output_path="models/elasticnet_model.joblib"
+        params_json_path="../models/elasticnet_best_params.json",
+        model_output_path="../models/elasticnet_model.joblib"
     )
 
     # Train on full dataset (uncomment to run)

@@ -1,16 +1,4 @@
-from catboost_model_trainer import train_catboost
-from champ_stats_calculator import calculate_champion_and_draft_stats
-from download_latest_data import download_latest_match_data
-from elasticnet_model_trainer import train_elasticnet_model
-from elastictree_model_trainer import train_elastictree
-from elo_calculator import compute_team_elo_ratings
-from match_data_converter import prepare_oracles_elixir_pregame
-from player_stats_calculator import compute_player_and_mastery_stats
-from model_trainer import train_lol_prediction_model
-from lightgbm_model_trainer import train_secondary_model
-import pandas as pd
-import numpy as np
-import json
+from trainers.elastictree_model_trainer import train_elastictree
 
 if __name__ == '__main__':
 
@@ -66,10 +54,10 @@ if __name__ == '__main__':
     #                split_date='2026-04-01',
     #                full_train=True)
     #
-    # train_elastictree(filepath=dataset_path,
-    #                   split_date="2026-04-01",
-    #                   full_train=True)
-    #
+    train_elastictree(filepath=dataset_path,
+                      split_date="2026-04-01",
+                      full_train=False)
+
     # train_elasticnet_model(filepath=dataset_path,
     #                        split_date="2026-04-01",
     #                        full_train=True)
