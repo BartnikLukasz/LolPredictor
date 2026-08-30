@@ -6,3 +6,5 @@ xgboost
 scikit-learn
 gdown
 upstash-redis
+joblib
+lightgbm
