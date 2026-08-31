@@ -7,9 +7,9 @@ from catboost import CatBoostClassifier, Pool
 from sklearn.metrics import accuracy_score, log_loss, roc_auc_score, classification_report
 
 # --- PATH CONFIGURATION ---
-DATASET_PATH = "../dataset/pregame/pregame_dataset_final_features.csv"
-PARAMS_PATH = "../models/catboost_best_params.json"
-MODEL_OUTPUT_PATH = "../models/catboost_model.pkl"
+DATASET_PATH = "dataset/pregame/pregame_dataset_final_features.csv"
+PARAMS_PATH = "models/catboost_best_params.json"
+MODEL_OUTPUT_PATH = "models/catboost_model.pkl"
 TARGET_COL = "blue_win"
 
 
@@ -144,6 +144,7 @@ def train_catboost(
 
     # 4. Load Params and Train
     params = load_best_params(params_path)
+    params.pop('best_logloss', None)
     early_stopping_rounds = params.pop("early_stopping_rounds", 30)
 
     model = CatBoostClassifier(**params)

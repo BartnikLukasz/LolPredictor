@@ -11,9 +11,9 @@ from sklearn.pipeline import Pipeline
 from sklearn.metrics import accuracy_score, log_loss, roc_auc_score, classification_report
 
 # --- PATH CONFIGURATION ---
-DATASET_PATH = "../dataset/pregame/pregame_dataset_final_features.csv"
-PARAMS_PATH = "../models/elastictree_best_params.json"
-MODEL_OUTPUT_PATH = "../models/elastictree_model.pkl"
+DATASET_PATH = "dataset/pregame/pregame_dataset_final_features.csv"
+PARAMS_PATH = "models/elastictree_best_params.json"
+MODEL_OUTPUT_PATH = "models/elastictree_model.pkl"
 TARGET_COL = "blue_win"
 
 
@@ -160,6 +160,7 @@ def train_elastictree(
     )
 
     params = load_best_params(params_path)
+    params.pop('best_logloss', None)
     tree_model = ExtraTreesClassifier(**params)
 
     # Wrap preprocessor and classifier in a single Pipeline

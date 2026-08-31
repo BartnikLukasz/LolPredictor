@@ -146,6 +146,7 @@ def train_lol_prediction_model(
         }
 
     # 6. Train XGBoost Model
+    model_params.pop('best_logloss', None)
     if full_train:
         # Remove early_stopping_rounds when there is no evaluation set
         model_params.pop('early_stopping_rounds', None)

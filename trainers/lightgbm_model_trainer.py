@@ -118,6 +118,7 @@ def train_secondary_model(
         params = default_params
 
     # 5. Train LightGBM Model
+    params.pop('best_logloss', None)
     model = LGBMClassifier(**params)
     model.fit(X_train, y_train)
 
