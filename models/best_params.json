@@ -11,5 +11,6 @@
     "eval_metric": "logloss",
     "enable_categorical": true,
     "early_stopping_rounds": 30,
-    "random_state": 42
+    "random_state": 42,
+    "best_logloss": 0.609999
 }

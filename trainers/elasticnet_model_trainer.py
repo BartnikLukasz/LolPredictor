@@ -121,6 +121,7 @@ def train_elasticnet_model(
     )
 
     # Full Pipeline containing both feature transformers and model
+    params.pop('best_logloss', None)
     model_pipeline = Pipeline([
         ('preprocessor', preprocessor),
         ('classifier', LogisticRegression(**params))
