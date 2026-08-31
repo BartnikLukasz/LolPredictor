@@ -188,7 +188,7 @@ def load_predictor_assets():
         else:
             engines[model_name] = base_engine
 
-    with open("team_rosters.json", "r") as f:
+    with open("models/team_rosters.json", "r") as f:
         roster_data = json.load(f)
 
     champ_cols = [c for c in base_engine.df_hist.columns if 'champion' in c]
