@@ -25,6 +25,45 @@ MODEL_REGISTRY = {
 }
 
 
+# --- ADMIN AUTHENTICATION HELPER ---
+def check_is_admin() -> bool:
+    """Checks if the current session is authenticated as the owner/admin."""
+    try:
+        admin_secret = st.secrets.get("ADMIN_KEY", "")
+    except Exception:
+        admin_secret = ""
+
+    if not admin_secret:
+        return False
+
+    if st.query_params.get("admin") == admin_secret:
+        return True
+
+    if st.session_state.get("is_admin", False):
+        return True
+
+    return False
+
+
+# --- SWAP SIDES CALLBACK ---
+def swap_sides_callback():
+    """Swaps selected teams and champion picks between Blue and Red sides."""
+    # Swap Teams
+    temp_blue = st.session_state.get("blue_team_select")
+    temp_red = st.session_state.get("red_team_select")
+    st.session_state["blue_team_select"] = temp_red
+    st.session_state["red_team_select"] = temp_blue
+
+    # Swap Champion Picks
+    for i in range(5):
+        bc_key = f"bc_{i}"
+        rc_key = f"rc_{i}"
+        if bc_key in st.session_state and rc_key in st.session_state:
+            temp_champ = st.session_state[bc_key]
+            st.session_state[bc_key] = st.session_state[rc_key]
+            st.session_state[rc_key] = temp_champ
+
+
 # Initialize Redis connection via Streamlit Secrets
 @st.cache_resource
 def get_redis_client():
@@ -62,14 +101,12 @@ def compute_model_accuracies(tracking_data: dict, min_confidence_pct: float = 50
     threshold = min_confidence_pct / 100.0
 
     for log in tracking_data.get("logs", []):
-        # Multi-model logs format
         if "models" in log and isinstance(log["models"], list):
             for m in log["models"]:
                 name = m.get("model_used")
                 if not name:
                     continue
 
-                # Determine model confidence (highest predicted probability)
                 p_blue = m.get("blue_win_probability", 0.5)
                 p_red = m.get("red_win_probability", 0.5)
                 confidence = max(p_blue, p_red)
@@ -82,7 +119,6 @@ def compute_model_accuracies(tracking_data: dict, min_confidence_pct: float = 50
                 model_stats[name]["total"] += 1
                 if m.get("is_correct"):
                     model_stats[name]["correct"] += 1
-        # Legacy single-model log format (defaulting to XGBoost)
         else:
             name = "XGBoost"
             p_blue = log.get("blue_win_probability", 0.5)
@@ -127,13 +163,10 @@ def load_predictor_assets():
         if os.path.exists(model_path):
             eng = copy.deepcopy(base_engine)
 
-            # Load Native XGBoost JSON
             if model_path.endswith(".json"):
                 model = xgb.XGBClassifier()
                 model.load_model(model_path)
                 eng.model = model
-
-            # Load standard Pickle/Joblib
             else:
                 artifact = joblib.load(model_path)
 
@@ -264,6 +297,7 @@ def create_ensemble_result(model_results_dict: dict) -> dict:
 
 # Load App Assets
 engines, team_rosters, champion_list, df_hist = load_predictor_assets()
+is_admin = check_is_admin()
 
 # --- SIDEBAR: LIVE ACCURACY MONITOR & MANUAL COUNTER ADJUSTER ---
 st.sidebar.title("🎯 Live Accuracy Tracker")
@@ -280,17 +314,45 @@ if st.sidebar.button("📊 View Model Accuracy Chart", use_container_width=True)
     st.session_state["show_accuracy_chart"] = not st.session_state.get("show_accuracy_chart", False)
 
 st.sidebar.markdown("---")
-with st.sidebar.expander("⚙️ Manual Count Override"):
-    st.caption("Adjust counters directly if you missed logging a game live.")
-    manual_total = st.number_input("Total Live Games", min_value=0, value=int(total_g), step=1)
-    manual_correct = st.number_input("Correct Predictions", min_value=0, value=int(correct_p), step=1)
 
-    if st.button("Save Manual Counts", use_container_width=True):
-        tracking_data["total_games"] = int(manual_total)
-        tracking_data["correct_predictions"] = int(manual_correct)
-        save_tracking_data(tracking_data)
-        st.toast("Tracking counts updated successfully!", icon="💾")
-        st.rerun()
+# Manual Override (Gated for Owner/Admin)
+with st.sidebar.expander("⚙️ Manual Count Override"):
+    if is_admin:
+        st.caption("Adjust counters directly if you missed logging a game live.")
+        manual_total = st.number_input("Total Live Games", min_value=0, value=int(total_g), step=1)
+        manual_correct = st.number_input("Correct Predictions", min_value=0, value=int(correct_p), step=1)
+
+        if st.button("Save Manual Counts", use_container_width=True):
+            tracking_data["total_games"] = int(manual_total)
+            tracking_data["correct_predictions"] = int(manual_correct)
+            save_tracking_data(tracking_data)
+            st.toast("Tracking counts updated successfully!", icon="💾")
+            st.rerun()
+    else:
+        st.info("🔒 Owner access required to manually adjust tracking counters.")
+
+# Owner Authentication Widget
+with st.sidebar.expander("🔐 Owner Login"):
+    if is_admin:
+        st.success("Admin Access Unlocked")
+        if st.button("Logout Admin", use_container_width=True):
+            st.session_state["is_admin"] = False
+            st.query_params.clear()
+            st.rerun()
+    else:
+        admin_input = st.text_input("Admin Key", type="password")
+        if st.button("Unlock Admin Features", use_container_width=True):
+            try:
+                secret_key = st.secrets.get("ADMIN_KEY", "")
+            except Exception:
+                secret_key = ""
+
+            if secret_key and admin_input == secret_key:
+                st.session_state["is_admin"] = True
+                st.toast("Unlocked Owner Mode!", icon="🔓")
+                st.rerun()
+            else:
+                st.error("Incorrect Admin Key")
 
 st.title("League of Legends Pre-Game Match Predictor")
 
@@ -331,7 +393,7 @@ if st.session_state.get("show_accuracy_chart", False):
             st.info(f"No predictions found meeting the minimum confidence threshold of {min_conf}%.")
 
 # --- 1. Team & Series Context Selection ---
-col_blue_header, col_red_header = st.columns(2)
+col_blue_header, col_swap_btn, col_red_header = st.columns([4, 2, 4])
 
 with col_blue_header:
     st.subheader("Blue Side")
@@ -340,6 +402,16 @@ with col_blue_header:
         options=list(team_rosters.keys()),
         index=0 if team_rosters else 0,
         key="blue_team_select"
+    )
+
+with col_swap_btn:
+    st.write("")
+    st.write("")
+    st.button(
+        "🔄 Swap Sides",
+        on_click=swap_sides_callback,
+        use_container_width=True,
+        help="Instantly swap Blue and Red team selections and draft picks."
     )
 
 with col_red_header:
@@ -445,17 +517,14 @@ if st.button("Calculate Match Probabilities", type="primary", use_container_widt
         "blue_prev_win": blue_prev_win
     }
 
-    # Evaluate predictions across all registered engines
     all_model_results = {}
     for model_name, eng in engines.items():
         all_model_results[model_name] = eng.predict_match(draft_payload)
 
-    # Calculate "Even Split" Ensemble result
     all_model_results["Even Split"] = create_ensemble_result(all_model_results)
 
     h2h_data = get_historical_team_metrics(df_hist, blue_team, red_team)
 
-    # Automatically post default XGBoost / baseline odds to endpoint
     primary_res = all_model_results.get("XGBoost", next(iter(all_model_results.values())))
     send_odds_to_endpoint(
         blue_team=blue_team,
@@ -464,7 +533,6 @@ if st.button("Calculate Match Probabilities", type="primary", use_container_widt
         p_red=primary_res['red_win_probability']
     )
 
-    # Save calculated active predictions into session state
     st.session_state["active_prediction"] = {
         "blue_team": blue_team,
         "red_team": red_team,
@@ -479,6 +547,7 @@ def render_model_dashboard(model_name: str, results: dict, active_pred: dict, h2
     r_team = active_pred['red_team']
     all_model_results = active_pred['model_results']
     predicted_winner = b_team if results['blue_win_probability'] >= 0.5 else r_team
+    admin_active = check_is_admin()
 
     # Top Level Win Probability Header
     res_b, res_r = st.columns(2)
@@ -503,10 +572,19 @@ def render_model_dashboard(model_name: str, results: dict, active_pred: dict, h2
 
         with act_col2:
             st.write("")
-            if st.button("Save & Log Result", type="secondary", use_container_width=True, key=f"save_btn_{model_name}"):
+            save_disabled = not admin_active
+            help_msg = None if admin_active else "🔒 Locked: Only the app owner can record live game outcomes."
+
+            if st.button(
+                "Save & Log Result",
+                type="primary" if admin_active else "secondary",
+                use_container_width=True,
+                key=f"save_btn_{model_name}",
+                disabled=save_disabled,
+                help=help_msg
+            ):
                 current_track_data = load_tracking_data()
 
-                # Build model prediction details across all active models
                 models_log_list = []
                 xgb_is_correct = False
 

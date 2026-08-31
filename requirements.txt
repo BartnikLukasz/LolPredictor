@@ -9,3 +9,4 @@ upstash-redis
 joblib
 lightgbm
 catboost
+playwright

@@ -1,10 +1,6 @@
 import os
-import re
-import shutil
-import tempfile
 from datetime import datetime, date
-import requests
-import gdown
+from playwright.sync_api import sync_playwright
 
 FOLDER_ID = "1gLSw0RLjBbtaNy0dgnGQDAZOHIgCe-HH"
 FOLDER_URL = f"https://drive.google.com/drive/folders/{FOLDER_ID}"
@@ -12,64 +8,76 @@ TARGET_PATH = "../dataset/match/2026_match_data.csv"
 
 
 def is_updated_today(path: str) -> bool:
-    """Check if the local file exists and was last modified today."""
     if not os.path.exists(path):
         return False
-    file_mtime = datetime.fromtimestamp(os.path.getmtime(path)).date()
-    return file_mtime == date.today()
-
-
-def get_drive_file_id_by_prefix(folder_id: str, prefix: str):
-    """Scrapes the public GDrive folder HTML to quickly locate the single file ID matching the target prefix."""
-    try:
-        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
-        res = requests.get(f"https://drive.google.com/drive/folders/{folder_id}", headers=headers, timeout=10)
-        # Search for embedded GDrive JSON pattern [ "FILE_ID", "2026...csv" ]
-        pattern = rf'\["([a-zA-Z0-9_-]{{25,}})","({prefix}[^"]*\.csv)"'
-        matches = re.findall(pattern, res.text)
-        if matches:
-            return matches[0][0], matches[0][1]  # Returns (file_id, file_name)
-    except Exception as e:
-        print(f"[!] Fast lookup failed ({e}), falling back to full folder download...")
-    return None, None
+    return datetime.fromtimestamp(os.path.getmtime(path)).date() == date.today()
 
 
 def download_latest_match_data(target_path: str = TARGET_PATH):
-    current_year = datetime.now().year
-    year_prefix = str(current_year)
-
-    # 1. Daily check: skip download if updated today
     if is_updated_today(target_path):
-        mtime_str = datetime.fromtimestamp(os.path.getmtime(target_path)).strftime("%Y-%m-%d %H:%M")
-        print(f"[+] Dataset '{target_path}' is up to date (last updated today at {mtime_str}). Skipping download.")
+        print(f"[+] Dataset '{target_path}' is already updated today. Skipping.")
         return
 
-    print(f"[*] Local dataset missing or outdated. Syncing {current_year} match data...")
     os.makedirs(os.path.dirname(target_path), exist_ok=True)
+    year_prefix = str(datetime.now().year)
 
-    # 2. Fast Path: Download only the matching 2026 CSV directly
-    file_id, file_name = get_drive_file_id_by_prefix(FOLDER_ID, year_prefix)
-    if file_id:
-        print(f"[*] Found remote file: '{file_name}' (ID: {file_id})")
-        gdown.download(id=file_id, output=target_path, quiet=False)
-        print(f"[✓] Successfully downloaded and updated '{target_path}'.")
-        return
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context(accept_downloads=True)
+        page = context.new_page()
 
-    # 3. Fallback Path: Fetch folder contents via temp dir
-    print("[*] Running fallback folder download...")
-    with tempfile.TemporaryDirectory() as temp_dir:
-        gdown.download_folder(url=FOLDER_URL, output=temp_dir, quiet=False)
-        matching_files = [
-            f for f in os.listdir(temp_dir)
-            if f.startswith(year_prefix) and f.endswith(".csv")
-        ]
-        if not matching_files:
-            raise FileNotFoundError(f"No CSV file starting with '{year_prefix}' found in folder.")
+        print(f"[*] Navigating to folder: {FOLDER_URL}")
+        page.goto(FOLDER_URL, wait_until="networkidle")
 
-        matching_files.sort(key=lambda f: os.path.getmtime(os.path.join(temp_dir, f)), reverse=True)
-        newest_file = matching_files[0]
-        shutil.copy2(os.path.join(temp_dir, newest_file), target_path)
-        print(f"[✓] Successfully updated '{target_path}' with '{newest_file}'.")
+        # 1. Extract target file ID directly from rendered DOM
+        target_file_id = None
+        target_file_name = None
+
+        elements = page.locator("[data-id]").all()
+        for el in elements:
+            text = el.inner_text()
+            if year_prefix in text and text.endswith(".csv"):
+                target_file_id = el.get_attribute("data-id")
+                target_file_name = text.strip()
+                break
+
+        if not target_file_id:
+            raise FileNotFoundError(
+                f"Could not find a .csv file starting with '{year_prefix}' in the folder."
+            )
+
+        print(f"[*] Found target file: '{target_file_name}' (ID: {target_file_id})")
+
+        # 2. Trigger Direct Endpoint Download
+        download_url = f"https://drive.google.com/uc?export=download&id={target_file_id}"
+
+        try:
+            with page.expect_download(timeout=30000) as download_info:
+                try:
+                    page.goto(download_url)
+                except Exception as goto_err:
+                    # Catch and suppress Playwright's expected download navigation interrupt
+                    if "Download is starting" not in str(goto_err):
+                        raise goto_err
+
+            download = download_info.value
+            download.save_as(target_path)
+            print(f"[✓] Download completed successfully: '{target_path}'")
+
+        except Exception as err:
+            print(f"[!] Direct download fallback triggered: {err}")
+            # Fallback: Click the row's native download action button shown in screenshot
+            row = page.locator(f"[data-id='{target_file_id}']").first
+            row.hover()
+
+            with page.expect_download(timeout=30000) as download_info:
+                page.locator("div[role='button']:has-text('Download'), [aria-label*='Download']").last.click()
+
+            download = download_info.value
+            download.save_as(target_path)
+            print(f"[✓] Download completed via row UI: '{target_path}'")
+
+        browser.close()
 
 
 if __name__ == "__main__":
