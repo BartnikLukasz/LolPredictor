@@ -110,7 +110,7 @@ if __name__ == '__main__':
 
         roster_dict[team] = roster
 
-    with open("team_rosters.json", "w") as f:
+    with open("models/team_rosters.json", "w") as f:
         json.dump(roster_dict, f, indent=4)
 
     print("[ARTIFACT] Saved team rosters to 'team_rosters.json'")

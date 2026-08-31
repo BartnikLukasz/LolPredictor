@@ -18,7 +18,7 @@ def train_lol_prediction_model(
         split_date: str = None,
         full_train: bool = False,
         params_filepath: str = "models/best_params.json",
-        output_model_path: str = "xgboost_model.json"
+        output_model_path: str = "models/xgboost_model.json"
 ) -> tuple[xgb.XGBClassifier, pd.DataFrame]:
     """
     Trains and evaluates an XGBoost model on pre-game LoL match features.
