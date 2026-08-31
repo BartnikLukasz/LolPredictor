@@ -10,3 +10,4 @@ joblib
 lightgbm
 catboost
 playwright
+beautifulsoup4

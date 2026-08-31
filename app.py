@@ -1,14 +1,14 @@
 import copy
 import json
 import os
-import re
 from datetime import datetime
 import xgboost as xgb
 import joblib
 import pandas as pd
 import requests
-from bs4 import BeautifulSoup
 import streamlit as st
+
+from app_helpers import compute_model_accuracies, match_team_name, match_champion_name, fetch_golgg_draft
 from live_feature_engine import LiveFeatureEngine
 from upstash_redis import Redis
 
@@ -24,151 +24,6 @@ MODEL_REGISTRY = {
     "ElasticTree": "models/elastictree_model.pkl",
     "ElasticNet": "models/elasticnet_model.joblib",
 }
-
-
-# --- GOL.GG WEB SCRAPER ENGINE ---
-def fetch_golgg_draft(url: str) -> dict:
-    """Scrapes match draft, teams, and player details directly from a gol.gg game URL."""
-    logs = []
-
-    headers = {
-        'User-Agent': (
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-            'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        )
-    }
-
-    try:
-        response = requests.get(url, headers=headers, timeout=10)
-        logs.append(f"HTTP Status: {response.status_code}")
-    except Exception as e:
-        raise ConnectionError(f"Connection failed: {e}\nLogs:\n" + "\n".join(logs))
-
-    if response.status_code != 200:
-        raise ConnectionError(f"HTTP {response.status_code}: Page unavailable.\nLogs:\n" + "\n".join(logs))
-
-    soup = BeautifulSoup(response.text, 'html.parser')
-
-    # 1. Extract Team Names
-    blue_team_elem = soup.select_one('.blue-line-header a')
-    red_team_elem = soup.select_one('.red-line-header a')
-
-    blue_team = blue_team_elem.get_text(strip=True) if blue_team_elem else ""
-    red_team = red_team_elem.get_text(strip=True) if red_team_elem else ""
-
-    logs.append(f"Teams Extracted -> Blue: '{blue_team}', Red: '{red_team}'")
-
-    # 2. Extract First Pick Side
-    first_pick = "Blue"  # Default fallback
-    first_pick_img = (
-            soup.find('img', src=re.compile(r'first\.png', re.IGNORECASE)) or
-            soup.find('img', alt=re.compile(r'first pick', re.IGNORECASE))
-    )
-
-    if first_pick_img:
-        # Check parent container tree for side keywords
-        curr = first_pick_img.parent
-        found_side = None
-        while curr and curr.name != '[document]':
-            classes = " ".join(curr.get('class', [])).lower()
-            if 'red' in classes:
-                found_side = "Red"
-                break
-            elif 'blue' in classes:
-                found_side = "Blue"
-                break
-            curr = curr.parent
-
-        if found_side:
-            first_pick = found_side
-        else:
-            # Fallback: check DOM position relative to Red Header tag
-            raw_html = str(soup)
-            img_pos = raw_html.find('first.png')
-            red_hdr_pos = raw_html.find('red-line-header')
-            if img_pos != -1 and red_hdr_pos != -1 and img_pos > red_hdr_pos:
-                first_pick = "Red"
-
-    logs.append(f"First Pick: {first_pick}")
-
-    # 3. Extract Player Names & Champion Picks
-    blue_champs, red_champs = [], []
-    blue_players, red_players = [], []
-
-    tables = soup.select('table.playersInfosLine')
-    logs.append(f"Player Info Tables Found: {len(tables)}")
-
-    for idx, tbl in enumerate(tables):
-        # Determine team side by header class or table index position (0=Blue, 1=Red)
-        is_blue = bool(tbl.select_one('.blue-line-header')) or (idx == 0)
-        is_red = bool(tbl.select_one('.red-line-header')) or (idx == 1 and not is_blue)
-
-        # Target champion links directly inside the table cells
-        champ_links = tbl.select('a[href*="/champion/"]')
-        for champ_link in champ_links:
-            # Extract Champion Name
-            champ_img = champ_link.find('img')
-            champ_name = ""
-            if champ_img and champ_img.get('alt'):
-                champ_name = champ_img['alt'].strip()
-            elif champ_link.get('title'):
-                champ_name = champ_link['title'].replace(' stats', '').strip()
-
-            # Extract Player Name from the same cell
-            parent_td = champ_link.find_parent('td')
-            player_link = parent_td.select_one('a.link-blanc') if parent_td else None
-            player_name = player_link.get_text(strip=True) if player_link else ""
-
-            if champ_name:
-                if is_blue:
-                    blue_champs.append(champ_name)
-                    if player_name:
-                        blue_players.append(player_name)
-                elif is_red:
-                    red_champs.append(champ_name)
-                    if player_name:
-                        red_players.append(player_name)
-
-    logs.append(f"Blue Side -> Champs: {blue_champs} | Players: {blue_players}")
-    logs.append(f"Red Side  -> Champs: {red_champs} | Players: {red_players}")
-
-    # Validation Guard
-    if len(blue_champs) < 5 or len(red_champs) < 5:
-        raise ValueError(
-            f"Draft extraction incomplete (Found Blue: {len(blue_champs)}, Red: {len(red_champs)}).\n"
-            f"--- DEBUG LOGS ---\n" + "\n".join(logs)
-        )
-
-    return {
-        "blue_team": blue_team,
-        "red_team": red_team,
-        "first_pick": first_pick,
-        "blue_champs": blue_champs[:5],
-        "red_champs": red_champs[:5],
-        "blue_players": blue_players[:5],
-        "red_players": red_players[:5],
-        "debug_logs": logs
-    }
-
-def match_team_name(scraped_name: str, valid_teams: list) -> str:
-    if not scraped_name or not valid_teams:
-        return valid_teams[0] if valid_teams else ""
-    scraped_clean = scraped_name.lower().strip()
-    for team in valid_teams:
-        if team.lower().strip() == scraped_clean or scraped_clean in team.lower() or team.lower() in scraped_clean:
-            return team
-    return valid_teams[0]
-
-
-def match_champion_name(scraped_name: str, valid_champions: list) -> str:
-    if not scraped_name or not valid_champions:
-        return valid_champions[0] if valid_champions else ""
-    scraped_clean = re.sub(r'[^a-zA-Z0-9]', '', scraped_name).lower()
-    for champ in valid_champions:
-        champ_clean = re.sub(r'[^a-zA-Z0-9]', '', champ).lower()
-        if scraped_clean == champ_clean:
-            return champ
-    return valid_champions[0]
 
 
 def check_is_admin() -> bool:
@@ -220,41 +75,6 @@ def load_tracking_data() -> dict:
 
 def save_tracking_data(data: dict):
     redis.set(TRACKING_KEY, json.dumps(data))
-
-
-def compute_model_accuracies(tracking_data: dict, min_confidence_pct: float = 50.0) -> pd.DataFrame:
-    model_stats = {}
-    threshold = min_confidence_pct / 100.0
-
-    for log in tracking_data.get("logs", []):
-        if "models" in log and isinstance(log["models"], list):
-            for m in log["models"]:
-                name = m.get("model_used")
-                if not name:
-                    continue
-                p_blue = m.get("blue_win_probability", 0.5)
-                p_red = m.get("red_win_probability", 0.5)
-                if max(p_blue, p_red) < threshold:
-                    continue
-                if name not in model_stats:
-                    model_stats[name] = {"correct": 0, "total": 0}
-                model_stats[name]["total"] += 1
-                if m.get("is_correct"):
-                    model_stats[name]["correct"] += 1
-
-    rows = [
-        {
-            "Model": k,
-            "Accuracy (%)": round((v["correct"] / v["total"] * 100), 1) if v["total"] > 0 else 0.0,
-            "Correct": v["correct"],
-            "Total": v["total"]
-        }
-        for k, v in model_stats.items()
-    ]
-    df_acc = pd.DataFrame(rows)
-    if not df_acc.empty:
-        df_acc = df_acc.sort_values(by="Accuracy (%)", ascending=False).reset_index(drop=True)
-    return df_acc
 
 
 @st.cache_resource
@@ -625,29 +445,70 @@ def render_model_dashboard(model_name: str, results: dict, active_pred: dict, h2
 
     with tab_elo:
         e1, e2, e3 = st.columns(3)
+        elo_base = results.get('elo_metrics', {}).get('elo_implied_blue_winrate', 50.0)
         e1.metric(f"{b_team} Elo", f"{results['elo_metrics']['blue_elo']}")
         e2.metric(f"{r_team} Elo", f"{results['elo_metrics']['red_elo']}")
-        e3.metric("Elo Implied Winrate", f"{results['elo_metrics']['elo_implied_blue_winrate']}%")
+        e3.metric("Elo Implied Winrate", f"{elo_base}%")
 
     with tab_players:
-        player_rows = [{
-            "Role": r['role'],
-            f"{b_team} Player": r['blue_player'],
-            "Blue WR": f"{round(r['blue_p_wr']*100, 1)}%",
-            f"{r_team} Player": r['red_player'],
-            "Red WR": f"{round(r['red_p_wr']*100, 1)}%"
-        } for r in results['role_breakdown']]
-        st.table(pd.DataFrame(player_rows))
+        player_rows = []
+        for r in results.get('role_breakdown', []):
+            b_p_wr = r.get('blue_p_wr', 0.5) * 100
+            r_p_wr = r.get('red_p_wr', 0.5) * 100
+            player_rows.append({
+                "Role": r['role'],
+                f"{b_team} Player": r['blue_player'],
+                "Blue WR": f"{b_p_wr:.1f}%",
+                f"{r_team} Player": r['red_player'],
+                "Red WR": f"{r_p_wr:.1f}%",
+                "Mastery Swing": f"{(b_p_wr - r_p_wr):+.1f}%"
+            })
+        st.dataframe(pd.DataFrame(player_rows), use_container_width=True, hide_index=True)
 
     with tab_draft:
-        champ_rows = [{
-            "Role": r['role'],
-            f"{b_team} Pick": r['blue_champ'],
-            "Blue Champ WR": f"{round(r['blue_c_wr']*100, 1)}%",
-            f"{r_team} Pick": r['red_champ'],
-            "Red Champ WR": f"{round(r['red_c_wr']*100, 1)}%"
-        } for r in results['role_breakdown']]
-        st.table(pd.DataFrame(champ_rows))
+        # 1. High-level Percentage Swing Impact Metrics
+        elo_base_pct = results.get('elo_metrics', {}).get('elo_implied_blue_winrate', 50.0)
+        final_blue_pct = results.get('blue_win_percentage', 50.0)
+        total_draft_swing = round(final_blue_pct - elo_base_pct, 1)
+
+        role_data = results.get('role_breakdown', [])
+        if role_data:
+            avg_b_c_wr = sum(r.get('blue_c_wr', 0.5) for r in role_data) / len(role_data) * 100
+            avg_r_c_wr = sum(r.get('red_c_wr', 0.5) for r in role_data) / len(role_data) * 100
+            draft_comp_delta = round(avg_b_c_wr - avg_r_c_wr, 1)
+        else:
+            avg_b_c_wr, avg_r_c_wr, draft_comp_delta = 50.0, 50.0, 0.0
+
+        # Render Summary Cards
+        d1, d2, d3 = st.columns(3)
+        d1.metric("Total Draft Swing (vs Elo)", f"{total_draft_swing:+.1f}%", help="Win probability change added/lost from draft relative to Elo expectation.")
+        d2.metric(f"{b_team} Draft Winrate", f"{avg_b_c_wr:.1f}%")
+        d3.metric("Champ Composition Delta", f"{draft_comp_delta:+.1f}%", help="Direct winrate differential between Blue and Red champion picks.")
+
+        # 2. Check for explicit model feature impacts if available in model outputs
+        explicit_impacts = results.get("draft_impact", results.get("impact_breakdown", None))
+        if explicit_impacts and isinstance(explicit_impacts, dict):
+            st.markdown("#### 🔍 Model Feature Impact Breakdown")
+            imp_cols = st.columns(len(explicit_impacts))
+            for idx, (imp_name, imp_val) in enumerate(explicit_impacts.items()):
+                imp_cols[idx].metric(imp_name, f"{imp_val:+.1f}%")
+
+        # 3. Role-by-Role Draft Swing Breakdown
+        st.markdown("#### 🎯 Role-by-Role Draft Swing Breakdown")
+        champ_rows = []
+        for r in role_data:
+            b_c_wr = r.get('blue_c_wr', 0.5) * 100
+            r_c_wr = r.get('red_c_wr', 0.5) * 100
+            role_swing = round(b_c_wr - r_c_wr, 1)
+            champ_rows.append({
+                "Role": r['role'],
+                f"{b_team} Pick": r['blue_champ'],
+                "Blue Champ WR": f"{b_c_wr:.1f}%",
+                f"{r_team} Pick": r['red_champ'],
+                "Red Champ WR": f"{r_c_wr:.1f}%",
+                "Role Impact Swing": f"{role_swing:+.1f}%"
+            })
+        st.dataframe(pd.DataFrame(champ_rows), use_container_width=True, hide_index=True)
 
     with tab_h2h:
         st.info(f"Historical Matchups: {h2h_data['total_h2h']} | {b_team} H2H Winrate: {h2h_data['blue_h2h_wr']}%")
