@@ -37,6 +37,18 @@ def check_is_admin() -> bool:
         return True
     return False
 
+# --- TEAM ROSTER CALLBACKS ---
+def update_blue_roster_callback():
+    selected_team = st.session_state.get("blue_team_select")
+    roster = team_rosters.get(selected_team, ["", "", "", "", ""])
+    for i in range(5):
+        st.session_state[f"bp_{i}"] = roster[i] if i < len(roster) else ""
+
+def update_red_roster_callback():
+    selected_team = st.session_state.get("red_team_select")
+    roster = team_rosters.get(selected_team, ["", "", "", "", ""])
+    for i in range(5):
+        st.session_state[f"rp_{i}"] = roster[i] if i < len(roster) else ""
 
 def swap_sides_callback():
     temp_blue = st.session_state.get("blue_team_select")
@@ -278,12 +290,31 @@ with st.expander("🌐 Import Match Draft from gol.gg", expanded=True):
             else:
                 st.warning("Please enter a valid gol.gg match URL.")
 
+# --- INITIALIZE DEFAULT ROSTERS IN SESSION STATE IF UNSET ---
+if "bp_0" not in st.session_state:
+    initial_blue = st.session_state.get("blue_team_select", list(team_rosters.keys())[0] if team_rosters else "")
+    blue_def = team_rosters.get(initial_blue, ["", "", "", "", ""])
+    for i in range(5):
+        st.session_state[f"bp_{i}"] = blue_def[i] if i < len(blue_def) else ""
+
+if "rp_0" not in st.session_state:
+    initial_red_idx = 1 if len(team_rosters) > 1 else 0
+    initial_red = st.session_state.get("red_team_select", list(team_rosters.keys())[initial_red_idx] if team_rosters else "")
+    red_def = team_rosters.get(initial_red, ["", "", "", "", ""])
+    for i in range(5):
+        st.session_state[f"rp_{i}"] = red_def[i] if i < len(red_def) else ""
+
 # --- TEAM & SERIES CONTEXT ---
 col_blue_header, col_swap_btn, col_red_header = st.columns([4, 2, 4])
 
 with col_blue_header:
     st.subheader("Blue Side")
-    blue_team = st.selectbox("Select Blue Team", options=list(team_rosters.keys()), key="blue_team_select")
+    blue_team = st.selectbox(
+        "Select Blue Team",
+        options=list(team_rosters.keys()),
+        key="blue_team_select",
+        on_change=update_blue_roster_callback
+    )
 
 with col_swap_btn:
     st.write("")
@@ -292,7 +323,13 @@ with col_swap_btn:
 
 with col_red_header:
     st.subheader("Red Side")
-    red_team = st.selectbox("Select Red Team", options=list(team_rosters.keys()), index=1 if len(team_rosters) > 1 else 0, key="red_team_select")
+    red_team = st.selectbox(
+        "Select Red Team",
+        options=list(team_rosters.keys()),
+        index=1 if len(team_rosters) > 1 else 0,
+        key="red_team_select",
+        on_change=update_red_roster_callback
+    )
 
 st.markdown("##### 🎮 Match & Series Context")
 s1, s2, s3, s4 = st.columns(4)
@@ -310,16 +347,6 @@ st.markdown("---")
 
 # --- STABLE PLAYER ROSTERS & DRAFT GRID ---
 roles = ["Top", "Jungle", "Mid", "ADC", "Support"]
-blue_default = team_rosters.get(blue_team, ["", "", "", "", ""])
-red_default = team_rosters.get(red_team, ["", "", "", "", ""])
-
-# Ensure session state exists prior to rendering without conflicting `value=` arguments
-for i in range(5):
-    if f"bp_{i}" not in st.session_state:
-        st.session_state[f"bp_{i}"] = blue_default[i] if i < len(blue_default) else ""
-    if f"rp_{i}" not in st.session_state:
-        st.session_state[f"rp_{i}"] = red_default[i] if i < len(red_default) else ""
-
 c1, c2, c3, c4 = st.columns([2, 3, 2, 3])
 blue_players, blue_champs = [], []
 red_players, red_champs = [], []
