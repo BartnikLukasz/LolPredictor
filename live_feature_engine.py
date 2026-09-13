@@ -255,23 +255,58 @@ class LiveFeatureEngine:
 
     def predict_match(self, draft_payload: dict) -> dict:
         feature_df = self.build_feature_vector(draft_payload)
-        feature_df = self._align_dtypes_and_shape(feature_df)
+        aligned_df = self._align_dtypes_and_shape(feature_df)
 
-        # Model Inference
+        # 1. Full Final Prediction
         if hasattr(self.model, "predict_proba"):
-            proba_blue = float(self.model.predict_proba(feature_df)[0][1])
+            proba_blue = float(self.model.predict_proba(aligned_df)[0][1])
         else:
-            dmatrix = xgb.DMatrix(feature_df, enable_categorical=True)
+            dmatrix = xgb.DMatrix(aligned_df, enable_categorical=True)
             proba_blue = float(self.model.predict(dmatrix)[0])
 
         proba_red = 1.0 - proba_blue
 
+        # 2. Stage 1: Pure Elo Baseline
         blue_team = draft_payload.get('blue_team', 'Blue Team')
         red_team = draft_payload.get('red_team', 'Red Team')
         b_elo = self.latest_elo.get(blue_team, 1500.0)
         r_elo = self.latest_elo.get(red_team, 1500.0)
         elo_diff = (b_elo + (10.0 if draft_payload.get('blue_firstpick', 1) == 1 else -10.0)) - r_elo
-        elo_implied_prob = 1.0 / (1.0 + 10.0 ** (-elo_diff / 400.0))
+        elo_base_prob = 1.0 / (1.0 + 10.0 ** (-elo_diff / 400.0))
+
+        # 3. Stage 2: Elo + Player Mastery (Masking Champion Picks to Defaults)
+        player_stage_df = aligned_df.copy()
+        for col in player_stage_df.columns:
+            if col.endswith('_champion'):
+                player_stage_df[col] = 'missing' if 'catboost' in str(type(self.model)).lower() else None
+            elif col.endswith('_champ_winrate_pre'):
+                player_stage_df[col] = 0.50
+            elif col.endswith('_champ_games_pre'):
+                player_stage_df[col] = 10
+
+        try:
+            if hasattr(self.model, "predict_proba"):
+                player_stage_prob = float(self.model.predict_proba(player_stage_df)[0][1])
+            else:
+                dmatrix_p = xgb.DMatrix(player_stage_prob, enable_categorical=True)
+                player_stage_prob = float(self.model.predict(dmatrix_p)[0])
+        except Exception:
+            player_stage_prob = elo_base_prob
+
+        # Calculate Swings
+        elo_pct = round(elo_base_prob * 100, 2)
+        player_pct = round(player_stage_prob * 100, 2)
+        final_pct = round(proba_blue * 100, 2)
+
+        player_swing = round(player_pct - elo_pct, 2)
+        draft_swing = round(final_pct - player_pct, 2)
+
+        # Progression Map for Line/Waterfall Charts
+        progression_data = pd.DataFrame({
+            "Stage": ["1. Elo Baseline", "2. Player Mastery Impact", "3. Champion Draft Impact", "4. Final Prediction"],
+            f"{blue_team} Win %": [elo_pct, player_pct, final_pct, final_pct],
+            "Impact Delta": [0.0, player_swing, draft_swing, 0.0]
+        })
 
         # Role Breakdown
         role_breakdown = []
@@ -313,8 +348,14 @@ class LiveFeatureEngine:
         return {
             'blue_win_probability': proba_blue,
             'red_win_probability': proba_red,
-            'blue_win_percentage': round(proba_blue * 100, 2),
+            'blue_win_percentage': final_pct,
             'red_win_percentage': round(proba_red * 100, 2),
+            'progression_data': progression_data,
+            'draft_swings': {
+                'player_swing': player_swing,
+                'draft_swing': draft_swing,
+                'total_swing': round(final_pct - elo_pct, 2)
+            },
             'series_metrics': {
                 'game_number': draft_payload.get('game_number', 1),
                 'blue_series_lead': draft_payload.get('blue_series_lead', 0),
@@ -324,7 +365,7 @@ class LiveFeatureEngine:
                 'blue_elo': round(b_elo, 1),
                 'red_elo': round(r_elo, 1),
                 'elo_diff': round(elo_diff, 1),
-                'elo_implied_blue_winrate': round(elo_implied_prob * 100, 2)
+                'elo_implied_blue_winrate': elo_pct
             },
             'player_metrics': {
                 'avg_blue_p_wr': round(avg_blue_p_wr * 100, 2),

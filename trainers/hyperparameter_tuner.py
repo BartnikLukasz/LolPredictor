@@ -587,27 +587,27 @@ if __name__ == "__main__":
         n_trials=800,
         output_json_path="../models/best_lightgbm_params.json"
     )
-    #
-    # # Optimize CatBoost
-    # optimize_catboost_hyperparameters(
-    #     filepath=dataset_path,
-    #     split_date="2026-04-01",
-    #     n_trials=400,
-    #     output_json_path="../models/catboost_best_params.json"
-    # )
-    #
-    # # Optimize ElasticTree
-    # optimize_elastictree_hyperparameters(
-    #     filepath=dataset_path,
-    #     split_date="2026-04-01",
-    #     n_trials=400,
-    #     output_json_path="../models/elastictree_best_params.json"
-    # )
-    #
-    # # Optimize ElasticNet
-    # optimize_elasticnet_hyperparameters(
-    #     filepath=dataset_path,
-    #     split_date="2026-04-01",
-    #     n_trials=400,
-    #     output_json_path="../models/elasticnet_best_params.json"
-    # )
+
+    # Optimize CatBoost
+    optimize_catboost_hyperparameters(
+        filepath=dataset_path,
+        split_date="2026-04-01",
+        n_trials=400,
+        output_json_path="../models/catboost_best_params.json"
+    )
+
+    # Optimize ElasticTree
+    optimize_elastictree_hyperparameters(
+        filepath=dataset_path,
+        split_date="2026-04-01",
+        n_trials=400,
+        output_json_path="../models/elastictree_best_params.json"
+    )
+
+    # Optimize ElasticNet
+    optimize_elasticnet_hyperparameters(
+        filepath=dataset_path,
+        split_date="2026-04-01",
+        n_trials=400,
+        output_json_path="../models/elasticnet_best_params.json"
+    )

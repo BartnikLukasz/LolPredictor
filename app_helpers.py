@@ -1,8 +1,11 @@
 import re
+from difflib import SequenceMatcher
+
 from bs4 import BeautifulSoup
 import requests
 import pandas as pd
-
+import copy
+import numpy as np
 
 def fetch_golgg_draft(url: str) -> dict:
     """Scrapes match draft, teams, and player details directly from a gol.gg game URL."""
@@ -128,15 +131,59 @@ def fetch_golgg_draft(url: str) -> dict:
     }
 
 
-
-def match_team_name(scraped_name: str, valid_teams: list) -> str:
+def match_team_name(
+        scraped_name: str,
+        valid_teams: list[str],
+        fetched_players: list[str] = None,
+        team_rosters: dict = None,
+        df_hist: pd.DataFrame = None
+) -> str:
     if not scraped_name or not valid_teams:
         return valid_teams[0] if valid_teams else ""
-    scraped_clean = scraped_name.lower().strip()
+
+    scraped_clean = scraped_name.strip().lower()
+
+    # 1. Exact or case-insensitive match
     for team in valid_teams:
-        if team.lower().strip() == scraped_clean or scraped_clean in team.lower() or team.lower() in scraped_clean:
+        if scraped_clean == team.strip().lower():
             return team
-    return valid_teams[0]
+
+    # 2. Player Roster Overlap (Best for rebrands like SKT -> T1)
+    if fetched_players and team_rosters:
+        scraped_players_set = {p.strip().lower() for p in fetched_players if p and p.strip()}
+        if scraped_players_set:
+            best_roster_match = None
+            max_overlap = 0
+
+            for team_name in valid_teams:
+                known_roster = {p.strip().lower() for p in team_rosters.get(team_name, []) if p}
+                overlap = len(scraped_players_set.intersection(known_roster))
+                if overlap > max_overlap:
+                    max_overlap = overlap
+                    best_roster_match = team_name
+
+            # If 2 or more roster players match, prioritize this team entity
+            if best_roster_match and max_overlap >= 2:
+                return best_roster_match
+
+    # 3. Recency-weighted fuzzy matching via df_hist
+    candidate_scores = []
+    for team in valid_teams:
+        sim_score = SequenceMatcher(None, scraped_clean, team.lower()).ratio()
+
+        # Determine latest match date in df_hist if column exists
+        latest_date = pd.Timestamp.min
+        if df_hist is not None and ('date' in df_hist.columns or 'date_utc' in df_hist.columns):
+            date_col = 'date' if 'date' in df_hist.columns else 'date_utc'
+            team_matches = df_hist[(df_hist['team_blue'] == team) | (df_hist['team_red'] == team)]
+            if not team_matches.empty:
+                latest_date = pd.to_datetime(team_matches[date_col]).max()
+
+        candidate_scores.append((team, sim_score, latest_date))
+
+    # Sort primarily by similarity score, secondarily by most recent match date
+    candidate_scores.sort(key=lambda x: (x[1], x[2]), reverse=True)
+    return candidate_scores[0][0]
 
 
 def match_champion_name(scraped_name: str, valid_champions: list) -> str:
@@ -182,3 +229,115 @@ def compute_model_accuracies(tracking_data: dict, min_confidence_pct: float = 50
     if not df_acc.empty:
         df_acc = df_acc.sort_values(by="Accuracy (%)", ascending=False).reset_index(drop=True)
     return df_acc
+
+def get_historical_team_metrics(df_hist, blue_team, red_team):
+    h2h_matches = df_hist[
+        ((df_hist['blue_team'] == blue_team) & (df_hist['red_team'] == red_team)) |
+        ((df_hist['blue_team'] == red_team) & (df_hist['red_team'] == blue_team))
+    ].sort_values('date', ascending=False)
+
+    total_h2h = len(h2h_matches)
+    blue_h2h_wins = 0
+    if total_h2h > 0:
+        for _, row in h2h_matches.iterrows():
+            if (row['blue_team'] == blue_team and row['blue_win'] == 1) or (row['red_team'] == blue_team and row['blue_win'] == 0):
+                blue_h2h_wins += 1
+
+    blue_matches = df_hist[(df_hist['blue_team'] == blue_team) | (df_hist['red_team'] == blue_team)].sort_values('date', ascending=False).head(10)
+    red_matches = df_hist[(df_hist['blue_team'] == red_team) | (df_hist['red_team'] == red_team)].sort_values('date', ascending=False).head(10)
+
+    blue_recent_wins = sum((row['blue_win'] == 1 if row['blue_team'] == blue_team else row['blue_win'] == 0) for _, row in blue_matches.iterrows())
+    red_recent_wins = sum((row['blue_win'] == 1 if row['red_team'] == red_team else row['blue_win'] == 0) for _, row in red_matches.iterrows())
+
+    return {
+        'total_h2h': total_h2h,
+        'blue_h2h_wins': blue_h2h_wins,
+        'red_h2h_wins': total_h2h - blue_h2h_wins,
+        'blue_h2h_wr': round((blue_h2h_wins / total_h2h * 100), 1) if total_h2h > 0 else 50.0,
+        'blue_recent_wr': round((blue_recent_wins / max(len(blue_matches), 1) * 100), 1),
+        'red_recent_wr': round((red_recent_wins / max(len(red_matches), 1) * 100), 1)
+    }
+
+
+def prob_to_american_odds(prob: float) -> str:
+    if prob <= 0 or prob >= 1:
+        return "N/A"
+    return f"{int(round(-100 * prob / (1 - prob)))}" if prob >= 0.5 else f"+{int(round(100 * (1 - prob) / prob))}"
+
+
+def create_ensemble_result(model_results_dict: dict) -> dict:
+    single_models = [res for key, res in model_results_dict.items() if key != "Even Split"]
+    avg_blue_prob = sum(res['blue_win_probability'] for res in single_models) / len(single_models)
+    ensemble_res = copy.deepcopy(single_models[0])
+    ensemble_res['blue_win_probability'] = round(avg_blue_prob, 4)
+    ensemble_res['red_win_probability'] = round(1.0 - avg_blue_prob, 4)
+    ensemble_res['blue_win_percentage'] = round(avg_blue_prob * 100, 1)
+    ensemble_res['red_win_percentage'] = round((1.0 - avg_blue_prob) * 100, 1)
+    return ensemble_res
+
+def compute_db_model_weights(tracking_data: dict, model_names: list) -> tuple[dict, dict]:
+    """Calculates model weights dynamically on page load based on historical recorded accuracy in Redis DB."""
+    stats = {m: {"total": 0, "correct": 0} for m in model_names}
+    logs = tracking_data.get("logs", [])
+
+    for entry in logs:
+        for m_log in entry.get("models", []):
+            m_name = m_log.get("model_used")
+            if m_name in stats:
+                stats[m_name]["total"] += 1
+                if m_log.get("is_correct", False):
+                    stats[m_name]["correct"] += 1
+
+    accuracies = {}
+    for m in model_names:
+        tot = stats[m]["total"]
+        accuracies[m] = (stats[m]["correct"] / tot) if tot > 0 else 0.50
+
+    T = 0.1
+    exp_acc = {m: np.exp(acc / T) for m, acc in accuracies.items()}
+    tot_exp = sum(exp_acc.values())
+    weights = {m: exp_val / tot_exp for m, exp_val in exp_acc.items()}
+
+    return weights, accuracies
+
+
+def create_weighted_ensemble_result(all_model_results: dict, model_weights: dict) -> dict:
+    """Combines predictions using normalized accuracy weights from DB."""
+    base_results = {k: v for k, v in all_model_results.items() if k in model_weights}
+    if not base_results:
+        return next(iter(all_model_results.values()))
+
+    w_sum = sum(model_weights[k] for k in base_results.keys())
+    norm_weights = {k: (model_weights[k] / w_sum if w_sum > 0 else 1.0 / len(base_results)) for k in base_results.keys()}
+
+    w_p_blue = sum(norm_weights[m] * base_results[m]['blue_win_probability'] for m in base_results)
+    w_p_red = 1.0 - w_p_blue
+
+    w_player_swing = sum(norm_weights[m] * base_results[m].get('draft_swings', {}).get('player_swing', 0.0) for m in base_results)
+    w_draft_swing = sum(norm_weights[m] * base_results[m].get('draft_swings', {}).get('draft_swing', 0.0) for m in base_results)
+
+    first_res = next(iter(base_results.values()))
+    elo_base = first_res.get('elo_metrics', {}).get('elo_implied_blue_winrate', 50.0)
+
+    final_pct = round(w_p_blue * 100, 2)
+    player_pct = round(elo_base + w_player_swing, 2)
+
+    progression_data = pd.DataFrame({
+        "Stage": ["1. Elo Baseline", "2. Player Mastery Impact", "3. Champion Draft Impact", "4. Final Prediction"],
+        "Win %": [elo_base, player_pct, final_pct, final_pct],
+        "Impact Delta": [0.0, round(w_player_swing, 2), round(w_draft_swing, 2), 0.0]
+    })
+
+    res = copy.deepcopy(first_res)
+    res['blue_win_probability'] = w_p_blue
+    res['red_win_probability'] = w_p_red
+    res['blue_win_percentage'] = final_pct
+    res['red_win_percentage'] = round(w_p_red * 100, 2)
+    res['progression_data'] = progression_data
+    res['draft_swings'] = {
+        'player_swing': round(w_player_swing, 2),
+        'draft_swing': round(w_draft_swing, 2),
+        'total_swing': round(final_pct - elo_base, 2)
+    }
+    res['weights_used'] = norm_weights
+    return res
