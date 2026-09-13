@@ -50,17 +50,14 @@ class LiveFeatureEngine:
 
     def _extract_model_feature_names(self) -> list:
         """Extracts the exact ordered list of feature names expected by the model."""
-        # Check Scikit-Learn wrapper feature names attribute
         if hasattr(self.model, "feature_names_in_") and self.model.feature_names_in_ is not None:
             return list(self.model.feature_names_in_)
 
-        # Check LightGBM Booster feature names
         if hasattr(self.model, "booster_") and hasattr(self.model.booster_, "feature_name"):
             fn = self.model.booster_.feature_name()
             if fn and len(fn) > 0 and not fn[0].startswith("Column_"):
                 return list(fn)
 
-        # Check XGBoost Booster feature names
         if hasattr(self.model, "get_booster"):
             try:
                 fn = self.model.get_booster().feature_names
@@ -201,32 +198,50 @@ class LiveFeatureEngine:
         """Aligns DataFrame column types and strictly forces model feature count."""
         df = df.copy()
 
-        # Determine target feature count expected by LightGBM
+        model_type_str = str(type(self.model)).lower()
+        is_catboost = "catboost" in model_type_str
+        is_lgb = "lightgbm" in model_type_str
+
+        saved_cats = getattr(self.model, "pandas_categorical_", None)
+
+        for col in df.columns:
+            if col.endswith('_champion') or col.endswith('_player') or col.endswith('_team'):
+                if is_catboost:
+                    # CatBoost requires string/int values and explicitly rejects NaN / float
+                    if col in self.df_hist.columns:
+                        known_cats = set(str(x) for x in self.df_hist[col].dropna().unique())
+                        vals = df[col].astype(str)
+                        df[col] = vals.apply(lambda x: x if x in known_cats else 'missing')
+                    else:
+                        df[col] = df[col].fillna('missing').astype(str)
+
+                    df[col] = df[col].replace({'nan': 'missing', 'NaN': 'missing', 'None': 'missing', '': 'missing'})
+
+                elif saved_cats and col in saved_cats:
+                    df[col] = pd.Categorical(df[col].astype(str), categories=saved_cats[col])
+
+                elif is_lgb and not saved_cats:
+                    df[col] = df[col].astype('category').cat.codes.astype('float64')
+
+                else:
+                    # XGBoost & standard models: uses pd.Categorical where unseen picks become NaN
+                    if col in self.df_hist.columns:
+                        known_cats = [str(x) for x in self.df_hist[col].dropna().unique().tolist()]
+                        df[col] = pd.Categorical(df[col].astype(str), categories=known_cats)
+                    else:
+                        df[col] = df[col].astype('category')
+            else:
+                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
+
+        # Truncate or pad columns if feature count still mismatches exact target shape
         target_n_features = None
         if hasattr(self.model, "n_features_in_"):
             target_n_features = self.model.n_features_in_
         elif hasattr(self.model, "booster_") and hasattr(self.model.booster_, "num_feature"):
             target_n_features = self.model.booster_.num_feature()
 
-        # Handle LightGBM categorical variables
-        is_lgb = "lightgbm" in str(type(self.model)).lower()
-        saved_cats = getattr(self.model, "pandas_categorical_", None)
-
-        for col in df.columns:
-            if saved_cats and col in saved_cats:
-                df[col] = pd.Categorical(df[col].astype(str), categories=saved_cats[col])
-            elif col.endswith('_champion') or col.endswith('_player') or col.endswith('_team'):
-                if is_lgb and not saved_cats:
-                    df[col] = df[col].astype('category').cat.codes.astype('float64')
-                else:
-                    df[col] = df[col].astype('category')
-            else:
-                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
-
-        # Truncate or pad columns if feature count still mismatches exact target shape
         if target_n_features and df.shape[1] != target_n_features:
             if df.shape[1] > target_n_features:
-                # Exclude metadata columns first
                 clean_cols = [c for c in df.columns if c not in META_COLUMNS]
                 if len(clean_cols) == target_n_features:
                     df = df[clean_cols]
@@ -323,31 +338,3 @@ class LiveFeatureEngine:
             },
             'role_breakdown': role_breakdown
         }
-
-
-if __name__ == "__main__":
-    dataset_file = "dataset/pregame/pregame_dataset_final_features.csv"
-
-    if os.path.exists(dataset_file) and os.path.exists("models/xgboost_model.json"):
-        engine = LiveFeatureEngine(dataset_path=dataset_file)
-
-        sample_draft = {
-            "blue_team": "T1",
-            "red_team": "Gen.G",
-            "blue_players": ["Doran", "Oner", "Faker", "Gumayusi", "Keria"],
-            "red_players": ["Kiin", "Canyon", "Chovy", "Ruler", "Duro"],
-            "blue_champs": ["Aatrox", "Sejuani", "Ahri", "Jinx", "Nautilus"],
-            "red_champs": ["K'Sante", "Vi", "Azir", "Varus", "Rakan"],
-            "blue_firstpick": 1,
-            "game_number": 3,
-            "blue_series_lead": 1,
-            "blue_prev_win": 1
-        }
-
-        result = engine.predict_match(sample_draft)
-        print("\n" + "=" * 45)
-        print("          LIVE MATCH PREDICTION RESULT          ")
-        print("=" * 45)
-        print(f"Blue Side ({sample_draft['blue_team']}): {result['blue_win_percentage']}%")
-        print(f"Red Side  ({sample_draft['red_team']}): {result['red_win_percentage']}%")
-        print("=" * 45)
