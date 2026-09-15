@@ -93,6 +93,11 @@ def optimize_xgboost_hyperparameters(
     ]
     champ_features = [c for c in champ_features if c in df.columns]
 
+    new_step_features = [
+        col for col in df.columns
+        if col.startswith('diff_') or 'hist_' in col or 'roll_' in col
+    ]
+
     feature_cols = (
         elo_features +
         series_features +
@@ -100,7 +105,8 @@ def optimize_xgboost_hyperparameters(
         h2h_matchup_features +
         synergy_roster_features +
         draft_champ_features +
-        champ_features
+        champ_features +
+        new_step_features
     )
     feature_cols = [col for col in dict.fromkeys(feature_cols) if col in df.columns]
 
@@ -200,6 +206,11 @@ def optimize_lightgbm_hyperparameters(
     ]
     champ_features = [c for c in champ_features if c in df.columns]
 
+    new_step_features = [
+        col for col in df.columns
+        if col.startswith('diff_') or 'hist_' in col or 'roll_' in col
+    ]
+
     feature_cols = (
         elo_features +
         series_features +
@@ -207,7 +218,8 @@ def optimize_lightgbm_hyperparameters(
         h2h_matchup_features +
         synergy_roster_features +
         draft_champ_features +
-        champ_features
+        champ_features +
+        new_step_features
     )
     feature_cols = [col for col in dict.fromkeys(feature_cols) if col in df.columns]
 
@@ -299,7 +311,12 @@ def optimize_catboost_hyperparameters(
     ]
     champ_features = [c for c in champ_features if c in df.columns]
 
-    feature_cols = elo_features + series_features + player_features + h2h_matchup_features + synergy_roster_features + draft_champ_features + champ_features
+    new_step_features = [
+        col for col in df.columns
+        if col.startswith('diff_') or 'hist_' in col or 'roll_' in col
+    ]
+
+    feature_cols = elo_features + series_features + player_features + h2h_matchup_features + synergy_roster_features + draft_champ_features + champ_features + new_step_features
     feature_cols = [col for col in dict.fromkeys(feature_cols) if col in df.columns]
 
     X = df[feature_cols].copy()
@@ -392,7 +409,12 @@ def optimize_elastictree_hyperparameters(
     ]
     champ_features = [c for c in champ_features if c in df.columns]
 
-    feature_cols = elo_features + series_features + player_features + h2h_matchup_features + synergy_roster_features + draft_champ_features + champ_features
+    new_step_features = [
+        col for col in df.columns
+        if col.startswith('diff_') or 'hist_' in col or 'roll_' in col
+    ]
+
+    feature_cols = elo_features + series_features + player_features + h2h_matchup_features + synergy_roster_features + draft_champ_features + champ_features + new_step_features
     feature_cols = [col for col in dict.fromkeys(feature_cols) if col in df.columns]
 
     X = df[feature_cols].copy()
@@ -447,7 +469,7 @@ def optimize_elastictree_hyperparameters(
     study.optimize(objective, n_trials=n_trials, n_jobs=-1, show_progress_bar=True)
 
     best_params = study.best_params
-    best_params['n_estimators'] = 500
+    best_params['n_estimators'] = 5000
     best_params['random_state'] = 42
     best_params['n_jobs'] = -1
 
@@ -492,6 +514,11 @@ def optimize_elasticnet_hyperparameters(
     ]
     champ_features = [c for c in champ_features if c in df.columns]
 
+    new_step_features = [
+        col for col in df.columns
+        if col.startswith('diff_') or 'hist_' in col or 'roll_' in col
+    ]
+
     feature_cols = (
         elo_features +
         series_features +
@@ -499,7 +526,8 @@ def optimize_elasticnet_hyperparameters(
         h2h_matchup_features +
         synergy_roster_features +
         draft_champ_features +
-        champ_features
+        champ_features +
+        new_step_features
     )
     feature_cols = [col for col in dict.fromkeys(feature_cols) if col in df.columns]
 
@@ -564,7 +592,7 @@ def optimize_elasticnet_hyperparameters(
     best_params = study.best_params
     best_params['penalty'] = 'elasticnet'
     best_params['solver'] = 'saga'
-    best_params['max_iter'] = 1000
+    best_params['max_iter'] = 5000
     best_params['random_state'] = 42
 
     save_best_params_if_improved(best_params, study.best_value, output_json_path)

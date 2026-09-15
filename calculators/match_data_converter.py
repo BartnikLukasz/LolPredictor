@@ -10,8 +10,9 @@ def prepare_oracles_elixir_pregame(
 ) -> pd.DataFrame:
     """
     Transforms multi-year Oracle's Elixir raw datasets into a unified single-row per match
-    pre-game dataset sorted chronologically across all years, incorporating draft side/first pick info,
-    team names, player names, and intra-series tracking features (BO3/BO5 momentum & leads).
+    pre-game dataset sorted chronologically, incorporating draft side/first pick info,
+    team/player names, intra-series tracking features, raw early game metrics, strategic objective counts,
+    resource stats, vision metrics, and match duration columns.
 
     Parameters:
         filepaths (str | list[str]): Path or list of paths to Oracle's Elixir CSV files.
@@ -76,6 +77,12 @@ def prepare_oracles_elixir_pregame(
     # Convert date to datetime for chronological sorting
     match_df['date'] = pd.to_datetime(match_df['date'])
 
+    # Game duration handling for resource and vision metrics generators
+    gamelength_col = next((c for c in ['gamelength', 'game_length_sec'] if c in blue_teams.columns), None)
+    if gamelength_col:
+        match_df['gamelength'] = pd.to_numeric(blue_teams[gamelength_col], errors='coerce').fillna(1800.0).values
+        match_df['game_length_sec'] = match_df['gamelength'] if match_df['gamelength'].max() > 100 else match_df['gamelength'] * 60.0
+
     # Target Variable: 1 if Blue wins, 0 if Red wins
     match_df['blue_win'] = blue_teams['result'].astype(int).values
 
@@ -133,7 +140,58 @@ def prepare_oracles_elixir_pregame(
             if player_name_col and player_name_col in role_df.columns:
                 match_df[f'{side_prefix}_{role}_player'] = role_df[player_name_col].values
 
-    # 7. Calculate Intra-Series Features (game_number, blue_series_lead, blue_prev_win)
+    # 7. Raw Snapshot & Cumulative Performance Metrics per Team
+    # Early Game & Lane Dominance
+    early_game_cols = [
+        'golddiffat10', 'golddiffat15', 'xpdiffat15', 'csdiffat15',
+        'turretplates', 'opp_turretplates',
+        'firstblood', 'firsttower', 'firstdragon', 'firstherald'
+    ]
+
+    # Strategic Priority & Objective Counts (Step 2 Generator)
+    strategic_cols = [
+        'dragons', 'opp_dragons', 'heralds', 'opp_heralds',
+        'void_grubs', 'opp_void_grubs', 'barons', 'opp_barons'
+    ]
+
+    # Resource Allocation & Combat Stats (Step 3 Generator)
+    resource_cols = ['kills', 'deaths', 'team_kills']
+
+    # Vision & Map Control Stats (Step 4 Generator)
+    vision_cols = [
+        'visionscore', 'vspm', 'wardspaced', 'wpm',
+        'wardscleared', 'wcpm', 'controlwardsbought', 'cwpm'
+    ]
+
+    all_raw_cols = list(set(early_game_cols + strategic_cols + resource_cols + vision_cols))
+
+    for col in all_raw_cols:
+        # Check standard column name as well as Oracle's Elixir aliases
+        target_col = col
+        if target_col not in blue_teams.columns:
+            alias_map = {
+                'dragons': 'dragons',
+                'heralds': 'heralds',
+                'void_grubs': 'voidgrubs',
+                'team_kills': 'kills',
+                'visionscore': 'visionscore',
+                'wardspaced': 'wardsplaced',
+                'wardscleared': 'wardskilled',
+                'controlwardsbought': 'visionwardsbought'
+            }
+            target_col = alias_map.get(col, col)
+
+        if target_col in blue_teams.columns:
+            blue_val = pd.to_numeric(blue_teams[target_col], errors='coerce').fillna(0.0)
+            red_val = pd.to_numeric(red_teams[target_col], errors='coerce').fillna(0.0)
+
+            match_df[f'blue_{col}'] = blue_val.values
+            match_df[f'red_{col}'] = red_val.values
+        else:
+            match_df[f'blue_{col}'] = 0.0
+            match_df[f'red_{col}'] = 0.0
+
+    # 8. Calculate Intra-Series Features (game_number, blue_series_lead, blue_prev_win)
     if 'matchid' in blue_teams.columns and blue_teams['matchid'].notna().any():
         match_df['series_id'] = blue_teams['matchid'].values
     else:
@@ -191,7 +249,6 @@ def prepare_oracles_elixir_pregame(
     return match_df
 
 
-# Example usage combining multi-year datasets:
 if __name__ == "__main__":
     multi_year_files = [
         "2023_match_data.csv",

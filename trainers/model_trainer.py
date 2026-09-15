@@ -71,6 +71,11 @@ def train_lol_prediction_model(
     ]
     champ_features = [c for c in champ_features if c in df.columns]
 
+    new_step_features = [
+        col for col in df.columns
+        if col.startswith('diff_') or 'hist_' in col or 'roll_' in col
+    ]
+
     feature_cols = (
             elo_features +
             series_features +
@@ -78,7 +83,8 @@ def train_lol_prediction_model(
             h2h_matchup_features +
             synergy_roster_features +
             draft_champ_features +
-            champ_features
+            champ_features +
+            new_step_features
     )
     feature_cols = [col for col in dict.fromkeys(feature_cols) if col in df.columns]
 

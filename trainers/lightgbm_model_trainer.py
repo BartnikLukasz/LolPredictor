@@ -41,9 +41,58 @@ def train_secondary_model(
         "gameid", "date", "blue_team", "red_team",
         "blue_teamid", "red_teamid", target_col
     ]
+    # 2. Identify feature subsets
+    elo_features = ['elo_diff', 'blue_elo_pre', 'red_elo_pre', 'blue_elo_win_prob', 'blue_firstpick']
+    series_features = ['game_number', 'blue_series_lead', 'blue_prev_win']
+
+    player_features = [
+        col for col in df.columns
+        if col.endswith('_player_games_pre') or
+           col.endswith('_player_winrate_pre') or
+           col.endswith('_champ_games_pre') or
+           col.endswith('_champ_winrate_pre')
+    ]
+
+    h2h_matchup_features = [
+        col for col in df.columns
+        if 'h2h' in col or 'lane_matchup' in col or 'p2p' in col
+    ]
+
+    synergy_roster_features = [
+        col for col in df.columns
+        if 'roster' in col or 'duo' in col
+    ]
+
+    draft_champ_features = [
+        col for col in df.columns
+        if 'patch' in col or 'counter' in col or 'synergy' in col or 'cohesion' in col or 'comp' in col
+    ]
+
+    champ_features = [
+        'blue_top_champion', 'blue_jng_champion', 'blue_mid_champion', 'blue_bot_champion', 'blue_sup_champion',
+        'red_top_champion', 'red_jng_champion', 'red_mid_champion', 'red_bot_champion', 'red_sup_champion'
+    ]
+    champ_features = [c for c in champ_features if c in df.columns]
+
+    new_step_features = [
+        col for col in df.columns
+        if col.startswith('diff_') or 'hist_' in col or 'roll_' in col
+    ]
+
+    feature_cols = (
+            elo_features +
+            series_features +
+            player_features +
+            h2h_matchup_features +
+            synergy_roster_features +
+            draft_champ_features +
+            champ_features +
+            new_step_features
+    )
+    feature_cols = [col for col in dict.fromkeys(feature_cols) if col in df.columns]
 
     feature_cols = [
-        col for col in df.columns
+        col for col in feature_cols
         if col not in exclude_cols and df[col].dtype in [np.float64, np.int64, np.float32, np.int32]
     ]
 

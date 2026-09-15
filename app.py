@@ -1,144 +1,27 @@
-import copy
-import json
-import os
-from datetime import datetime
-import xgboost as xgb
-import joblib
-import pandas as pd
-import requests
 import streamlit as st
-import plotly.graph_objects as go
 
-from app_helpers import compute_model_accuracies, match_team_name, match_champion_name, fetch_golgg_draft, \
-    prob_to_american_odds, get_historical_team_metrics, compute_db_model_weights, create_weighted_ensemble_result
-from live_feature_engine import LiveFeatureEngine
-from upstash_redis import Redis
+from app_helpers import (
+    check_is_admin,
+    load_tracking_data,
+    save_tracking_data,
+    load_predictor_assets,
+    send_odds_to_endpoint,
+    update_blue_roster_callback,
+    update_red_roster_callback,
+    swap_sides_callback,
+    fetch_golgg_draft,
+    match_team_name,
+    match_champion_name,
+    compute_model_accuracies,
+    get_historical_team_metrics,
+    compute_db_model_weights,
+    create_weighted_ensemble_result,
+    render_model_dashboard,
+)
 
 st.set_page_config(page_title="LoL Match Predictor", layout="wide")
 
-ODDS_ENDPOINT_URL = "http://127.0.0.1:5000/odds"
-TRACKING_KEY = "live_accuracy_tracking"
-
-MODEL_REGISTRY = {
-    "XGBoost": "models/xgboost_model.json",
-    "LightGBM": "models/lightgbm_model.pkl",
-    "CatBoost": "models/catboost_model.pkl",
-    "ElasticTree": "models/elastictree_model.pkl",
-    "ElasticNet": "models/elasticnet_model.joblib",
-}
-
-
-def check_is_admin() -> bool:
-    try:
-        admin_secret = st.secrets.get("ADMIN_KEY", "")
-    except Exception:
-        admin_secret = ""
-    if not admin_secret:
-        return False
-    if st.query_params.get("admin") == admin_secret or st.session_state.get("is_admin", False):
-        return True
-    return False
-
-# --- TEAM ROSTER CALLBACKS ---
-def update_blue_roster_callback():
-    selected_team = st.session_state.get("blue_team_select")
-    roster = team_rosters.get(selected_team, ["", "", "", "", ""])
-    for i in range(5):
-        st.session_state[f"bp_{i}"] = roster[i] if i < len(roster) else ""
-
-def update_red_roster_callback():
-    selected_team = st.session_state.get("red_team_select")
-    roster = team_rosters.get(selected_team, ["", "", "", "", ""])
-    for i in range(5):
-        st.session_state[f"rp_{i}"] = roster[i] if i < len(roster) else ""
-
-def swap_sides_callback():
-    temp_blue = st.session_state.get("blue_team_select")
-    temp_red = st.session_state.get("red_team_select")
-    st.session_state["blue_team_select"] = temp_red
-    st.session_state["red_team_select"] = temp_blue
-
-    for i in range(5):
-        bc_key, rc_key = f"bc_{i}", f"rc_{i}"
-        bp_key, rp_key = f"bp_{i}", f"rp_{i}"
-        if bc_key in st.session_state and rc_key in st.session_state:
-            st.session_state[bc_key], st.session_state[rc_key] = st.session_state[rc_key], st.session_state[bc_key]
-        if bp_key in st.session_state and rp_key in st.session_state:
-            st.session_state[bp_key], st.session_state[rp_key] = st.session_state[rp_key], st.session_state[bp_key]
-
-
-@st.cache_resource
-def get_redis_client():
-    return Redis(
-        url=st.secrets["UPSTASH_REDIS_REST_URL"],
-        token=st.secrets["UPSTASH_REDIS_REST_TOKEN"]
-    )
-
-
-redis = get_redis_client()
-
-
-def load_tracking_data() -> dict:
-    raw_data = redis.get(TRACKING_KEY)
-    if not raw_data:
-        return {"total_games": 0, "correct_predictions": 0, "logs": []}
-    if isinstance(raw_data, str):
-        return json.loads(raw_data)
-    return raw_data
-
-
-def save_tracking_data(data: dict):
-    redis.set(TRACKING_KEY, json.dumps(data))
-
-
-@st.cache_resource
-def load_predictor_assets():
-    dataset_path = "dataset/pregame/pregame_dataset_final_features.csv"
-    base_engine = LiveFeatureEngine(dataset_path=dataset_path)
-    engines = {}
-
-    for model_name, model_path in MODEL_REGISTRY.items():
-        if os.path.exists(model_path):
-            eng = copy.deepcopy(base_engine)
-            if model_path.endswith(".json"):
-                model = xgb.XGBClassifier()
-                model.load_model(model_path)
-                eng.model = model
-            else:
-                artifact = joblib.load(model_path)
-                if isinstance(artifact, dict):
-                    eng.model = artifact.get("pipeline", artifact.get("model", artifact))
-                else:
-                    eng.model = artifact
-            engines[model_name] = eng
-        else:
-            engines[model_name] = base_engine
-
-    with open("models/team_rosters.json", "r") as f:
-        roster_data = json.load(f)
-
-    champ_cols = [c for c in base_engine.df_hist.columns if 'champion' in c]
-    champions_set = set()
-    for col in champ_cols:
-        champions_set.update(base_engine.df_hist[col].dropna().unique().tolist())
-
-    champions_list = sorted(list(champions_set)) if champions_set else ["Ahri", "Aatrox", "Azir"]
-    return engines, roster_data, champions_list, base_engine.df_hist
-
-
-def send_odds_to_endpoint(blue_team: str, red_team: str, p_blue: float, p_red: float):
-    payload = {
-        "odds": {blue_team: round(1.0 / p_blue, 2) if p_blue > 0 else 0, red_team: round(1.0 / p_red, 2) if p_red > 0 else 0},
-        "model_probs": {blue_team: round(p_blue, 4), red_team: round(p_red, 4)}
-    }
-    try:
-        requests.post(ODDS_ENDPOINT_URL, json=payload, timeout=2)
-        st.toast("Dispatched odds to prediction monitor!", icon="📡")
-    except Exception:
-        st.toast(f"Could not reach endpoint ({ODDS_ENDPOINT_URL})", icon="⚠️")
-
-
-# Load Predictor Assets
+# Asset Loading & Auth State
 engines, team_rosters, champion_list, df_hist = load_predictor_assets()
 is_admin = check_is_admin()
 
@@ -219,7 +102,6 @@ with st.expander("🌐 Import Match Draft from gol.gg", expanded=True):
 
                         valid_teams = list(team_rosters.keys())
 
-                        # Enhanced team matching passing rosters, fetched players, and df_hist
                         st.session_state["blue_team_select"] = match_team_name(
                             draft["blue_team"],
                             valid_teams,
@@ -254,343 +136,136 @@ with st.expander("🌐 Import Match Draft from gol.gg", expanded=True):
                     except Exception as e:
                         status.update(label="Draft Import Failed", state="error", expanded=True)
                         st.error(f"**Error Details:**\n```text\n{e}\n```")
-            else:
-                st.warning("Please enter a valid gol.gg match URL.")
 
-# --- INITIALIZE DEFAULT ROSTERS IN SESSION STATE IF UNSET ---
-if "bp_0" not in st.session_state:
-    initial_blue = st.session_state.get("blue_team_select", list(team_rosters.keys())[0] if team_rosters else "")
-    blue_def = team_rosters.get(initial_blue, ["", "", "", "", ""])
-    for i in range(5):
-        st.session_state[f"bp_{i}"] = blue_def[i] if i < len(blue_def) else ""
+st.markdown("---")
 
-if "rp_0" not in st.session_state:
-    initial_red_idx = 1 if len(team_rosters) > 1 else 0
-    initial_red = st.session_state.get("red_team_select", list(team_rosters.keys())[initial_red_idx] if team_rosters else "")
-    red_def = team_rosters.get(initial_red, ["", "", "", "", ""])
-    for i in range(5):
-        st.session_state[f"rp_{i}"] = red_def[i] if i < len(red_def) else ""
+# --- TEAM & MATCH SETUP ---
+st.subheader("⚔️ Team & Match Setup")
+col_blue, col_swap, col_red = st.columns([4, 1, 4])
 
-# --- TEAM & SERIES CONTEXT ---
-col_blue_header, col_swap_btn, col_red_header = st.columns([4, 2, 4])
+valid_teams = list(team_rosters.keys())
 
-with col_blue_header:
-    st.subheader("Blue Side")
+with col_blue:
     blue_team = st.selectbox(
-        "Select Blue Team",
-        options=list(team_rosters.keys()),
+        "🔵 Blue Side Team",
+        options=valid_teams,
         key="blue_team_select",
-        on_change=update_blue_roster_callback
+        on_change=update_blue_roster_callback,
+        args=(team_rosters,)
     )
 
-with col_swap_btn:
+with col_swap:
     st.write("")
     st.write("")
-    st.button("🔄 Swap Sides", on_click=swap_sides_callback, use_container_width=True)
+    st.button("🔄 Swap", on_click=swap_sides_callback, use_container_width=True)
 
-with col_red_header:
-    st.subheader("Red Side")
+with col_red:
     red_team = st.selectbox(
-        "Select Red Team",
-        options=list(team_rosters.keys()),
-        index=1 if len(team_rosters) > 1 else 0,
+        "🔴 Red Side Team",
+        options=valid_teams,
         key="red_team_select",
-        on_change=update_red_roster_callback
+        on_change=update_red_roster_callback,
+        args=(team_rosters,)
     )
 
-st.markdown("##### 🎮 Match & Series Context")
-s1, s2, s3, s4 = st.columns(4)
-with s1:
-    first_pick_side = st.radio("First Pick Side", options=["Blue", "Red"], horizontal=True, key="first_pick_radio")
-with s2:
-    game_number = st.number_input("Game Number in Series", 1, 7, 1)
-with s3:
-    blue_series_lead = st.number_input(f"{blue_team} Series Lead", -3, 3, 0)
-with s4:
-    blue_prev_win_raw = st.selectbox(f"Did {blue_team} Win Previous Game?", options=["N/A (Game 1)", "Yes", "No"])
-    blue_prev_win = 1 if blue_prev_win_raw == "Yes" else 0
+col_fp, col_patch, col_gnum, col_lead = st.columns(4)
+with col_fp:
+    first_pick = st.radio("First Pick", ["Blue", "Red"], horizontal=True, key="first_pick_radio")
+with col_patch:
+    patch_ver = st.text_input("Patch Version", value="14.10", key="patch_input")
+with col_gnum:
+    game_number = st.number_input("Game # in Series", min_value=1, max_value=7, value=1)
+with col_lead:
+    blue_series_lead = st.number_input("Blue Series Lead (+/-)", value=0)
 
 st.markdown("---")
 
-# --- STABLE PLAYER ROSTERS & DRAFT GRID ---
-roles = ["Top", "Jungle", "Mid", "ADC", "Support"]
-c1, c2, c3, c4 = st.columns([2, 3, 2, 3])
-blue_players, blue_champs = [], []
-red_players, red_champs = [], []
+# --- DRAFT GRID (5 ROLES) ---
+st.subheader("🛡️ Draft & Player Selection")
 
-with c1:
-    st.markdown("**Blue Players**")
-    for i, role in enumerate(roles):
-        p = st.text_input(f"Blue {role} Player", key=f"bp_{i}")
-        blue_players.append(p)
+roles = ["TOP", "JGL", "MID", "BOT", "SUP"]
+blue_champs, red_champs = [], []
+blue_players, red_players = [], []
 
-with c2:
-    st.markdown("**Blue Champions**")
-    for i, role in enumerate(roles):
-        c = st.selectbox(f"Blue {role} Pick", options=champion_list, key=f"bc_{i}")
-        blue_champs.append(c)
+default_blue_roster = team_rosters.get(blue_team, ["", "", "", "", ""])
+default_red_roster = team_rosters.get(red_team, ["", "", "", "", ""])
 
-with c3:
-    st.markdown("**Red Players**")
-    for i, role in enumerate(roles):
-        p = st.text_input(f"Red {role} Player", key=f"rp_{i}")
-        red_players.append(p)
+for i, role in enumerate(roles):
+    r_col1, r_col2, r_label, r_col3, r_col4 = st.columns([3, 3, 1, 3, 3])
 
-with c4:
-    st.markdown("**Red Champions**")
-    for i, role in enumerate(roles):
-        c = st.selectbox(f"Red {role} Pick", options=champion_list, key=f"rc_{i}")
-        red_champs.append(c)
+    with r_label:
+        st.markdown(f"<h5 style='text-align: center; margin-top: 28px;'>{role}</h5>", unsafe_allow_html=True)
+
+    with r_col1:
+        bc = st.selectbox(f"Blue {role} Champ", champion_list, key=f"bc_{i}", label_visibility="collapsed")
+        blue_champs.append(bc)
+
+    with r_col2:
+        bp = st.text_input(f"Blue {role} Player", value=default_blue_roster[i] if i < len(default_blue_roster) else "", key=f"bp_{i}", label_visibility="collapsed")
+        blue_players.append(bp)
+
+    with r_col3:
+        rc = st.selectbox(f"Red {role} Champ", champion_list, key=f"rc_{i}", label_visibility="collapsed")
+        red_champs.append(rc)
+
+    with r_col4:
+        rp = st.text_input(f"Red {role} Player", value=default_red_roster[i] if i < len(default_red_roster) else "", key=f"rp_{i}", label_visibility="collapsed")
+        red_players.append(rp)
 
 st.markdown("---")
 
-# --- CALCULATE PREDICTIONS ---
-if st.button("Calculate Match Probabilities", type="primary", use_container_width=True):
+# --- PREDICTION TRIGGER ---
+if st.button("🚀 Predict Match Outcome", type="primary", use_container_width=True):
     draft_payload = {
         "blue_team": blue_team,
         "red_team": red_team,
+        "patch": patch_ver,
+        "blue_firstpick": 1 if first_pick == "Blue" else 0,
+        "game_number": game_number,
+        "blue_series_lead": blue_series_lead,
+        "blue_prev_win": 1 if blue_series_lead > 0 else 0,
         "blue_players": blue_players,
         "red_players": red_players,
         "blue_champs": blue_champs,
         "red_champs": red_champs,
-        "blue_firstpick": 1 if first_pick_side == "Blue" else 0,
-        "game_number": game_number,
-        "blue_series_lead": blue_series_lead,
-        "blue_prev_win": blue_prev_win
     }
 
-    base_results = {m_name: eng.predict_match(draft_payload) for m_name, eng in engines.items()}
+    model_results = {}
+    for m_name, eng in engines.items():
+        model_results[m_name] = eng.predict_match(draft_payload)
 
-    # Compute DB Accuracy Weights on calculation
-    model_weights, model_accuracies = compute_db_model_weights(tracking_data, list(base_results.keys()))
-    weighted_res = create_weighted_ensemble_result(base_results, model_weights)
-
-    all_model_results = base_results.copy()
-    all_model_results["Weighted Split"] = weighted_res
+    weights, accuracies = compute_db_model_weights(tracking_data, list(engines.keys()))
+    weighted_res = create_weighted_ensemble_result(model_results, weights)
+    model_results["Weighted Split"] = weighted_res
 
     h2h_data = get_historical_team_metrics(df_hist, blue_team, red_team)
-
-    primary_res = all_model_results.get("XGBoost", next(iter(all_model_results.values())))
-    send_odds_to_endpoint(blue_team, red_team, primary_res['blue_win_probability'], primary_res['red_win_probability'])
-
-    st.session_state["selected_actual_winner"] = blue_team
 
     st.session_state["active_prediction"] = {
         "blue_team": blue_team,
         "red_team": red_team,
-        "model_results": all_model_results,
-        "model_weights": model_weights,
-        "model_accuracies": model_accuracies,
-        "h2h_data": h2h_data
+        "model_results": model_results,
+        "model_accuracies": accuracies,
+        "h2h_data": h2h_data,
     }
 
+    p_blue = weighted_res["blue_win_probability"]
+    p_red = weighted_res["red_win_probability"]
+    send_odds_to_endpoint(blue_team, red_team, p_blue, p_red)
 
-def render_model_dashboard(model_name: str, results: dict, active_pred: dict, h2h_data: dict):
-    b_team, r_team = active_pred['blue_team'], active_pred['red_team']
-    predicted_winner = b_team if results['blue_win_probability'] >= 0.5 else r_team
-
-    res_b, res_r = st.columns(2)
-    res_b.metric(f"{b_team} Win Probability", f"{results['blue_win_percentage']}%")
-    res_r.metric(f"{r_team} Win Probability", f"{results['red_win_percentage']}%")
-    st.progress(results['blue_win_probability'])
-
-    if model_name == "Weighted Split" and "weights_used" in results:
-        with st.expander("⚖️ DB-Weighted Model Breakdown", expanded=False):
-            w_cols = st.columns(len(results["weights_used"]))
-            for idx, (m_k, w_v) in enumerate(results["weights_used"].items()):
-                acc_v = active_pred.get("model_accuracies", {}).get(m_k, 0.5) * 100
-                w_cols[idx].metric(m_k, f"{w_v * 100:.1f}% Weight", help=f"Historical DB Accuracy: {acc_v:.1f}%")
-
-    with st.container(border=True):
-        st.subheader("📝 Record Live Game Result")
-        st.write(f"Model ({model_name}) Predicted Winner: **{predicted_winner}**")
-
-        act_col1, act_col2 = st.columns([3, 1])
-        with act_col1:
-            if "selected_actual_winner" not in st.session_state:
-                st.session_state["selected_actual_winner"] = b_team
-
-            actual_winner = st.radio(
-                "Select Actual Game Winner:",
-                options=[b_team, r_team],
-                horizontal=True,
-                key="selected_actual_winner"
-            )
-
-        with act_col2:
-            st.write("")
-            if st.button("Save & Log Result", type="primary" if is_admin else "secondary", disabled=not is_admin, key=f"save_btn_{model_name}"):
-                current_track_data = load_tracking_data()
-                models_log_list = []
-                xgb_is_correct = False
-
-                for m_name, m_res in active_pred['model_results'].items():
-                    m_pred = b_team if m_res['blue_win_probability'] >= 0.5 else r_team
-                    m_corr = (actual_winner == m_pred)
-                    if m_name == "XGBoost":
-                        xgb_is_correct = m_corr
-
-                    models_log_list.append({
-                        "model_used": m_name,
-                        "blue_win_probability": m_res['blue_win_probability'],
-                        "red_win_probability": m_res['red_win_probability'],
-                        "predicted_winner": m_pred,
-                        "actual_winner": actual_winner,
-                        "is_correct": m_corr
-                    })
-
-                current_track_data["total_games"] = current_track_data.get("total_games", 0) + 1
-                if xgb_is_correct:
-                    current_track_data["correct_predictions"] = current_track_data.get("correct_predictions", 0) + 1
-
-                current_track_data.setdefault("logs", []).append({
-                    "datetime": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "blue_team": b_team,
-                    "red_team": r_team,
-                    "models": models_log_list
-                })
-                save_tracking_data(current_track_data)
-                st.toast("Result Logged!", icon="🎯")
-                del st.session_state["active_prediction"]
-                st.rerun()
-
-    st.markdown(f"### 📊 Feature & Match Analysis ({model_name})")
-
-    # Persistent analysis sub-tabs bound to session state
-    analysis_options = [
-        "⚡ Elo & Series Context",
-        "👤 Player Mastery",
-        "⚔️ Draft Impact",
-        "🛡️ Team H2H",
-        "🎲 Value Odds"
-    ]
-    if "active_analysis_tab" not in st.session_state:
-        st.session_state["active_analysis_tab"] = analysis_options[0]
-
-    selected_analysis_tab = st.radio(
-        "Analysis View Navigation",
-        options=analysis_options,
-        horizontal=True,
-        key="active_analysis_tab",
-        label_visibility="collapsed"
-    )
-
-    if selected_analysis_tab == "⚡ Elo & Series Context":
-        e1, e2, e3 = st.columns(3)
-        elo_base = results.get('elo_metrics', {}).get('elo_implied_blue_winrate', 50.0)
-        e1.metric(f"{b_team} Elo", f"{results['elo_metrics']['blue_elo']}")
-        e2.metric(f"{r_team} Elo", f"{results['elo_metrics']['red_elo']}")
-        e3.metric("Elo Implied Winrate", f"{elo_base}%")
-
-    elif selected_analysis_tab == "👤 Player Mastery":
-        player_rows = []
-        for r in results.get('role_breakdown', []):
-            b_p_wr = r.get('blue_p_wr', 0.5) * 100
-            r_p_wr = r.get('red_p_wr', 0.5) * 100
-            player_rows.append({
-                "Role": r['role'],
-                f"{b_team} Player": r['blue_player'],
-                "Blue WR": f"{b_p_wr:.1f}%",
-                f"{r_team} Player": r['red_player'],
-                "Red WR": f"{r_p_wr:.1f}%",
-                "Mastery Swing": f"{(b_p_wr - r_p_wr):+.1f}%"
-            })
-        st.dataframe(pd.DataFrame(player_rows), use_container_width=True, hide_index=True)
-
-    elif selected_analysis_tab == "⚔️ Draft Impact":
-        swings = results.get("draft_swings", {})
-        role_data = results.get("role_breakdown", [])
-
-        # Top Summary Metrics
-        m1, m2, m3 = st.columns(3)
-        elo_base = results['elo_metrics']['elo_implied_blue_winrate']
-        player_swing = swings.get('player_swing', 0.0)
-        draft_swing = swings.get('draft_swing', 0.0)
-        final_pct = results.get('blue_win_percentage', round(elo_base + player_swing + draft_swing, 2))
-
-        m1.metric("Elo Baseline Winrate", f"{elo_base}%")
-        m2.metric("Player Mastery Swing", f"{player_swing:+.2f}%")
-        m3.metric("Champion Draft Swing", f"{draft_swing:+.2f}%")
-
-        # --- PLOTLY WATERFALL CHART ---
-        st.markdown(f"#### 📈 Prediction Progression Waterfall ({b_team})")
-
-        fig = go.Figure(go.Waterfall(
-            name="Winrate Swing",
-            orientation="v",
-            measure=["absolute", "relative", "relative", "total"],
-            x=["Elo Baseline", "Player Mastery", "Champion Draft", "Final Prediction"],
-            textposition="outside",
-            text=[
-                f"{elo_base:.1f}%",
-                f"{player_swing:+.2f}%",
-                f"{draft_swing:+.2f}%",
-                f"{final_pct:.1f}%"
-            ],
-            y=[elo_base, player_swing, draft_swing, 0],
-            connector={"line": {"color": "#888", "width": 1.5}},
-            increasing={"marker": {"color": "#2ecc71"}},
-            decreasing={"marker": {"color": "#e74c3c"}},
-            totals={"marker": {"color": "#3498db"}}
-        ))
-
-        fig.update_layout(
-            yaxis_title=f"{b_team} Win Probability (%)",
-            yaxis=dict(range=[0, max(100, final_pct + 10)]),
-            showlegend=False,
-            height=360,
-            margin=dict(l=20, r=20, t=30, b=20),
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)"
-        )
-
-        st.plotly_chart(fig, use_container_width=True)
-
-        st.markdown("#### 🎯 Role-by-Role Draft Swing Breakdown")
-        champ_rows = []
-        for r in role_data:
-            b_c_wr = r.get('blue_c_wr', 0.5) * 100
-            r_c_wr = r.get('red_c_wr', 0.5) * 100
-            champ_rows.append({
-                "Role": r['role'],
-                f"{b_team} Pick": r['blue_champ'],
-                "Blue Champ WR": f"{b_c_wr:.1f}%",
-                f"{r_team} Pick": r['red_champ'],
-                "Red Champ WR": f"{r_c_wr:.1f}%",
-                "Role Impact Swing": f"{(b_c_wr - r_c_wr):+.1f}%"
-            })
-        st.dataframe(pd.DataFrame(champ_rows), use_container_width=True, hide_index=True)
-
-    elif selected_analysis_tab == "🛡️ Team H2H":
-        st.info(f"Historical Matchups: {h2h_data['total_h2h']} | {b_team} H2H Winrate: {h2h_data['blue_h2h_wr']}%")
-
-    elif selected_analysis_tab == "🎲 Value Odds":
-        p_b, p_r = results['blue_win_probability'], results['red_win_probability']
-        st.write(f"**{b_team} Fair Decimal:** {round(1.0/p_b, 2) if p_b > 0 else 0} ({prob_to_american_odds(p_b)})")
-        st.write(f"**{r_team} Fair Decimal:** {round(1.0/p_r, 2) if p_r > 0 else 0} ({prob_to_american_odds(p_r)})")
-
-
+# --- DASHBOARD TAB RENDERING ---
 if "active_prediction" in st.session_state:
     active_pred = st.session_state["active_prediction"]
-    model_results = active_pred["model_results"]
-    st.markdown("## 🤖 Prediction Engine Selector")
+    model_names = list(active_pred["model_results"].keys())
 
-    model_names = list(model_results.keys())
+    st.markdown("---")
+    tabs = st.tabs(model_names)
 
-    if "active_model_tab" not in st.session_state or st.session_state["active_model_tab"] not in model_names:
-        st.session_state["active_model_tab"] = "Weighted Split" if "Weighted Split" in model_names else model_names[0]
-
-    selected_model_name = st.radio(
-        "Select Active Prediction Model Engine",
-        options=model_names,
-        horizontal=True,
-        key="active_model_tab"
-    )
-
-    if selected_model_name in model_results:
-        render_model_dashboard(
-            selected_model_name,
-            model_results[selected_model_name],
-            active_pred,
-            active_pred["h2h_data"]
-        )
+    for idx, m_name in enumerate(model_names):
+        with tabs[idx]:
+            render_model_dashboard(
+                model_name=m_name,
+                results=active_pred["model_results"][m_name],
+                active_pred=active_pred,
+                h2h_data=active_pred["h2h_data"],
+                is_admin=is_admin,
+            )

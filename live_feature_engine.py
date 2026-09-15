@@ -1,16 +1,36 @@
+# live_feature_engine.py
 import os
-import json
 import pandas as pd
 import numpy as np
 import xgboost as xgb
 import joblib
 
-ROLES = ['top', 'jng', 'mid', 'bot', 'sup']
-META_COLUMNS = [
-    'date', 'blue_win', 'match_id', 'game_id',
-    'blue_team', 'red_team', 'league', 'patch',
-    'split', 'tournament', 'year', 'season'
-]
+from live_feature_helpers import (
+    ROLES,
+    META_COLUMNS,
+    EARLY_GAME_METRICS,
+    EARLY_GAME_DEFAULTS,
+    STRATEGIC_METRICS,
+    STRATEGIC_DEFAULTS,
+    RESOURCE_PLAYSTYLE_METRICS,
+    RESOURCE_PLAYSTYLE_DEFAULTS,
+    VISION_METRICS,
+    VISION_DEFAULTS,
+    PATCH_ADAPTABILITY_METRICS,
+    PATCH_ADAPTABILITY_DEFAULTS,
+    DEFAULT_PLAYER_CHAMP_STATS,
+    extract_model_feature_names,
+    build_elo_lookup,
+    build_early_game_lookups,
+    build_strategic_lookups,
+    build_resource_playstyle_lookups,
+    build_vision_lookups,
+    build_patch_meta_lookup,
+    build_patch_adaptability_lookups,
+    build_player_and_champ_lookups,
+    align_dtypes_and_shape,
+    build_role_breakdown,
+)
 
 
 class LiveFeatureEngine:
@@ -20,7 +40,7 @@ class LiveFeatureEngine:
         if not os.path.exists(dataset_path):
             raise FileNotFoundError(f"Historical feature dataset '{dataset_path}' not found.")
 
-        # 1. Load Trained Model (.json or .pkl / .joblib)
+        # 1. Load Trained Model
         self.model_path = model_path
         if model_path.endswith(".json"):
             self.model = xgb.XGBClassifier()
@@ -36,100 +56,56 @@ class LiveFeatureEngine:
             self.df_hist['date'] = pd.to_datetime(self.df_hist['date'])
             self.df_hist = self.df_hist.sort_values('date').reset_index(drop=True)
 
-        # 3. Extract Exact Expected Features from Loaded Model
-        self.expected_features = self._extract_model_feature_names()
-
-        # Fallback if model has no saved feature schema or generic names
+        # 3. Extract Expected Features
+        self.expected_features = extract_model_feature_names(self.model)
         valid_hist_cols = [c for c in self.df_hist.columns if c not in META_COLUMNS]
         if not self.expected_features or not all(f in self.df_hist.columns for f in self.expected_features):
             self.expected_features = valid_hist_cols
 
-        # 4. Build Lookup Maps
-        self._build_elo_lookup()
-        self._build_player_and_champ_lookups()
-
-    def _extract_model_feature_names(self) -> list:
-        """Extracts the exact ordered list of feature names expected by the model."""
-        if hasattr(self.model, "feature_names_in_") and self.model.feature_names_in_ is not None:
-            return list(self.model.feature_names_in_)
-
-        if hasattr(self.model, "booster_") and hasattr(self.model.booster_, "feature_name"):
-            fn = self.model.booster_.feature_name()
-            if fn and len(fn) > 0 and not fn[0].startswith("Column_"):
-                return list(fn)
-
-        if hasattr(self.model, "get_booster"):
-            try:
-                fn = self.model.get_booster().feature_names
-                if fn and len(fn) > 0:
-                    return list(fn)
-            except Exception:
-                pass
-
-        return []
-
-    def _build_elo_lookup(self):
-        """Builds dictionary of latest team Elo ratings."""
-        self.latest_elo = {}
-        for _, row in self.df_hist.iterrows():
-            if pd.notna(row.get('blue_team')) and pd.notna(row.get('blue_elo_pre')):
-                self.latest_elo[row['blue_team']] = float(row['blue_elo_pre'])
-            if pd.notna(row.get('red_team')) and pd.notna(row.get('red_elo_pre')):
-                self.latest_elo[row['red_team']] = float(row['red_elo_pre'])
-
-    def _build_player_and_champ_lookups(self):
-        """Builds player and champion historical performance lookup dictionaries."""
-        self.player_stats = {}
-        self.champ_stats = {}
-
-        self.defaults = {
-            'player_games': 10,
-            'player_winrate': 0.50,
-            'champ_games': 10,
-            'champ_winrate': 0.50,
-        }
-
-        for role in ROLES:
-            for side in ['blue', 'red']:
-                p_col = f'{side}_{role}_player'
-                g_col = f'{side}_{role}_player_games_pre'
-                w_col = f'{side}_{role}_player_winrate_pre'
-                c_col = f'{side}_{role}_champion'
-                cg_col = f'{side}_{role}_champ_games_pre'
-                cw_col = f'{side}_{role}_champ_winrate_pre'
-
-                if p_col in self.df_hist.columns and w_col in self.df_hist.columns:
-                    for _, row in self.df_hist[[p_col, g_col, w_col]].dropna().iterrows():
-                        self.player_stats[str(row[p_col])] = {
-                            'games': int(row[g_col]),
-                            'winrate': float(row[w_col])
-                        }
-
-                if c_col in self.df_hist.columns and cw_col in self.df_hist.columns:
-                    for _, row in self.df_hist[[c_col, cg_col, cw_col]].dropna().iterrows():
-                        self.champ_stats[str(row[c_col])] = {
-                            'games': int(row[cg_col]),
-                            'winrate': float(row[cw_col])
-                        }
+        # 4. Build Lookups via Helpers
+        self.latest_elo = build_elo_lookup(self.df_hist)
+        self.team_early_game = build_early_game_lookups(self.df_hist)
+        self.team_strategic = build_strategic_lookups(self.df_hist)
+        self.team_resource_playstyle = build_resource_playstyle_lookups(self.df_hist)
+        self.team_vision = build_vision_lookups(self.df_hist)
+        self.patch_meta = build_patch_meta_lookup(self.df_hist)
+        self.team_patch_adaptability = build_patch_adaptability_lookups(self.df_hist)
+        self.player_stats, self.champ_stats = build_player_and_champ_lookups(self.df_hist)
+        self.defaults = DEFAULT_PLAYER_CHAMP_STATS.copy()
 
     def get_player_stat(self, player_name: str) -> dict:
-        return self.player_stats.get(player_name, {
+        return self.player_stats.get(str(player_name), {
             'games': self.defaults['player_games'],
             'winrate': self.defaults['player_winrate']
         })
 
     def get_champ_stat(self, champ_name: str) -> dict:
-        return self.champ_stats.get(champ_name, {
+        return self.champ_stats.get(str(champ_name), {
             'games': self.defaults['champ_games'],
             'winrate': self.defaults['champ_winrate']
         })
+
+    def get_team_early_game(self, team_name: str) -> dict:
+        return self.team_early_game.get(str(team_name), EARLY_GAME_DEFAULTS.copy())
+
+    def get_team_strategic(self, team_name: str) -> dict:
+        return self.team_strategic.get(str(team_name), STRATEGIC_DEFAULTS.copy())
+
+    def get_team_resource_playstyle(self, team_name: str) -> dict:
+        return self.team_resource_playstyle.get(str(team_name), RESOURCE_PLAYSTYLE_DEFAULTS.copy())
+
+    def get_team_vision(self, team_name: str) -> dict:
+        return self.team_vision.get(str(team_name), VISION_DEFAULTS.copy())
+
+    def get_team_patch_adaptability(self, team_name: str) -> dict:
+        return self.team_patch_adaptability.get(str(team_name), PATCH_ADAPTABILITY_DEFAULTS.copy())
 
     def build_feature_vector(self, draft_payload: dict) -> pd.DataFrame:
         row = {}
 
         # 1. Elo Features
-        blue_team = draft_payload.get('blue_team', '')
-        red_team = draft_payload.get('red_team', '')
+        blue_team = str(draft_payload.get('blue_team', ''))
+        red_team = str(draft_payload.get('red_team', ''))
         blue_fp = draft_payload.get('blue_firstpick', 1)
 
         b_elo = self.latest_elo.get(blue_team, 1500.0)
@@ -137,22 +113,103 @@ class LiveFeatureEngine:
         first_pick_bonus = 10.0 if blue_fp == 1 else -10.0
 
         elo_diff = (b_elo + first_pick_bonus) - r_elo
-        blue_win_prob = 1.0 / (1.0 + 10.0 ** (-elo_diff / 400.0))
-
         row['blue_elo_pre'] = b_elo
         row['red_elo_pre'] = r_elo
         row['elo_diff'] = elo_diff
-        row['blue_elo_win_prob'] = blue_win_prob
+        row['blue_elo_win_prob'] = 1.0 / (1.0 + 10.0 ** (-elo_diff / 400.0))
         row['blue_firstpick'] = blue_fp
 
-        # 2. Series Context Features
+        # 2. Rolling Early Game Features
+        b_eg = self.get_team_early_game(blue_team)
+        r_eg = self.get_team_early_game(red_team)
+        for m in EARLY_GAME_METRICS:
+            b_val = b_eg.get(m, EARLY_GAME_DEFAULTS[m])
+            r_val = r_eg.get(m, EARLY_GAME_DEFAULTS[m])
+            row[f'blue_roll_{m}'] = b_val
+            row[f'red_roll_{m}'] = r_val
+            row[f'diff_roll_{m}'] = b_val - r_val
+
+        # 3. Rolling Strategic Priority Features
+        b_strat = self.get_team_strategic(blue_team)
+        r_strat = self.get_team_strategic(red_team)
+        for m in STRATEGIC_METRICS:
+            b_val = b_strat.get(m, STRATEGIC_DEFAULTS[m])
+            r_val = r_strat.get(m, STRATEGIC_DEFAULTS[m])
+            row[f'blue_roll_{m}'] = b_val
+            row[f'red_roll_{m}'] = r_val
+            row[f'diff_roll_{m}'] = b_val - r_val
+
+        # 4. Step 3: Resource Allocation & Playstyle Profile Features
+        b_rp = self.get_team_resource_playstyle(blue_team)
+        r_rp = self.get_team_resource_playstyle(red_team)
+        for m in RESOURCE_PLAYSTYLE_METRICS:
+            b_val = b_rp.get(m, RESOURCE_PLAYSTYLE_DEFAULTS[m])
+            r_val = r_rp.get(m, RESOURCE_PLAYSTYLE_DEFAULTS[m])
+
+            row[f'blue_roll_{m}'] = b_val
+            row[f'red_roll_{m}'] = r_val
+            row[f'diff_roll_{m}'] = b_val - r_val
+
+            row[f'blue_hist_{m}_avg_last10'] = b_val
+            row[f'red_hist_{m}_avg_last10'] = r_val
+            row[f'diff_hist_{m}_avg_last10'] = b_val - r_val
+
+        # 5. Step 4: Vision & Map Control Features
+        b_vis = self.get_team_vision(blue_team)
+        r_vis = self.get_team_vision(red_team)
+        for m in VISION_METRICS:
+            b_val = b_vis.get(m, VISION_DEFAULTS[m])
+            r_val = r_vis.get(m, VISION_DEFAULTS[m])
+
+            row[f'blue_roll_{m}'] = b_val
+            row[f'red_roll_{m}'] = r_val
+            row[f'diff_roll_{m}'] = b_val - r_val
+
+            row[f'blue_hist_{m}_avg_last10'] = b_val
+            row[f'red_hist_{m}_avg_last10'] = r_val
+            row[f'diff_hist_{m}_avg_last10'] = b_val - r_val
+
+        # 6. Step 5: Patch & Meta Adaptability Features
+        current_patch = str(draft_payload.get('patch', ''))
+        if not current_patch and 'patch' in self.df_hist.columns:
+            current_patch = str(self.df_hist['patch'].dropna().iloc[-1])
+
+        patch_meta_champs = set(self.patch_meta.get(current_patch, []))
+
+        blue_champs = draft_payload.get('blue_champs', ['', '', '', '', ''])
+        red_champs = draft_payload.get('red_champs', ['', '', '', '', ''])
+
+        b_valid_champs = [c for c in blue_champs if c and str(c) != '']
+        r_valid_champs = [c for c in red_champs if c and str(c) != '']
+
+        b_meta_score = (sum(1 for c in b_valid_champs if c in patch_meta_champs) / len(b_valid_champs)) if b_valid_champs else 0.50
+        r_meta_score = (sum(1 for c in r_valid_champs if c in patch_meta_champs) / len(r_valid_champs)) if r_valid_champs else 0.50
+
+        b_pa = self.get_team_patch_adaptability(blue_team)
+        r_pa = self.get_team_patch_adaptability(red_team)
+
+        row['blue_hist_patch_winrate'] = b_pa.get('patch_winrate', 0.50)
+        row['red_hist_patch_winrate'] = r_pa.get('patch_winrate', 0.50)
+        row['diff_hist_patch_winrate'] = row['blue_hist_patch_winrate'] - row['red_hist_patch_winrate']
+
+        row['blue_hist_patch_wr_delta'] = b_pa.get('patch_wr_delta', 0.0)
+        row['red_hist_patch_wr_delta'] = r_pa.get('patch_wr_delta', 0.0)
+        row['diff_hist_patch_wr_delta'] = row['blue_hist_patch_wr_delta'] - row['red_hist_patch_wr_delta']
+
+        row['blue_hist_champ_pool_depth'] = b_pa.get('champ_pool_depth', 10)
+        row['red_hist_champ_pool_depth'] = r_pa.get('champ_pool_depth', 10)
+        row['diff_hist_champ_pool_depth'] = row['blue_hist_champ_pool_depth'] - row['red_hist_champ_pool_depth']
+
+        row['blue_hist_meta_alignment_score'] = b_meta_score
+        row['red_hist_meta_alignment_score'] = r_meta_score
+        row['diff_hist_meta_alignment_score'] = b_meta_score - r_meta_score
+
+        # 7. Series Context Features
         row['game_number'] = draft_payload.get('game_number', 1)
         row['blue_series_lead'] = draft_payload.get('blue_series_lead', 0)
         row['blue_prev_win'] = draft_payload.get('blue_prev_win', 0)
 
-        # 3. Champion Picks & Players
-        blue_champs = draft_payload.get('blue_champs', ['', '', '', '', ''])
-        red_champs = draft_payload.get('red_champs', ['', '', '', '', ''])
+        # 8. Champion Picks & Players
         blue_players = draft_payload.get('blue_players', ['', '', '', '', ''])
         red_players = draft_payload.get('red_players', ['', '', '', '', ''])
 
@@ -184,80 +241,17 @@ class LiveFeatureEngine:
 
         live_df = pd.DataFrame([row])
 
-        # Fill any missing columns from historical schema with defaults
         for col in self.expected_features:
             if col not in live_df.columns:
                 live_df[col] = 0.0
 
-        # Strictly filter and align features to match target training count
-        live_df = live_df[[c for c in self.expected_features if c in live_df.columns]].copy()
-
-        return live_df
-
-    def _align_dtypes_and_shape(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Aligns DataFrame column types and strictly forces model feature count."""
-        df = df.copy()
-
-        model_type_str = str(type(self.model)).lower()
-        is_catboost = "catboost" in model_type_str
-        is_lgb = "lightgbm" in model_type_str
-
-        saved_cats = getattr(self.model, "pandas_categorical_", None)
-
-        for col in df.columns:
-            if col.endswith('_champion') or col.endswith('_player') or col.endswith('_team'):
-                if is_catboost:
-                    # CatBoost requires string/int values and explicitly rejects NaN / float
-                    if col in self.df_hist.columns:
-                        known_cats = set(str(x) for x in self.df_hist[col].dropna().unique())
-                        vals = df[col].astype(str)
-                        df[col] = vals.apply(lambda x: x if x in known_cats else 'missing')
-                    else:
-                        df[col] = df[col].fillna('missing').astype(str)
-
-                    df[col] = df[col].replace({'nan': 'missing', 'NaN': 'missing', 'None': 'missing', '': 'missing'})
-
-                elif saved_cats and col in saved_cats:
-                    df[col] = pd.Categorical(df[col].astype(str), categories=saved_cats[col])
-
-                elif is_lgb and not saved_cats:
-                    df[col] = df[col].astype('category').cat.codes.astype('float64')
-
-                else:
-                    # XGBoost & standard models: uses pd.Categorical where unseen picks become NaN
-                    if col in self.df_hist.columns:
-                        known_cats = [str(x) for x in self.df_hist[col].dropna().unique().tolist()]
-                        df[col] = pd.Categorical(df[col].astype(str), categories=known_cats)
-                    else:
-                        df[col] = df[col].astype('category')
-            else:
-                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
-
-        # Truncate or pad columns if feature count still mismatches exact target shape
-        target_n_features = None
-        if hasattr(self.model, "n_features_in_"):
-            target_n_features = self.model.n_features_in_
-        elif hasattr(self.model, "booster_") and hasattr(self.model.booster_, "num_feature"):
-            target_n_features = self.model.booster_.num_feature()
-
-        if target_n_features and df.shape[1] != target_n_features:
-            if df.shape[1] > target_n_features:
-                clean_cols = [c for c in df.columns if c not in META_COLUMNS]
-                if len(clean_cols) == target_n_features:
-                    df = df[clean_cols]
-                else:
-                    df = df.iloc[:, :target_n_features]
-            elif df.shape[1] < target_n_features:
-                for i in range(df.shape[1], target_n_features):
-                    df[f"missing_feature_{i}"] = 0.0
-
-        return df
+        return live_df[[c for c in self.expected_features if c in live_df.columns]].copy()
 
     def predict_match(self, draft_payload: dict) -> dict:
         feature_df = self.build_feature_vector(draft_payload)
-        aligned_df = self._align_dtypes_and_shape(feature_df)
+        aligned_df = align_dtypes_and_shape(feature_df, self.model, self.df_hist)
 
-        # 1. Full Final Prediction
+        # 1. Final Prediction
         if hasattr(self.model, "predict_proba"):
             proba_blue = float(self.model.predict_proba(aligned_df)[0][1])
         else:
@@ -266,84 +260,99 @@ class LiveFeatureEngine:
 
         proba_red = 1.0 - proba_blue
 
-        # 2. Stage 1: Pure Elo Baseline
-        blue_team = draft_payload.get('blue_team', 'Blue Team')
-        red_team = draft_payload.get('red_team', 'Red Team')
+        # 2. Stage 1: Elo Baseline
+        blue_team = str(draft_payload.get('blue_team', 'Blue Team'))
+        red_team = str(draft_payload.get('red_team', 'Red Team'))
         b_elo = self.latest_elo.get(blue_team, 1500.0)
         r_elo = self.latest_elo.get(red_team, 1500.0)
         elo_diff = (b_elo + (10.0 if draft_payload.get('blue_firstpick', 1) == 1 else -10.0)) - r_elo
         elo_base_prob = 1.0 / (1.0 + 10.0 ** (-elo_diff / 400.0))
 
-        # 3. Stage 2: Elo + Player Mastery (Masking Champion Picks to Defaults)
+        # 3. Stage 2: Elo + Player Mastery
         player_stage_df = aligned_df.copy()
+        is_cb = 'catboost' in str(type(self.model)).lower()
+
         for col in player_stage_df.columns:
             if col.endswith('_champion'):
-                player_stage_df[col] = 'missing' if 'catboost' in str(type(self.model)).lower() else None
+                player_stage_df[col] = 'missing' if is_cb else None
             elif col.endswith('_champ_winrate_pre'):
                 player_stage_df[col] = 0.50
             elif col.endswith('_champ_games_pre'):
                 player_stage_df[col] = 10
+            elif col.startswith('diff_roll_') or col.startswith('diff_hist_'):
+                player_stage_df[col] = 0.0
 
         try:
             if hasattr(self.model, "predict_proba"):
                 player_stage_prob = float(self.model.predict_proba(player_stage_df)[0][1])
             else:
-                dmatrix_p = xgb.DMatrix(player_stage_prob, enable_categorical=True)
+                dmatrix_p = xgb.DMatrix(player_stage_df, enable_categorical=True)
                 player_stage_prob = float(self.model.predict(dmatrix_p)[0])
         except Exception:
             player_stage_prob = elo_base_prob
 
-        # Calculate Swings
+        # 4. Stage 3: Elo + Player Mastery + Team Macro, Vision & Meta Adaptability
+        early_game_stage_df = aligned_df.copy()
+        for col in early_game_stage_df.columns:
+            if col.endswith('_champion'):
+                early_game_stage_df[col] = 'missing' if is_cb else None
+            elif col.endswith('_champ_winrate_pre'):
+                early_game_stage_df[col] = 0.50
+            elif col.endswith('_champ_games_pre'):
+                early_game_stage_df[col] = 10
+
+        try:
+            if hasattr(self.model, "predict_proba"):
+                early_game_stage_prob = float(self.model.predict_proba(early_game_stage_df)[0][1])
+            else:
+                dmatrix_eg = xgb.DMatrix(early_game_stage_df, enable_categorical=True)
+                early_game_stage_prob = float(self.model.predict(dmatrix_eg)[0])
+        except Exception:
+            early_game_stage_prob = player_stage_prob
+
+        # Calculations & Percentages
         elo_pct = round(elo_base_prob * 100, 2)
         player_pct = round(player_stage_prob * 100, 2)
+        early_game_pct = round(early_game_stage_prob * 100, 2)
         final_pct = round(proba_blue * 100, 2)
 
         player_swing = round(player_pct - elo_pct, 2)
-        draft_swing = round(final_pct - player_pct, 2)
+        early_game_swing = round(early_game_pct - player_pct, 2)
+        draft_swing = round(final_pct - early_game_pct, 2)
 
-        # Progression Map for Line/Waterfall Charts
         progression_data = pd.DataFrame({
-            "Stage": ["1. Elo Baseline", "2. Player Mastery Impact", "3. Champion Draft Impact", "4. Final Prediction"],
-            f"{blue_team} Win %": [elo_pct, player_pct, final_pct, final_pct],
-            "Impact Delta": [0.0, player_swing, draft_swing, 0.0]
+            "Stage": [
+                "1. Elo Baseline",
+                "2. Player Mastery Impact",
+                "3. Team Macro & Vision Impact",
+                "4. Champion Draft Impact",
+                "5. Final Prediction"
+            ],
+            f"{blue_team} Win %": [elo_pct, player_pct, early_game_pct, final_pct, final_pct],
+            "Impact Delta": [0.0, player_swing, early_game_swing, draft_swing, 0.0]
         })
 
-        # Role Breakdown
-        role_breakdown = []
-        blue_players = draft_payload.get('blue_players', [])
-        red_players = draft_payload.get('red_players', [])
-        blue_champs = draft_payload.get('blue_champs', [])
-        red_champs = draft_payload.get('red_champs', [])
-
-        for i, role in enumerate(ROLES):
-            bp = blue_players[i] if i < len(blue_players) else ''
-            rp = red_players[i] if i < len(red_players) else ''
-            bc = blue_champs[i] if i < len(blue_champs) else ''
-            rc = red_champs[i] if i < len(red_champs) else ''
-
-            bp_s = self.get_player_stat(bp)
-            rp_s = self.get_player_stat(rp)
-            bc_s = self.get_champ_stat(bc)
-            rc_s = self.get_champ_stat(rc)
-
-            role_breakdown.append({
-                'role': role.upper(),
-                'blue_player': bp,
-                'blue_p_wr': bp_s['winrate'],
-                'blue_p_games': bp_s['games'],
-                'red_player': rp,
-                'red_p_wr': rp_s['winrate'],
-                'red_p_games': rp_s['games'],
-                'blue_champ': bc,
-                'blue_c_wr': bc_s['winrate'],
-                'red_champ': rc,
-                'red_c_wr': rc_s['winrate'],
-            })
+        role_breakdown = build_role_breakdown(draft_payload, self.player_stats, self.champ_stats, self.defaults)
 
         avg_blue_p_wr = np.mean([r['blue_p_wr'] for r in role_breakdown])
         avg_red_p_wr = np.mean([r['red_p_wr'] for r in role_breakdown])
         avg_blue_c_wr = np.mean([r['blue_c_wr'] for r in role_breakdown])
         avg_red_c_wr = np.mean([r['red_c_wr'] for r in role_breakdown])
+
+        b_eg_stats = self.get_team_early_game(blue_team)
+        r_eg_stats = self.get_team_early_game(red_team)
+        b_strat_stats = self.get_team_strategic(blue_team)
+        r_strat_stats = self.get_team_strategic(red_team)
+        b_rp_stats = self.get_team_resource_playstyle(blue_team)
+        r_rp_stats = self.get_team_resource_playstyle(red_team)
+        b_vis_stats = self.get_team_vision(blue_team)
+        r_vis_stats = self.get_team_vision(red_team)
+        b_pa_stats = self.get_team_patch_adaptability(blue_team)
+        r_pa_stats = self.get_team_patch_adaptability(red_team)
+
+        current_patch = str(draft_payload.get('patch', ''))
+        if not current_patch and 'patch' in self.df_hist.columns:
+            current_patch = str(self.df_hist['patch'].dropna().iloc[-1])
 
         return {
             'blue_win_probability': proba_blue,
@@ -353,6 +362,7 @@ class LiveFeatureEngine:
             'progression_data': progression_data,
             'draft_swings': {
                 'player_swing': player_swing,
+                'early_game_swing': early_game_swing,
                 'draft_swing': draft_swing,
                 'total_swing': round(final_pct - elo_pct, 2)
             },
@@ -366,6 +376,53 @@ class LiveFeatureEngine:
                 'red_elo': round(r_elo, 1),
                 'elo_diff': round(elo_diff, 1),
                 'elo_implied_blue_winrate': elo_pct
+            },
+            'early_game_metrics': {
+                'blue_golddiff15': round(b_eg_stats['golddiff15'], 1),
+                'red_golddiff15': round(r_eg_stats['golddiff15'], 1),
+                'golddiff15_diff': round(b_eg_stats['golddiff15'] - r_eg_stats['golddiff15'], 1),
+                'blue_plate_ratio': round(b_eg_stats['plate_ratio'] * 100, 1),
+                'red_plate_ratio': round(r_eg_stats['plate_ratio'] * 100, 1),
+            },
+            'strategic_metrics': {
+                'blue_topside_share': round(b_strat_stats['topside_share'] * 100, 1),
+                'red_topside_share': round(r_strat_stats['topside_share'] * 100, 1),
+                'blue_topside_control': round(b_strat_stats['topside_control_rate'] * 100, 1),
+                'red_topside_control': round(r_strat_stats['topside_control_rate'] * 100, 1),
+                'blue_dragon_control': round(b_strat_stats['dragon_control_rate'] * 100, 1),
+                'red_dragon_control': round(r_strat_stats['dragon_control_rate'] * 100, 1),
+                'blue_jungle_aggression': round(b_strat_stats['jungle_aggression'] * 100, 1),
+                'red_jungle_aggression': round(r_strat_stats['jungle_aggression'] * 100, 1),
+            },
+            'resource_playstyle_metrics': {
+                'blue_gold_hhi': round(b_rp_stats['team_gold_hhi'], 4),
+                'red_gold_hhi': round(r_rp_stats['team_gold_hhi'], 4),
+                'blue_aggression_index': round(b_rp_stats['aggression_index'], 2),
+                'red_aggression_index': round(r_rp_stats['aggression_index'], 2),
+                'blue_early_orientation': round(b_rp_stats['early_game_orientation'], 2),
+                'red_early_orientation': round(r_rp_stats['early_game_orientation'], 2),
+                'blue_objective_priority': round(b_rp_stats['objective_priority_score'], 2),
+                'red_objective_priority': round(r_rp_stats['objective_priority_score'], 2),
+            },
+            'vision_metrics': {
+                'blue_vspm': round(b_vis_stats['vspm'], 2),
+                'red_vspm': round(r_vis_stats['vspm'], 2),
+                'vspm_diff': round(b_vis_stats['vspm'] - r_vis_stats['vspm'], 2),
+                'blue_ward_clear_ratio': round(b_vis_stats['ward_clear_ratio'], 3),
+                'red_ward_clear_ratio': round(r_vis_stats['ward_clear_ratio'], 3),
+                'blue_cwpm': round(b_vis_stats['cwpm'], 2),
+                'red_cwpm': round(r_vis_stats['cwpm'], 2),
+                'blue_map_control_score': round(b_vis_stats['map_control_score'], 2),
+                'red_map_control_score': round(r_vis_stats['map_control_score'], 2),
+            },
+            'patch_adaptability_metrics': {
+                'patch': current_patch,
+                'blue_patch_winrate': round(b_pa_stats['patch_winrate'] * 100, 1),
+                'red_patch_winrate': round(r_pa_stats['patch_winrate'] * 100, 1),
+                'blue_patch_wr_delta': round(b_pa_stats['patch_wr_delta'] * 100, 1),
+                'red_patch_wr_delta': round(r_pa_stats['patch_wr_delta'] * 100, 1),
+                'blue_champ_pool_depth': int(b_pa_stats['champ_pool_depth']),
+                'red_champ_pool_depth': int(r_pa_stats['champ_pool_depth']),
             },
             'player_metrics': {
                 'avg_blue_p_wr': round(avg_blue_p_wr * 100, 2),

@@ -4,9 +4,14 @@ import pandas as pd
 
 from calculators.champ_stats_calculator import calculate_champion_and_draft_stats
 from calculators.download_latest_data import download_latest_match_data
+from calculators.early_game_feature_generator import generate_early_game_features
 from calculators.elo_calculator import compute_team_elo_ratings
+from calculators.map_control_generator import process_vision_map_control_features
 from calculators.match_data_converter import prepare_oracles_elixir_pregame
+from calculators.patch_data_generator import generate_patch_data
 from calculators.player_stats_calculator import compute_player_and_mastery_stats
+from calculators.resource_allocation_generator import generate_resource_allocation
+from calculators.strategic_feature_generator import generate_strategic_priority_features
 from trainers.catboost_model_trainer import train_catboost
 from trainers.elasticnet_model_trainer import train_elasticnet_model
 from trainers.elastictree_model_trainer import train_elastictree
@@ -15,43 +20,68 @@ from trainers.model_trainer import train_lol_prediction_model
 
 if __name__ == '__main__':
 
-    download_latest_match_data()
-    prepare_oracles_elixir_pregame(["dataset/match/2014_match_data.csv",
-                                    "dataset/match/2015_match_data.csv",
-                                    "dataset/match/2016_match_data.csv",
-                                    "dataset/match/2017_match_data.csv",
-                                    "dataset/match/2018_match_data.csv",
-                                    "dataset/match/2019_match_data.csv",
-                                    "dataset/match/2020_match_data.csv",
-                                    "dataset/match/2021_match_data.csv",
-                                    "dataset/match/2022_match_data.csv",
-                                    "dataset/match/2023_match_data.csv",
-                                    "dataset/match/2024_match_data.csv",
-                                    "dataset/match/2025_match_data.csv",
-                                    "dataset/match/2026_match_data.csv"],
-                                   "dataset/pregame/pregame.csv")
+    # download_latest_match_data()
+    # prepare_oracles_elixir_pregame(["dataset/match/2014_match_data.csv",
+    #                                 "dataset/match/2015_match_data.csv",
+    #                                 "dataset/match/2016_match_data.csv",
+    #                                 "dataset/match/2017_match_data.csv",
+    #                                 "dataset/match/2018_match_data.csv",
+    #                                 "dataset/match/2019_match_data.csv",
+    #                                 "dataset/match/2020_match_data.csv",
+    #                                 "dataset/match/2021_match_data.csv",
+    #                                 "dataset/match/2022_match_data.csv",
+    #                                 "dataset/match/2023_match_data.csv",
+    #                                 "dataset/match/2024_match_data.csv",
+    #                                 "dataset/match/2025_match_data.csv",
+    #                                 "dataset/match/2026_match_data.csv"],
+    #                                "dataset/pregame/pregame.csv")
+
+    dataset_path = "dataset/pregame/pregame_dataset_final_features.csv"
 
     enriched_df, team_leaderboard = compute_team_elo_ratings(
         filepath="dataset/pregame/pregame.csv",
-        output_filepath="dataset/pregame/pregame_dataset_with_elo.csv",
+        output_filepath=dataset_path,
         init_rating=1500,
         first_pick_bonus=10.0,
         season_soft_reset_factor=0.2
     )
 
+    generate_early_game_features(
+        filepath=dataset_path,
+        output_filepath=dataset_path
+    )
+
+    generate_strategic_priority_features(
+        filepath=dataset_path,
+        output_filepath=dataset_path
+    )
+
+    generate_resource_allocation(
+        input_path=dataset_path,
+        output_path=dataset_path
+    )
+
+    process_vision_map_control_features(
+        input_path=dataset_path,
+        output_path=dataset_path
+    )
+
+    generate_patch_data(
+        input_path=dataset_path,
+        output_path=dataset_path
+    )
+
     compute_player_and_mastery_stats(
-        filepath="dataset/pregame/pregame_dataset_with_elo.csv",
-        output_filepath="dataset/pregame/pregame_dataset_with_player_stats.csv",
+        filepath=dataset_path,
+        output_filepath=dataset_path,
         prior_weight=1.0,
         prior_prob=0.50
     )
 
     calculate_champion_and_draft_stats(
-        input_filepath="dataset/pregame/pregame_dataset_with_player_stats.csv",
-        output_filepath="dataset/pregame/pregame_dataset_final_features.csv"
+        input_filepath=dataset_path,
+        output_filepath=dataset_path
     )
-
-    dataset_path = "dataset/pregame/pregame_dataset_final_features.csv"
 
     model, feature_importance = train_lol_prediction_model(
         filepath=dataset_path,
