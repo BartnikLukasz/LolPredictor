@@ -1,6 +1,7 @@
 import os
 import json
 import optuna
+import warnings
 import pandas as pd
 import numpy as np
 import xgboost as xgb
@@ -129,15 +130,15 @@ def optimize_xgboost_hyperparameters(
 
     def objective(trial: optuna.Trial) -> float:
         params = {
-            'n_estimators': 500,
-            'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.08, log=True),
-            'max_depth': trial.suggest_int('max_depth', 3, 6),
-            'subsample': trial.suggest_float('subsample', 0.6, 0.95),
-            'colsample_bytree': trial.suggest_float('colsample_bytree', 0.5, 0.9),
-            'min_child_weight': trial.suggest_int('min_child_weight', 1, 10),
-            'gamma': trial.suggest_float('gamma', 0.0, 1.0),
-            'reg_alpha': trial.suggest_float('reg_alpha', 1e-3, 10.0, log=True),
-            'reg_lambda': trial.suggest_float('reg_lambda', 1e-3, 10.0, log=True),
+            'n_estimators': 200,
+            'learning_rate': trial.suggest_float('learning_rate', 0.02, 0.06, log=True),
+            'max_depth': trial.suggest_int('max_depth', 4, 8),
+            'subsample': trial.suggest_float('subsample', 0.6, 0.8),
+            'colsample_bytree': trial.suggest_float('colsample_bytree', 0.7, 0.95),
+            'min_child_weight': trial.suggest_int('min_child_weight', 3, 7),
+            'gamma': trial.suggest_float('gamma', 0.3, 0.7),
+            'reg_alpha': trial.suggest_float('reg_alpha', 3, 20.0, log=True),
+            'reg_lambda': trial.suggest_float('reg_lambda', 1e-5, 1.0, log=True),
             'eval_metric': 'logloss',
             'enable_categorical': True,
             'early_stopping_rounds': 30,
@@ -212,14 +213,14 @@ def optimize_lightgbm_hyperparameters(
     ]
 
     feature_cols = (
-        elo_features +
-        series_features +
-        player_features +
-        h2h_matchup_features +
-        synergy_roster_features +
-        draft_champ_features +
-        champ_features +
-        new_step_features
+            elo_features +
+            series_features +
+            player_features +
+            h2h_matchup_features +
+            synergy_roster_features +
+            draft_champ_features +
+            champ_features +
+            new_step_features
     )
     feature_cols = [col for col in dict.fromkeys(feature_cols) if col in df.columns]
 
@@ -242,41 +243,50 @@ def optimize_lightgbm_hyperparameters(
 
     def objective(trial: optuna.Trial) -> float:
         params = {
-            'n_estimators': 500,
-            'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.08, log=True),
-            'max_depth': trial.suggest_int('max_depth', 3, 7),
-            'num_leaves': trial.suggest_int('num_leaves', 15, 63),
-            'min_child_samples': trial.suggest_int('min_child_samples', 5, 50),
-            'subsample': trial.suggest_float('subsample', 0.6, 0.95),
+            'n_estimators': 150,  # Speed optimization during search
+            'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.1, log=True),
+            'max_depth': trial.suggest_int('max_depth', 1, 7),
+            'num_leaves': trial.suggest_int('num_leaves', 25, 53),
+            'min_child_samples': trial.suggest_int('min_child_samples', 20, 60),
+            'subsample': trial.suggest_float('subsample', 0.4, 0.75),
             'subsample_freq': 1,
-            'colsample_bytree': trial.suggest_float('colsample_bytree', 0.5, 0.9),
-            'reg_alpha': trial.suggest_float('reg_alpha', 1e-3, 10.0, log=True),
-            'reg_lambda': trial.suggest_float('reg_lambda', 1e-3, 10.0, log=True),
+            'colsample_bytree': trial.suggest_float('colsample_bytree', 0.4, 0.7),
+            'reg_alpha': trial.suggest_float('reg_alpha', 1e-2, 5.0, log=True),
+            'reg_lambda': trial.suggest_float('reg_lambda', 1e-5, 1.0, log=True),
             'objective': 'binary',
             'metric': 'binary_logloss',
             'random_state': 42,
-            'verbosity': -1
+            'verbosity': -1,
+            'n_jobs': 1  # 1 thread per model fit so Optuna handles multi-trial parallelism
         }
 
         model = LGBMClassifier(**params)
+
+        # API FIX: Replaced eval_set with eval_X and eval_y
         model.fit(
             X_train, y_train,
-            eval_set=[(X_test, y_test)],
-            callbacks=[lgb.early_stopping(stopping_rounds=30, verbose=False)]
+            eval_X=X_test,
+            eval_y=y_test,
+            callbacks=[lgb.early_stopping(stopping_rounds=15, verbose=False)]
         )
 
         preds_proba = model.predict_proba(X_test)[:, 1]
         return log_loss(y_test, preds_proba)
 
     study = optuna.create_study(direction='minimize')
-    study.optimize(objective, n_trials=n_trials, show_progress_bar=True)
+    study.optimize(objective, n_trials=n_trials, n_jobs=-1, show_progress_bar=True)
 
-    best_params = study.best_params
-    best_params['n_estimators'] = 2000
-    best_params['objective'] = 'binary'
-    best_params['subsample_freq'] = 1
-    best_params['random_state'] = 42
-    best_params['verbosity'] = -1
+    # Complete parameter export
+    best_params = study.best_trial.params.copy()
+    best_params.update({
+        'n_estimators': 2000,
+        'objective': 'binary',
+        'subsample_freq': 1,
+        'random_state': 42,
+        'verbosity': -1,
+        'n_jobs': -1,
+        'best_logloss': study.best_value
+    })
 
     save_best_params_if_improved(best_params, study.best_value, output_json_path)
 
@@ -345,11 +355,11 @@ def optimize_catboost_hyperparameters(
     def objective(trial: optuna.Trial) -> float:
         params = {
             'iterations': 300,  # Cap at 300 iterations during search for maximum throughput
-            'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.08, log=True),
-            'depth': trial.suggest_int('depth', 3, 6),
-            'l2_leaf_reg': trial.suggest_float('l2_leaf_reg', 1e-1, 10.0, log=True),
-            'random_strength': trial.suggest_float('random_strength', 1e-3, 10.0, log=True),
-            'bagging_temperature': trial.suggest_float('bagging_temperature', 0.0, 1.0),
+            'learning_rate': trial.suggest_float('learning_rate', 0.03, 0.1, log=True),
+            'depth': trial.suggest_int('depth', 1, 6),
+            'l2_leaf_reg': trial.suggest_float('l2_leaf_reg', 1e-1, 5.0, log=True),
+            'random_strength': trial.suggest_float('random_strength', 1e-3, 1.0, log=True),
+            'bagging_temperature': trial.suggest_float('bagging_temperature', 0.5, 2.0),
             'eval_metric': 'Logloss',
             'thread_count': -1,
             'random_seed': 42,
@@ -450,10 +460,10 @@ def optimize_elastictree_hyperparameters(
         params = {
             'n_estimators': 50,  # 50 trees for swift evaluation
             'criterion': trial.suggest_categorical('criterion', ['log_loss', 'gini']),
-            'max_depth': trial.suggest_int('max_depth', 6, 14),
-            'min_samples_split': trial.suggest_int('min_samples_split', 2, 20),
-            'min_samples_leaf': trial.suggest_int('min_samples_leaf', 1, 10),
-            'max_features': trial.suggest_categorical('max_features', ['sqrt', 'log2', 0.05, 0.1]),
+            'max_depth': trial.suggest_int('max_depth', 15, 40),
+            'min_samples_split': trial.suggest_int('min_samples_split', 12, 30),
+            'min_samples_leaf': trial.suggest_int('min_samples_leaf', 5, 15),
+            'max_features': 0.1,
             'random_state': 42,
             'n_jobs': 1  # Keep 1 thread per estimator for parallel Optuna execution
         }
@@ -469,7 +479,7 @@ def optimize_elastictree_hyperparameters(
     study.optimize(objective, n_trials=n_trials, n_jobs=-1, show_progress_bar=True)
 
     best_params = study.best_params
-    best_params['n_estimators'] = 5000
+    best_params['n_estimators'] = 3000
     best_params['random_state'] = 42
     best_params['n_jobs'] = -1
 
@@ -545,9 +555,10 @@ def optimize_elasticnet_hyperparameters(
     X_test, y_test = X.iloc[split_idx:], y[split_idx:]
 
     print("=" * 60)
-    print("     ELASTICNET HYPERPARAMETER OPTIMIZATION (OPTUNA)    ")
+    print("     ELASTICNET HYPERPARAMETER OPTIMIZATION (FAST MODE)    ")
     print("=" * 60)
 
+    # 1. Preprocess data ONCE outside the optimization loop for maximum throughput
     num_transformer = Pipeline([
         ('imputer', SimpleImputer(strategy='median')),
         ('scaler', StandardScaler())
@@ -569,14 +580,16 @@ def optimize_elasticnet_hyperparameters(
     X_train_proc = preprocessor.fit_transform(X_train)
     X_test_proc = preprocessor.transform(X_test)
 
+    # 2. Objective function with expanded search space and fast iteration settings
     def objective(trial: optuna.Trial) -> float:
         params = {
-            'penalty': 'elasticnet',
             'solver': 'saga',
-            'C': trial.suggest_float('C', 1e-3, 5.0, log=True),
-            'l1_ratio': trial.suggest_float('l1_ratio', 0.0, 1.0),
-            'max_iter': 200,
-            'tol': 1e-2,
+            'C': trial.suggest_float('C', 1e-7, 0.001, log=True),
+            'l1_ratio': trial.suggest_float('l1_ratio', 0.0, 0.1),
+            'fit_intercept': trial.suggest_categorical('fit_intercept', [True, False]),
+            'class_weight': trial.suggest_categorical('class_weight', [None, 'balanced']),
+            'tol': trial.suggest_float('tol', 1e-7, 1e-1, log=True),  # Looser tolerance during search
+            'max_iter': 150,  # Capped iterations for fast trial evaluation
             'random_state': 42
         }
 
@@ -586,49 +599,55 @@ def optimize_elasticnet_hyperparameters(
         preds_proba = model.predict_proba(X_test_proc)[:, 1]
         return log_loss(y_test, preds_proba)
 
+    # 3. Parallel optimization across all available CPU threads
     study = optuna.create_study(direction='minimize')
-    study.optimize(objective, n_trials=n_trials, n_jobs=-1)
+    study.optimize(objective, n_trials=n_trials, n_jobs=-1, show_progress_bar=True)
 
-    best_params = study.best_params
-    best_params['penalty'] = 'elasticnet'
-    best_params['solver'] = 'saga'
-    best_params['max_iter'] = 5000
-    best_params['random_state'] = 42
+    # 4. Extract all parameters and configure for high-precision production training
+    best_params = study.best_trial.params.copy()
+    best_params.update({
+        'solver': 'saga',
+        'max_iter': 5000,
+        'tol': 1e-4,  # Tight tolerance for production fit
+        'random_state': 42,
+        'best_logloss': study.best_value
+    })
 
     save_best_params_if_improved(best_params, study.best_value, output_json_path)
 
 if __name__ == "__main__":
     dataset_path = "../dataset/pregame/pregame_dataset_final_features.csv"
-
-    # Optimize XGBoost
-    optimize_xgboost_hyperparameters(
-        filepath=dataset_path,
-        split_date="2026-04-01",
-        n_trials=800,
-        output_json_path="../models/best_params.json"
-    )
-
-    # Optimize LightGBM
-    optimize_lightgbm_hyperparameters(
-        filepath=dataset_path,
-        split_date="2026-04-01",
-        n_trials=800,
-        output_json_path="../models/best_lightgbm_params.json"
-    )
-
-    # Optimize CatBoost
-    optimize_catboost_hyperparameters(
-        filepath=dataset_path,
-        split_date="2026-04-01",
-        n_trials=400,
-        output_json_path="../models/catboost_best_params.json"
-    )
+    warnings.filterwarnings("ignore", category=UserWarning, module="lightgbm")
+    #
+    # # Optimize XGBoost
+    # optimize_xgboost_hyperparameters(
+    #     filepath=dataset_path,
+    #     split_date="2026-04-01",
+    #     n_trials=100,
+    #     output_json_path="../models/best_params.json"
+    # )
+    #
+    # # Optimize LightGBM
+    # optimize_lightgbm_hyperparameters(
+    #     filepath=dataset_path,
+    #     split_date="2026-04-01",
+    #     n_trials=150,
+    #     output_json_path="../models/best_lightgbm_params.json"
+    # )
+    #
+    # # Optimize CatBoost
+    # optimize_catboost_hyperparameters(
+    #     filepath=dataset_path,
+    #     split_date="2026-04-01",
+    #     n_trials=20,
+    #     output_json_path="../models/catboost_best_params.json"
+    # )
 
     # Optimize ElasticTree
     optimize_elastictree_hyperparameters(
         filepath=dataset_path,
         split_date="2026-04-01",
-        n_trials=400,
+        n_trials=100,
         output_json_path="../models/elastictree_best_params.json"
     )
 
