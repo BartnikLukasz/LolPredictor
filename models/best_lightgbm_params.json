@@ -7,7 +7,7 @@
     "colsample_bytree": 0.5103388717579507,
     "reg_alpha": 0.3236171608412214,
     "reg_lambda": 0.0015806730409981264,
-    "n_estimators": 5000,
+    "n_estimators": 1000,
     "objective": "binary",
     "subsample_freq": 1,
     "random_state": 42,

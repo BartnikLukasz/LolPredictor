@@ -4,7 +4,7 @@
     "l2_leaf_reg": 4.708332666954977,
     "random_strength": 4.781905586911453,
     "bagging_temperature": 2.1808561497590904,
-    "iterations": 5000,
+    "iterations": 1000,
     "eval_metric": "Logloss",
     "early_stopping_rounds": 30,
     "random_seed": 42,

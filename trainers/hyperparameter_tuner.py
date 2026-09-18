@@ -152,7 +152,7 @@ def optimize_xgboost_hyperparameters(
     study.optimize(objective, n_trials=n_trials, show_progress_bar=True)
 
     best_params = study.best_params
-    best_params['n_estimators'] = 5000
+    best_params['n_estimators'] = 1000
     best_params['eval_metric'] = 'logloss'
     best_params['enable_categorical'] = True
     best_params['early_stopping_rounds'] = 30
@@ -260,7 +260,7 @@ def optimize_lightgbm_hyperparameters(
     study.optimize(objective, n_trials=n_trials, show_progress_bar=True)
 
     best_params = study.best_params
-    best_params['n_estimators'] = 5000
+    best_params['n_estimators'] = 1000
     best_params['objective'] = 'binary'
     best_params['subsample_freq'] = 1
     best_params['random_state'] = 42
@@ -354,7 +354,7 @@ def optimize_catboost_hyperparameters(
     study.optimize(objective, n_trials=n_trials, show_progress_bar=True)
 
     best_params = study.best_params
-    best_params['iterations'] = 5000
+    best_params['iterations'] = 1000
     best_params['eval_metric'] = 'Logloss'
     best_params['early_stopping_rounds'] = 30
     best_params['random_seed'] = 42
@@ -564,7 +564,7 @@ def optimize_elasticnet_hyperparameters(
     best_params = study.best_params
     best_params['penalty'] = 'elasticnet'
     best_params['solver'] = 'saga'
-    best_params['max_iter'] = 5000
+    best_params['max_iter'] = 2000
     best_params['random_state'] = 42
 
     save_best_params_if_improved(best_params, study.best_value, output_json_path)

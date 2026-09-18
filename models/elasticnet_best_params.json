@@ -3,7 +3,7 @@
     "l1_ratio": 0.022534044463401036,
     "penalty": "elasticnet",
     "solver": "saga",
-    "max_iter": 5000,
+    "max_iter": 1000,
     "random_state": 42,
     "best_logloss": 0.620317
 }

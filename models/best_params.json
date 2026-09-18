@@ -7,7 +7,7 @@
     "gamma": 0.23001716499686536,
     "reg_alpha": 19.43765858000798,
     "reg_lambda": 6.355520430315546,
-    "n_estimators": 5000,
+    "n_estimators": 1000,
     "eval_metric": "logloss",
     "enable_categorical": true,
     "early_stopping_rounds": 30,
