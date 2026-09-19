@@ -15,14 +15,14 @@ def run_cmd(cmd: list[str], check: bool = True) -> subprocess.CompletedProcess:
 
 
 def run_pipeline_and_push():
-    # 1. Run main execution pipeline
-    print("[*] Starting main.py pipeline...")
-    try:
-        subprocess.run([sys.executable, "main.py"], check=True)
-        print("[✓] main.py completed successfully.")
-    except subprocess.CalledProcessError as e:
-        print(f"[!] main.py failed with exit code {e.returncode}. Aborting Git push.")
-        sys.exit(1)
+    # # 1. Run main execution pipeline
+    # print("[*] Starting main.py pipeline...")
+    # try:
+    #     subprocess.run([sys.executable, "main.py"], check=True)
+    #     print("[✓] main.py completed successfully.")
+    # except subprocess.CalledProcessError as e:
+    #     print(f"[!] main.py failed with exit code {e.returncode}. Aborting Git push.")
+    #     sys.exit(1)
 
     # 2. Stage updated files
     print("[*] Staging updated model and data files...")
