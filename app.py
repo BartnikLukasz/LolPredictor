@@ -9,14 +9,23 @@ import requests
 import streamlit as st
 import plotly.graph_objects as go
 
-from app_helpers import compute_model_accuracies, match_team_name, match_champion_name, fetch_golgg_draft, \
-    prob_to_american_odds, get_historical_team_metrics, compute_db_model_weights, create_weighted_ensemble_result
+from app_helpers import (
+    compute_model_accuracies,
+    match_team_name,
+    match_champion_name,
+    fetch_golgg_draft,
+    prob_to_american_odds,
+    get_historical_team_metrics,
+    compute_db_model_weights,
+    create_weighted_ensemble_result,
+    send_odds_to_endpoint,
+    apply_live_series_elo_adjustment  # <--- Imported Live Elo Helper
+)
 from live_feature_engine import LiveFeatureEngine
 from upstash_redis import Redis
 
 st.set_page_config(page_title="LoL Match Predictor", layout="wide")
 
-ODDS_ENDPOINT_URL = "http://127.0.0.1:5000/odds"
 TRACKING_KEY = "live_accuracy_tracking"
 
 MODEL_REGISTRY = {
@@ -39,6 +48,7 @@ def check_is_admin() -> bool:
         return True
     return False
 
+
 # --- TEAM ROSTER CALLBACKS ---
 def update_blue_roster_callback():
     selected_team = st.session_state.get("blue_team_select")
@@ -46,11 +56,13 @@ def update_blue_roster_callback():
     for i in range(5):
         st.session_state[f"bp_{i}"] = roster[i] if i < len(roster) else ""
 
+
 def update_red_roster_callback():
     selected_team = st.session_state.get("red_team_select")
     roster = team_rosters.get(selected_team, ["", "", "", "", ""])
     for i in range(5):
         st.session_state[f"rp_{i}"] = roster[i] if i < len(roster) else ""
+
 
 def swap_sides_callback():
     temp_blue = st.session_state.get("blue_team_select")
@@ -124,18 +136,6 @@ def load_predictor_assets():
 
     champions_list = sorted(list(champions_set)) if champions_set else ["Ahri", "Aatrox", "Azir"]
     return engines, roster_data, champions_list, base_engine.df_hist
-
-
-def send_odds_to_endpoint(blue_team: str, red_team: str, p_blue: float, p_red: float):
-    payload = {
-        "odds": {blue_team: round(1.0 / p_blue, 2) if p_blue > 0 else 0, red_team: round(1.0 / p_red, 2) if p_red > 0 else 0},
-        "model_probs": {blue_team: round(p_blue, 4), red_team: round(p_red, 4)}
-    }
-    try:
-        requests.post(ODDS_ENDPOINT_URL, json=payload, timeout=2)
-        st.toast("Dispatched odds to prediction monitor!", icon="📡")
-    except Exception:
-        st.toast(f"Could not reach endpoint ({ODDS_ENDPOINT_URL})", icon="⚠️")
 
 
 # Load Predictor Assets
@@ -303,9 +303,9 @@ s1, s2, s3, s4 = st.columns(4)
 with s1:
     first_pick_side = st.radio("First Pick Side", options=["Blue", "Red"], horizontal=True, key="first_pick_radio")
 with s2:
-    game_number = st.number_input("Game Number in Series", 1, 7, 1)
+    game_number = st.number_input("Game Number in Series", 1, 5, 1)
 with s3:
-    blue_series_lead = st.number_input(f"{blue_team} Series Lead", -3, 3, 0)
+    blue_series_lead = st.number_input(f"{blue_team} Series Lead", -2, 2, 0)
 with s4:
     blue_prev_win_raw = st.selectbox(f"Did {blue_team} Win Previous Game?", options=["N/A (Game 1)", "Yes", "No"])
     blue_prev_win = 1 if blue_prev_win_raw == "Yes" else 0
@@ -346,6 +346,27 @@ st.markdown("---")
 
 # --- CALCULATE PREDICTIONS ---
 if st.button("Calculate Match Probabilities", type="primary", use_container_width=True):
+    # Derive prior games won/lost within the current series
+    total_past_games = max(0, int(game_number) - 1)
+
+    # Calculate wins per team with defensive bounds checking
+    raw_blue_wins = (total_past_games + int(blue_series_lead)) // 2
+    raw_red_wins = (total_past_games - int(blue_series_lead)) // 2
+
+    blue_series_wins = max(0, min(total_past_games, raw_blue_wins))
+    red_series_wins = max(0, min(total_past_games, raw_red_wins))
+
+    # DYNAMIC IN-SERIES ELO ADJUSTMENT
+    custom_elo_metrics = apply_live_series_elo_adjustment(
+        df_hist=df_hist,
+        blue_team=blue_team,
+        red_team=red_team,
+        blue_series_wins=blue_series_wins,
+        red_series_wins=red_series_wins,
+        blue_has_first_pick=(first_pick_side == "Blue"),
+        k_series=60.0
+    )
+
     draft_payload = {
         "blue_team": blue_team,
         "red_team": red_team,
@@ -356,7 +377,10 @@ if st.button("Calculate Match Probabilities", type="primary", use_container_widt
         "blue_firstpick": 1 if first_pick_side == "Blue" else 0,
         "game_number": game_number,
         "blue_series_lead": blue_series_lead,
-        "blue_prev_win": blue_prev_win
+        "blue_prev_win": blue_prev_win,
+        "blue_series_wins": blue_series_wins,
+        "red_series_wins": red_series_wins,
+        "custom_elo_metrics": custom_elo_metrics  # Injected directly into engine context
     }
 
     base_results = {m_name: eng.predict_match(draft_payload) for m_name, eng in engines.items()}

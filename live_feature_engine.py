@@ -127,17 +127,23 @@ class LiveFeatureEngine:
     def build_feature_vector(self, draft_payload: dict) -> pd.DataFrame:
         row = {}
 
-        # 1. Elo Features
+        # 1. Elo Features (Check for dynamically injected custom_elo_metrics)
         blue_team = draft_payload.get('blue_team', '')
         red_team = draft_payload.get('red_team', '')
         blue_fp = draft_payload.get('blue_firstpick', 1)
 
-        b_elo = self.latest_elo.get(blue_team, 1500.0)
-        r_elo = self.latest_elo.get(red_team, 1500.0)
-        first_pick_bonus = 10.0 if blue_fp == 1 else -10.0
-
-        elo_diff = (b_elo + first_pick_bonus) - r_elo
-        blue_win_prob = 1.0 / (1.0 + 10.0 ** (-elo_diff / 400.0))
+        custom_elo = draft_payload.get('custom_elo_metrics')
+        if custom_elo:
+            b_elo = custom_elo.get('blue_elo_pre', self.latest_elo.get(blue_team, 1500.0))
+            r_elo = custom_elo.get('red_elo_pre', self.latest_elo.get(red_team, 1500.0))
+            elo_diff = custom_elo.get('elo_diff', b_elo - r_elo)
+            blue_win_prob = custom_elo.get('blue_elo_win_prob', 1.0 / (1.0 + 10.0 ** (-elo_diff / 400.0)))
+        else:
+            b_elo = self.latest_elo.get(blue_team, 1500.0)
+            r_elo = self.latest_elo.get(red_team, 1500.0)
+            first_pick_bonus = 10.0 if blue_fp == 1 else -10.0
+            elo_diff = (b_elo + first_pick_bonus) - r_elo
+            blue_win_prob = 1.0 / (1.0 + 10.0 ** (-elo_diff / 400.0))
 
         row['blue_elo_pre'] = b_elo
         row['red_elo_pre'] = r_elo
@@ -207,7 +213,6 @@ class LiveFeatureEngine:
         for col in df.columns:
             if col.endswith('_champion') or col.endswith('_player') or col.endswith('_team'):
                 if is_catboost:
-                    # CatBoost requires string/int values and explicitly rejects NaN / float
                     if col in self.df_hist.columns:
                         known_cats = set(str(x) for x in self.df_hist[col].dropna().unique())
                         vals = df[col].astype(str)
@@ -224,7 +229,6 @@ class LiveFeatureEngine:
                     df[col] = df[col].astype('category').cat.codes.astype('float64')
 
                 else:
-                    # XGBoost & standard models: uses pd.Categorical where unseen picks become NaN
                     if col in self.df_hist.columns:
                         known_cats = [str(x) for x in self.df_hist[col].dropna().unique().tolist()]
                         df[col] = pd.Categorical(df[col].astype(str), categories=known_cats)
@@ -233,7 +237,6 @@ class LiveFeatureEngine:
             else:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
 
-        # Truncate or pad columns if feature count still mismatches exact target shape
         target_n_features = None
         if hasattr(self.model, "n_features_in_"):
             target_n_features = self.model.n_features_in_
@@ -266,15 +269,23 @@ class LiveFeatureEngine:
 
         proba_red = 1.0 - proba_blue
 
-        # 2. Stage 1: Pure Elo Baseline
+        # 2. Stage 1: Pure Elo Baseline (Check for custom_elo_metrics)
         blue_team = draft_payload.get('blue_team', 'Blue Team')
         red_team = draft_payload.get('red_team', 'Red Team')
-        b_elo = self.latest_elo.get(blue_team, 1500.0)
-        r_elo = self.latest_elo.get(red_team, 1500.0)
-        elo_diff = (b_elo + (10.0 if draft_payload.get('blue_firstpick', 1) == 1 else -10.0)) - r_elo
-        elo_base_prob = 1.0 / (1.0 + 10.0 ** (-elo_diff / 400.0))
+        custom_elo = draft_payload.get('custom_elo_metrics')
 
-        # 3. Stage 2: Elo + Player Mastery (Masking Champion Picks to Defaults)
+        if custom_elo:
+            b_elo = custom_elo.get('blue_elo_pre', self.latest_elo.get(blue_team, 1500.0))
+            r_elo = custom_elo.get('red_elo_pre', self.latest_elo.get(red_team, 1500.0))
+            elo_diff = custom_elo.get('elo_diff', b_elo - r_elo)
+            elo_base_prob = custom_elo.get('blue_elo_win_prob', 1.0 / (1.0 + 10.0 ** (-elo_diff / 400.0)))
+        else:
+            b_elo = self.latest_elo.get(blue_team, 1500.0)
+            r_elo = self.latest_elo.get(red_team, 1500.0)
+            elo_diff = (b_elo + (10.0 if draft_payload.get('blue_firstpick', 1) == 1 else -10.0)) - r_elo
+            elo_base_prob = 1.0 / (1.0 + 10.0 ** (-elo_diff / 400.0))
+
+        # 3. Stage 2: Elo + Player Mastery
         player_stage_df = aligned_df.copy()
         for col in player_stage_df.columns:
             if col.endswith('_champion'):
@@ -283,7 +294,7 @@ class LiveFeatureEngine:
                 player_stage_df[col] = 0.50
             elif col.endswith('_champ_games_pre'):
                 player_stage_df[col] = 10
-
+        player_stage_prob = None
         try:
             if hasattr(self.model, "predict_proba"):
                 player_stage_prob = float(self.model.predict_proba(player_stage_df)[0][1])

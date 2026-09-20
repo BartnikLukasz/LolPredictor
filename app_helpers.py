@@ -6,6 +6,9 @@ import requests
 import pandas as pd
 import copy
 import numpy as np
+import streamlit as st
+
+ODDS_ENDPOINT_URL = "http://127.0.0.1:5000/odds"
 
 def fetch_golgg_draft(url: str) -> dict:
     """Scrapes match draft, teams, and player details directly from a gol.gg game URL."""
@@ -341,3 +344,103 @@ def create_weighted_ensemble_result(all_model_results: dict, model_weights: dict
     }
     res['weights_used'] = norm_weights
     return res
+
+
+def get_latest_team_elo(df_hist: pd.DataFrame, team_name: str, default_rating: float = 1500.0) -> float:
+    """Robustly finds the most recent Elo rating for a team from df_hist."""
+    if df_hist is None or df_hist.empty or not team_name:
+        return default_rating
+
+    target = str(team_name).strip().lower()
+
+    # Search across all potential team identity columns (names and IDs)
+    team_cols = [c for c in ['blue_team', 'red_team', 'blue_teamid', 'red_teamid'] if c in df_hist.columns]
+    if not team_cols:
+        return default_rating
+
+    # Case-insensitive & whitespace-stripped lookup
+    mask = pd.Series(False, index=df_hist.index)
+    for col in team_cols:
+        mask |= (df_hist[col].astype(str).str.strip().str.lower() == target)
+
+    team_matches = df_hist[mask]
+    if team_matches.empty:
+        return default_rating
+
+    # Extract rating from the most recent chronological match
+    last_row = team_matches.iloc[-1]
+
+    for b_col in ['blue_team', 'blue_teamid']:
+        if b_col in last_row and str(last_row[b_col]).strip().lower() == target:
+            if 'blue_elo_pre' in last_row and pd.notna(last_row['blue_elo_pre']):
+                return float(last_row['blue_elo_pre'])
+
+    for r_col in ['red_team', 'red_teamid']:
+        if r_col in last_row and str(last_row[r_col]).strip().lower() == target:
+            if 'red_elo_pre' in last_row and pd.notna(last_row['red_elo_pre']):
+                return float(last_row['red_elo_pre'])
+
+    return default_rating
+
+
+def apply_live_series_elo_adjustment(
+        df_hist: pd.DataFrame,
+        blue_team: str,
+        red_team: str,
+        blue_series_wins: int,
+        red_series_wins: int,
+        blue_has_first_pick: bool = True,
+        k_series: float = 80.0,
+        first_pick_bonus: float = 10.0,  # Harmonized with LiveFeatureEngine (10.0)
+        init_rating: float = 1500.0
+) -> dict:
+    """
+    Retrieves latest macro Elo ratings for both teams from df_hist and simulates
+    intra-series Elo drift on the fly based on current series score.
+    """
+    # 1. Fetch base macro Elos robustly from df_hist
+    r_blue = get_latest_team_elo(df_hist, blue_team, default_rating=init_rating)
+    r_red = get_latest_team_elo(df_hist, red_team, default_rating=init_rating)
+
+    # 2. Simulate prior games played in this series
+    total_prior_games = blue_series_wins + red_series_wins
+
+    if total_prior_games > 0:
+        outcomes = [1] * blue_series_wins + [0] * red_series_wins
+
+        for score_blue in outcomes:
+            exp_blue = 1.0 / (1.0 + 10.0 ** ((r_red - r_blue) / 400.0))
+
+            # Micro update for completed game
+            r_blue += k_series * (score_blue - exp_blue)
+            r_red += k_series * ((1.0 - score_blue) - (1.0 - exp_blue))
+
+    # 3. Compute current game features using adjusted dynamic Elos
+    effective_bonus = first_pick_bonus if blue_has_first_pick else -first_pick_bonus
+    r_blue_effective = r_blue + effective_bonus
+
+    exp_blue_next = 1.0 / (1.0 + 10.0 ** ((r_red - r_blue_effective) / 400.0))
+
+    return {
+        # Model features
+        "blue_elo_pre": r_blue,
+        "red_elo_pre": r_red,
+        "elo_diff": r_blue_effective - r_red,
+        "blue_elo_win_prob": exp_blue_next,
+        # UI visualization aliases
+        "blue_elo": round(r_blue, 1),
+        "red_elo": round(r_red, 1),
+        "elo_implied_blue_winrate": round(exp_blue_next * 100, 1)
+    }
+
+
+def send_odds_to_endpoint(blue_team: str, red_team: str, p_blue: float, p_red: float):
+    payload = {
+        "odds": {blue_team: round(1.0 / p_blue, 2) if p_blue > 0 else 0, red_team: round(1.0 / p_red, 2) if p_red > 0 else 0},
+        "model_probs": {blue_team: round(p_blue, 4), red_team: round(p_red, 4)}
+    }
+    try:
+        requests.post(ODDS_ENDPOINT_URL, json=payload, timeout=2)
+        st.toast("Dispatched odds to prediction monitor!", icon="📡")
+    except Exception:
+        st.toast(f"Could not reach endpoint ({ODDS_ENDPOINT_URL})", icon="⚠️")
