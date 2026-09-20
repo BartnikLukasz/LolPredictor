@@ -19,7 +19,7 @@ from app_helpers import (
     compute_db_model_weights,
     create_weighted_ensemble_result,
     send_odds_to_endpoint,
-    apply_live_series_elo_adjustment  # <--- Imported Live Elo Helper
+    apply_live_series_elo_adjustment
 )
 from live_feature_engine import LiveFeatureEngine
 from upstash_redis import Redis
@@ -219,7 +219,6 @@ with st.expander("🌐 Import Match Draft from gol.gg", expanded=True):
 
                         valid_teams = list(team_rosters.keys())
 
-                        # Enhanced team matching passing rosters, fetched players, and df_hist
                         st.session_state["blue_team_select"] = match_team_name(
                             draft["blue_team"],
                             valid_teams,
@@ -346,17 +345,14 @@ st.markdown("---")
 
 # --- CALCULATE PREDICTIONS ---
 if st.button("Calculate Match Probabilities", type="primary", use_container_width=True):
-    # Derive prior games won/lost within the current series
     total_past_games = max(0, int(game_number) - 1)
 
-    # Calculate wins per team with defensive bounds checking
     raw_blue_wins = (total_past_games + int(blue_series_lead)) // 2
     raw_red_wins = (total_past_games - int(blue_series_lead)) // 2
 
     blue_series_wins = max(0, min(total_past_games, raw_blue_wins))
     red_series_wins = max(0, min(total_past_games, raw_red_wins))
 
-    # DYNAMIC IN-SERIES ELO ADJUSTMENT
     custom_elo_metrics = apply_live_series_elo_adjustment(
         df_hist=df_hist,
         blue_team=blue_team,
@@ -380,12 +376,11 @@ if st.button("Calculate Match Probabilities", type="primary", use_container_widt
         "blue_prev_win": blue_prev_win,
         "blue_series_wins": blue_series_wins,
         "red_series_wins": red_series_wins,
-        "custom_elo_metrics": custom_elo_metrics  # Injected directly into engine context
+        "custom_elo_metrics": custom_elo_metrics
     }
 
     base_results = {m_name: eng.predict_match(draft_payload) for m_name, eng in engines.items()}
 
-    # Compute DB Accuracy Weights on calculation
     model_weights, model_accuracies = compute_db_model_weights(tracking_data, list(base_results.keys()))
     weighted_res = create_weighted_ensemble_result(base_results, model_weights)
 
@@ -480,7 +475,6 @@ def render_model_dashboard(model_name: str, results: dict, active_pred: dict, h2
 
     st.markdown(f"### 📊 Feature & Match Analysis ({model_name})")
 
-    # Persistent analysis sub-tabs bound to session state
     analysis_options = [
         "⚡ Elo & Series Context",
         "👤 Player Mastery",
@@ -525,44 +519,61 @@ def render_model_dashboard(model_name: str, results: dict, active_pred: dict, h2
         swings = results.get("draft_swings", {})
         role_data = results.get("role_breakdown", [])
 
-        # Top Summary Metrics
-        m1, m2, m3 = st.columns(3)
-        elo_base = results['elo_metrics']['elo_implied_blue_winrate']
-        player_swing = swings.get('player_swing', 0.0)
-        draft_swing = swings.get('draft_swing', 0.0)
-        final_pct = results.get('blue_win_percentage', round(elo_base + player_swing + draft_swing, 2))
+        # --- 8 CATEGORY SUMMARY METRICS GRID ---
+        st.markdown("#### 📊 8-Category Feature Impact Swings")
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("1. Elo Rating", f"{swings.get('elo_swing', 0.0):+.2f}%")
+        col2.metric("2. Team Momentum", f"{swings.get('momentum_swing', 0.0):+.2f}%")
+        col3.metric("3. Series Context", f"{swings.get('series_swing', 0.0):+.2f}%")
+        col4.metric("4. Player Mastery", f"{swings.get('player_swing', 0.0):+.2f}%")
 
-        m1.metric("Elo Baseline Winrate", f"{elo_base}%")
-        m2.metric("Player Mastery Swing", f"{player_swing:+.2f}%")
-        m3.metric("Champion Draft Swing", f"{draft_swing:+.2f}%")
+        col5, col6, col7, col8 = st.columns(4)
+        col5.metric("5. Head-to-Head", f"{swings.get('h2h_swing', 0.0):+.2f}%")
+        col6.metric("6. Roster Synergy", f"{swings.get('synergy_swing', 0.0):+.2f}%")
+        col7.metric("7. Draft Synergy", f"{swings.get('draft_champ_swing', 0.0):+.2f}%")
+        col8.metric("8. Champion Picks", f"{swings.get('champ_swing', 0.0):+.2f}%")
 
-        # --- PLOTLY WATERFALL CHART ---
+        # --- DYNAMIC 8-CATEGORY WATERFALL GRAPH ---
         st.markdown(f"#### 📈 Prediction Progression Waterfall ({b_team})")
+
+        waterfall_stages = [
+            ("0. Baseline (50%)", "absolute", 50.0, "50.0%"),
+            ("1. Elo Rating", "relative", swings.get("elo_swing", 0.0), f"{swings.get('elo_swing', 0.0):+.2f}%"),
+            ("2. Team Momentum", "relative", swings.get("momentum_swing", 0.0), f"{swings.get('momentum_swing', 0.0):+.2f}%"),
+            ("3. Series Context", "relative", swings.get("series_swing", 0.0), f"{swings.get('series_swing', 0.0):+.2f}%"),
+            ("4. Player Mastery", "relative", swings.get("player_swing", 0.0), f"{swings.get('player_swing', 0.0):+.2f}%"),
+            ("5. Head-to-Head", "relative", swings.get("h2h_swing", 0.0), f"{swings.get('h2h_swing', 0.0):+.2f}%"),
+            ("6. Roster Synergy", "relative", swings.get("synergy_swing", 0.0), f"{swings.get('synergy_swing', 0.0):+.2f}%"),
+            ("7. Draft Synergy & Counters", "relative", swings.get("draft_champ_swing", 0.0), f"{swings.get('draft_champ_swing', 0.0):+.2f}%"),
+            ("8. Champion Picks", "relative", swings.get("champ_swing", 0.0), f"{swings.get('champ_swing', 0.0):+.2f}%"),
+            ("Final Prediction", "total", 0, f"{results.get('blue_win_percentage', 50.0):.1f}%")
+        ]
+
+        x_labels = [item[0] for item in waterfall_stages]
+        measures = [item[1] for item in waterfall_stages]
+        y_values = [item[2] for item in waterfall_stages]
+        text_labels = [item[3] for item in waterfall_stages]
 
         fig = go.Figure(go.Waterfall(
             name="Winrate Swing",
             orientation="v",
-            measure=["absolute", "relative", "relative", "total"],
-            x=["Elo Baseline", "Player Mastery", "Champion Draft", "Final Prediction"],
+            measure=measures,
+            x=x_labels,
             textposition="outside",
-            text=[
-                f"{elo_base:.1f}%",
-                f"{player_swing:+.2f}%",
-                f"{draft_swing:+.2f}%",
-                f"{final_pct:.1f}%"
-            ],
-            y=[elo_base, player_swing, draft_swing, 0],
+            text=text_labels,
+            y=y_values,
             connector={"line": {"color": "#888", "width": 1.5}},
             increasing={"marker": {"color": "#2ecc71"}},
             decreasing={"marker": {"color": "#e74c3c"}},
             totals={"marker": {"color": "#3498db"}}
         ))
 
+        max_y = max(100.0, float(results.get('blue_win_percentage', 50.0)) + 10.0)
         fig.update_layout(
             yaxis_title=f"{b_team} Win Probability (%)",
-            yaxis=dict(range=[0, max(100, final_pct + 10)]),
+            yaxis=dict(range=[0, max_y]),
             showlegend=False,
-            height=360,
+            height=420,
             margin=dict(l=20, r=20, t=30, b=20),
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)"

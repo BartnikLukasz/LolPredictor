@@ -6,13 +6,16 @@ import numpy as np
 from lightgbm import LGBMClassifier
 from sklearn.metrics import accuracy_score, log_loss, roc_auc_score
 
+from trainers.trainer_helpers import save_feature_importance
+
 
 def train_secondary_model(
         dataset_path: str = "dataset/pregame/pregame_dataset_final_features.csv",
         model_output_path: str = "models/lightgbm_model.pkl",
         params_path: str = "models/best_lightgbm_params.json",
         test_start_date: str = "2024-01-01",
-        full_train: bool = False
+        full_train: bool = False,
+        importance_output_path: str = "metadata/lightgbm_feature_importance.csv"
 ):
     """
     Trains a LightGBM secondary model using best parameters from tuner if available.
@@ -35,13 +38,11 @@ def train_secondary_model(
     df["date"] = pd.to_datetime(df["date"])
     df = df.sort_values("date").reset_index(drop=True)
 
-    # 2. Exclude non-feature columns
-    target_col = "blue_win"
+    target_col = 'blue_win'
     exclude_cols = [
         "gameid", "date", "blue_team", "red_team",
         "blue_teamid", "red_teamid", target_col
     ]
-
     feature_cols = [
         col for col in df.columns
         if col not in exclude_cols and df[col].dtype in [np.float64, np.int64, np.float32, np.int32]
@@ -149,10 +150,5 @@ def train_secondary_model(
     joblib.dump(artifact, model_output_path)
     print(f"[✓] Model 2 successfully saved to '{model_output_path}'")
 
-
-if __name__ == "__main__":
-    # Standard evaluation split:
-    # train_secondary_model(test_start_date="2024-01-01", full_train=False)
-
-    # Production run (Train on 100% of available data):
-    train_secondary_model(full_train=True)
+    # 8. Feature Importance Analysis & Export
+    save_feature_importance(model, feature_cols, importance_output_path)

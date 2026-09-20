@@ -305,7 +305,7 @@ def compute_db_model_weights(tracking_data: dict, model_names: list) -> tuple[di
 
 
 def create_weighted_ensemble_result(all_model_results: dict, model_weights: dict) -> dict:
-    """Combines predictions using normalized accuracy weights from DB."""
+    """Combines predictions using normalized accuracy weights from DB across all 8 feature categories."""
     base_results = {k: v for k, v in all_model_results.items() if k in model_weights}
     if not base_results:
         return next(iter(all_model_results.values()))
@@ -315,35 +315,64 @@ def create_weighted_ensemble_result(all_model_results: dict, model_weights: dict
 
     w_p_blue = sum(norm_weights[m] * base_results[m]['blue_win_probability'] for m in base_results)
     w_p_red = 1.0 - w_p_blue
-
-    w_player_swing = sum(norm_weights[m] * base_results[m].get('draft_swings', {}).get('player_swing', 0.0) for m in base_results)
-    w_draft_swing = sum(norm_weights[m] * base_results[m].get('draft_swings', {}).get('draft_swing', 0.0) for m in base_results)
-
-    first_res = next(iter(base_results.values()))
-    elo_base = first_res.get('elo_metrics', {}).get('elo_implied_blue_winrate', 50.0)
-
     final_pct = round(w_p_blue * 100, 2)
-    player_pct = round(elo_base + w_player_swing, 2)
+
+    category_keys = [
+        'elo_swing', 'momentum_swing', 'series_swing', 'player_swing',
+        'h2h_swing', 'synergy_swing', 'draft_champ_swing', 'champ_swing'
+    ]
+
+    w_swings = {}
+    for s_key in category_keys:
+        w_swings[s_key] = round(
+            sum(norm_weights[m] * base_results[m].get('draft_swings', {}).get(s_key, 0.0) for m in base_results),
+            2
+        )
+
+    # Reconstruct sequential 8-stage progression data
+    category_labels = [
+        ('elo_swing', '1. Elo Rating'),
+        ('momentum_swing', '2. Team Momentum'),
+        ('series_swing', '3. Series Context'),
+        ('player_swing', '4. Player Mastery'),
+        ('h2h_swing', '5. Head-to-Head'),
+        ('synergy_swing', '6. Roster Synergy'),
+        ('draft_champ_swing', '7. Draft Synergy & Counters'),
+        ('champ_swing', '8. Champion Picks')
+    ]
+
+    stages = ["0. Baseline (50%)"]
+    vals = [50.0]
+    deltas = [0.0]
+
+    cum_val = 50.0
+    for s_key, label in category_labels:
+        delta = w_swings.get(s_key, 0.0)
+        cum_val += delta
+        stages.append(label)
+        vals.append(round(cum_val, 2))
+        deltas.append(delta)
+
+    stages.append("Final Prediction")
+    vals.append(final_pct)
+    deltas.append(0.0)
 
     progression_data = pd.DataFrame({
-        "Stage": ["1. Elo Baseline", "2. Player Mastery Impact", "3. Champion Draft Impact", "4. Final Prediction"],
-        "Win %": [elo_base, player_pct, final_pct, final_pct],
-        "Impact Delta": [0.0, round(w_player_swing, 2), round(w_draft_swing, 2), 0.0]
+        "Stage": stages,
+        "Win %": vals,
+        "Impact Delta": deltas
     })
 
-    res = copy.deepcopy(first_res)
-    res['blue_win_probability'] = w_p_blue
-    res['red_win_probability'] = w_p_red
-    res['blue_win_percentage'] = final_pct
-    res['red_win_percentage'] = round(w_p_red * 100, 2)
-    res['progression_data'] = progression_data
-    res['draft_swings'] = {
-        'player_swing': round(w_player_swing, 2),
-        'draft_swing': round(w_draft_swing, 2),
-        'total_swing': round(final_pct - elo_base, 2)
-    }
-    res['weights_used'] = norm_weights
-    return res
+    first_res = copy.deepcopy(next(iter(base_results.values())))
+    first_res['blue_win_probability'] = w_p_blue
+    first_res['red_win_probability'] = w_p_red
+    first_res['blue_win_percentage'] = final_pct
+    first_res['red_win_percentage'] = round(w_p_red * 100, 2)
+    first_res['progression_data'] = progression_data
+    first_res['draft_swings'] = w_swings
+    first_res['draft_swings']['total_swing'] = round(final_pct - 50.0, 2)
+    first_res['weights_used'] = norm_weights
+    return first_res
 
 
 def get_latest_team_elo(df_hist: pd.DataFrame, team_name: str, default_rating: float = 1500.0) -> float:

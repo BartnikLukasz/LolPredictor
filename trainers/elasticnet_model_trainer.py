@@ -10,13 +10,16 @@ from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import log_loss, accuracy_score, roc_auc_score
 
+from trainers.trainer_helpers import extract_features, save_feature_importance
+
 
 def train_elasticnet_model(
         filepath: str = "dataset/pregame/pregame_dataset_final_features.csv",
         split_date: str = "2026-04-01",
         full_train: bool = False,
         params_json_path: str = "models/elasticnet_best_params.json",
-        model_output_path: str = "models/elasticnet_model.joblib"
+        model_output_path: str = "models/elasticnet_model.joblib",
+        importance_output_path: str = "metadata/elasticnet_feature_importance.csv"
 ):
     """
     Trains an ElasticNet Logistic Regression model using a full scikit-learn Pipeline.
@@ -34,46 +37,16 @@ def train_elasticnet_model(
 
     target_col = 'blue_win'
 
-    elo_features = ['elo_diff', 'blue_elo_pre', 'red_elo_pre', 'blue_elo_win_prob', 'blue_firstpick']
-    series_features = ['game_number', 'blue_series_lead', 'blue_prev_win']
-    player_features = [
-        col for col in df.columns
-        if col.endswith('_player_games_pre') or
-           col.endswith('_player_winrate_pre') or
-           col.endswith('_champ_games_pre') or
-           col.endswith('_champ_winrate_pre')
-    ]
-    h2h_matchup_features = [
-        col for col in df.columns
-        if 'h2h' in col or 'lane_matchup' in col or 'p2p' in col
-    ]
-    synergy_roster_features = [
-        col for col in df.columns
-        if 'roster' in col or 'duo' in col
-    ]
-    draft_champ_features = [
-        col for col in df.columns
-        if 'patch' in col or 'counter' in col or 'synergy' in col or 'cohesion' in col or 'comp' in col
-    ]
+    feature_cols = extract_features(df)
+
+    X = df[feature_cols].copy()
+    y = df[target_col].values
+
     champ_features = [
         'blue_top_champion', 'blue_jng_champion', 'blue_mid_champion', 'blue_bot_champion', 'blue_sup_champion',
         'red_top_champion', 'red_jng_champion', 'red_mid_champion', 'red_bot_champion', 'red_sup_champion'
     ]
     champ_features = [c for c in champ_features if c in df.columns]
-
-    feature_cols = (
-        elo_features +
-        series_features +
-        player_features +
-        h2h_matchup_features +
-        synergy_roster_features +
-        draft_champ_features +
-        champ_features
-    )
-    feature_cols = [col for col in dict.fromkeys(feature_cols) if col in df.columns]
-
-    X = df[feature_cols].copy()
-    y = df[target_col].values
 
     cat_cols = champ_features
     num_cols = [c for c in feature_cols if c not in cat_cols]
@@ -176,23 +149,5 @@ def train_elasticnet_model(
     print("=" * 60)
     print(f"Successfully saved full model pipeline to '{model_output_path}'")
 
-
-if __name__ == "__main__":
-    dataset_path = "../dataset/pregame/pregame_dataset_final_features.csv"
-
-    # Train with chronological split
-    train_elasticnet_model(
-        filepath=dataset_path,
-        split_date="2026-04-01",
-        full_train=False,
-        params_json_path="../models/elasticnet_best_params.json",
-        model_output_path="../models/elasticnet_model.joblib"
-    )
-
-    # Train on full dataset (uncomment to run)
-    # train_elasticnet_model(
-    #     filepath=dataset_path,
-    #     full_train=True,
-    #     params_json_path="models/elasticnet_best_params.json",
-    #     model_output_path="models/elasticnet_model_full.joblib"
-    # )
+    # 8. Feature Importance Analysis & Export
+    save_feature_importance(model_pipeline, feature_cols, importance_output_path)

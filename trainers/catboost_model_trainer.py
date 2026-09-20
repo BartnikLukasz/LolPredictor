@@ -6,6 +6,8 @@ import numpy as np
 from catboost import CatBoostClassifier, Pool
 from sklearn.metrics import accuracy_score, log_loss, roc_auc_score, classification_report
 
+from trainers.trainer_helpers import extract_features, save_feature_importance
+
 # --- PATH CONFIGURATION ---
 DATASET_PATH = "dataset/pregame/pregame_dataset_final_features.csv"
 PARAMS_PATH = "models/catboost_best_params.json"
@@ -41,48 +43,13 @@ def load_best_params(params_path: str) -> dict:
 
 def extract_feature_matrix(df: pd.DataFrame):
     """Extracts identical feature subsets used across XGBoost, LightGBM, and CatBoost engines."""
-    elo_features = ['elo_diff', 'blue_elo_pre', 'red_elo_pre', 'blue_elo_win_prob', 'blue_firstpick']
-    series_features = ['game_number', 'blue_series_lead', 'blue_prev_win']
-
-    player_features = [
-        col for col in df.columns
-        if col.endswith('_player_games_pre') or
-           col.endswith('_player_winrate_pre') or
-           col.endswith('_champ_games_pre') or
-           col.endswith('_champ_winrate_pre')
-    ]
-
-    h2h_matchup_features = [
-        col for col in df.columns
-        if 'h2h' in col or 'lane_matchup' in col or 'p2p' in col
-    ]
-
-    synergy_roster_features = [
-        col for col in df.columns
-        if 'roster' in col or 'duo' in col
-    ]
-
-    draft_champ_features = [
-        col for col in df.columns
-        if 'patch' in col or 'counter' in col or 'synergy' in col or 'cohesion' in col or 'comp' in col
-    ]
+    feature_cols = extract_features(df)
 
     champ_features = [
         'blue_top_champion', 'blue_jng_champion', 'blue_mid_champion', 'blue_bot_champion', 'blue_sup_champion',
         'red_top_champion', 'red_jng_champion', 'red_mid_champion', 'red_bot_champion', 'red_sup_champion'
     ]
     champ_features = [c for c in champ_features if c in df.columns]
-
-    feature_cols = (
-            elo_features +
-            series_features +
-            player_features +
-            h2h_matchup_features +
-            synergy_roster_features +
-            draft_champ_features +
-            champ_features
-    )
-    feature_cols = [col for col in dict.fromkeys(feature_cols) if col in df.columns]
 
     X = df[feature_cols].copy()
 
@@ -99,7 +66,8 @@ def train_catboost(
         split_date: str = "2026-04-01",
         full_train: bool = False,
         params_path: str = PARAMS_PATH,
-        output_model_path: str = MODEL_OUTPUT_PATH
+        output_model_path: str = MODEL_OUTPUT_PATH,
+        importance_output_path: str = "metadata/catboost_feature_importance.csv"
 ):
     # 1. Load Data & Sort Chronologically
     if not os.path.exists(filepath):
@@ -197,12 +165,5 @@ def train_catboost(
     joblib.dump(artifact, output_model_path)
     print(f"\n💾 Trained CatBoost model saved to '{output_model_path}'!")
 
-
-if __name__ == "__main__":
-    train_catboost(
-        filepath=DATASET_PATH,
-        split_date="2026-04-01",
-        full_train=False,  # Set to True for production model building
-        params_path=PARAMS_PATH,
-        output_model_path=MODEL_OUTPUT_PATH
-    )
+    # 8. Feature Importance Analysis & Export
+    save_feature_importance(model, X, importance_output_path)

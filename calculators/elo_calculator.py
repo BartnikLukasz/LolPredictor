@@ -1,6 +1,9 @@
 import pandas as pd
 import numpy as np
 
+from calculators import team_momentum_calculator
+from calculators.team_momentum_calculator import add_momentum_features_to_dataset
+
 
 def compute_team_elo_ratings(
         filepath: str,
@@ -87,6 +90,8 @@ def compute_team_elo_ratings(
         list(ratings.items()),
         columns=['teamid', 'elo_rating']
     ).sort_values('elo_rating', ascending=False).reset_index(drop=True)
+
+    df = add_momentum_features_to_dataset(df, 10)
 
     # 5. Export enriched dataset if output path provided
     if output_filepath:

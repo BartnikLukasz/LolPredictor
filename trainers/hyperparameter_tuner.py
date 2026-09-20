@@ -15,6 +15,8 @@ from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import log_loss
 
+from trainers.trainer_helpers import extract_features
+
 # Silence Optuna's verbose per-trial logging
 optuna.logging.set_verbosity(optuna.logging.WARNING)
 
@@ -66,43 +68,13 @@ def optimize_xgboost_hyperparameters(
 
     target_col = 'blue_win'
 
-    elo_features = ['elo_diff', 'blue_elo_pre', 'red_elo_pre', 'blue_elo_win_prob', 'blue_firstpick']
-    series_features = ['game_number', 'blue_series_lead', 'blue_prev_win']
-    player_features = [
-        col for col in df.columns
-        if col.endswith('_player_games_pre') or
-           col.endswith('_player_winrate_pre') or
-           col.endswith('_champ_games_pre') or
-           col.endswith('_champ_winrate_pre')
-    ]
-    h2h_matchup_features = [
-        col for col in df.columns
-        if 'h2h' in col or 'lane_matchup' in col or 'p2p' in col
-    ]
-    synergy_roster_features = [
-        col for col in df.columns
-        if 'roster' in col or 'duo' in col
-    ]
-    draft_champ_features = [
-        col for col in df.columns
-        if 'patch' in col or 'counter' in col or 'synergy' in col or 'cohesion' in col or 'comp' in col
-    ]
+    feature_cols = extract_features(df)
+
     champ_features = [
         'blue_top_champion', 'blue_jng_champion', 'blue_mid_champion', 'blue_bot_champion', 'blue_sup_champion',
         'red_top_champion', 'red_jng_champion', 'red_mid_champion', 'red_bot_champion', 'red_sup_champion'
     ]
     champ_features = [c for c in champ_features if c in df.columns]
-
-    feature_cols = (
-        elo_features +
-        series_features +
-        player_features +
-        h2h_matchup_features +
-        synergy_roster_features +
-        draft_champ_features +
-        champ_features
-    )
-    feature_cols = [col for col in dict.fromkeys(feature_cols) if col in df.columns]
 
     X = df[feature_cols].copy()
     y = df[target_col].values
@@ -173,43 +145,13 @@ def optimize_lightgbm_hyperparameters(
 
     target_col = 'blue_win'
 
-    elo_features = ['elo_diff', 'blue_elo_pre', 'red_elo_pre', 'blue_elo_win_prob', 'blue_firstpick']
-    series_features = ['game_number', 'blue_series_lead', 'blue_prev_win']
-    player_features = [
-        col for col in df.columns
-        if col.endswith('_player_games_pre') or
-           col.endswith('_player_winrate_pre') or
-           col.endswith('_champ_games_pre') or
-           col.endswith('_champ_winrate_pre')
-    ]
-    h2h_matchup_features = [
-        col for col in df.columns
-        if 'h2h' in col or 'lane_matchup' in col or 'p2p' in col
-    ]
-    synergy_roster_features = [
-        col for col in df.columns
-        if 'roster' in col or 'duo' in col
-    ]
-    draft_champ_features = [
-        col for col in df.columns
-        if 'patch' in col or 'counter' in col or 'synergy' in col or 'cohesion' in col or 'comp' in col
-    ]
+    feature_cols = extract_features(df)
+
     champ_features = [
         'blue_top_champion', 'blue_jng_champion', 'blue_mid_champion', 'blue_bot_champion', 'blue_sup_champion',
         'red_top_champion', 'red_jng_champion', 'red_mid_champion', 'red_bot_champion', 'red_sup_champion'
     ]
     champ_features = [c for c in champ_features if c in df.columns]
-
-    feature_cols = (
-        elo_features +
-        series_features +
-        player_features +
-        h2h_matchup_features +
-        synergy_roster_features +
-        draft_champ_features +
-        champ_features
-    )
-    feature_cols = [col for col in dict.fromkeys(feature_cols) if col in df.columns]
 
     X = df[feature_cols].copy()
     y = df[target_col].values
@@ -281,26 +223,13 @@ def optimize_catboost_hyperparameters(
 
     target_col = 'blue_win'
 
-    elo_features = ['elo_diff', 'blue_elo_pre', 'red_elo_pre', 'blue_elo_win_prob', 'blue_firstpick']
-    series_features = ['game_number', 'blue_series_lead', 'blue_prev_win']
-    player_features = [
-        col for col in df.columns
-        if col.endswith('_player_games_pre') or
-           col.endswith('_player_winrate_pre') or
-           col.endswith('_champ_games_pre') or
-           col.endswith('_champ_winrate_pre')
-    ]
-    h2h_matchup_features = [col for col in df.columns if 'h2h' in col or 'lane_matchup' in col or 'p2p' in col]
-    synergy_roster_features = [col for col in df.columns if 'roster' in col or 'duo' in col]
-    draft_champ_features = [col for col in df.columns if 'patch' in col or 'counter' in col or 'synergy' in col or 'cohesion' in col or 'comp' in col]
+    feature_cols = extract_features(df)
+
     champ_features = [
         'blue_top_champion', 'blue_jng_champion', 'blue_mid_champion', 'blue_bot_champion', 'blue_sup_champion',
         'red_top_champion', 'red_jng_champion', 'red_mid_champion', 'red_bot_champion', 'red_sup_champion'
     ]
     champ_features = [c for c in champ_features if c in df.columns]
-
-    feature_cols = elo_features + series_features + player_features + h2h_matchup_features + synergy_roster_features + draft_champ_features + champ_features
-    feature_cols = [col for col in dict.fromkeys(feature_cols) if col in df.columns]
 
     X = df[feature_cols].copy()
     y = df[target_col].values
@@ -374,27 +303,13 @@ def optimize_elastictree_hyperparameters(
 
     target_col = 'blue_win'
 
-    elo_features = ['elo_diff', 'blue_elo_pre', 'red_elo_pre', 'blue_elo_win_prob', 'blue_firstpick']
-    series_features = ['game_number', 'blue_series_lead', 'blue_prev_win']
-    player_features = [
-        col for col in df.columns
-        if col.endswith('_player_games_pre') or
-           col.endswith('_player_winrate_pre') or
-           col.endswith('_champ_games_pre') or
-           col.endswith('_champ_winrate_pre')
-    ]
-    h2h_matchup_features = [col for col in df.columns if 'h2h' in col or 'lane_matchup' in col or 'p2p' in col]
-    synergy_roster_features = [col for col in df.columns if 'roster' in col or 'duo' in col]
-    draft_champ_features = [col for col in df.columns if 'patch' in col or 'counter' in col or 'synergy' in col or 'cohesion' in col or 'comp' in col]
+    feature_cols = extract_features(df)
+
     champ_features = [
         'blue_top_champion', 'blue_jng_champion', 'blue_mid_champion', 'blue_bot_champion', 'blue_sup_champion',
         'red_top_champion', 'red_jng_champion', 'red_mid_champion', 'red_bot_champion', 'red_sup_champion'
     ]
     champ_features = [c for c in champ_features if c in df.columns]
-
-    feature_cols = elo_features + series_features + player_features + h2h_matchup_features + synergy_roster_features + draft_champ_features + champ_features
-    feature_cols = [col for col in dict.fromkeys(feature_cols) if col in df.columns]
-
     X = df[feature_cols].copy()
     y = df[target_col].values
 
@@ -428,9 +343,9 @@ def optimize_elastictree_hyperparameters(
         params = {
             'n_estimators': 50,
             'criterion': 'gini',
-            'max_depth': trial.suggest_int('max_depth', 14, 20),
-            'min_samples_split': trial.suggest_int('min_samples_split', 8, 16),
-            'min_samples_leaf': trial.suggest_int('min_samples_leaf', 5, 10),
+            'max_depth': trial.suggest_int('max_depth', 10, 20),
+            'min_samples_split': trial.suggest_int('min_samples_split', 5, 15),
+            'min_samples_leaf': trial.suggest_int('min_samples_leaf', 2, 10),
             'max_features': trial.suggest_float('max_features', 0.05, 0.2, step=0.05, log=False),
             'random_state': 42,
             'n_jobs': 1  # Keep 1 thread per estimator for parallel Optuna execution
@@ -465,43 +380,13 @@ def optimize_elasticnet_hyperparameters(
 
     target_col = 'blue_win'
 
-    elo_features = ['elo_diff', 'blue_elo_pre', 'red_elo_pre', 'blue_elo_win_prob', 'blue_firstpick']
-    series_features = ['game_number', 'blue_series_lead', 'blue_prev_win']
-    player_features = [
-        col for col in df.columns
-        if col.endswith('_player_games_pre') or
-           col.endswith('_player_winrate_pre') or
-           col.endswith('_champ_games_pre') or
-           col.endswith('_champ_winrate_pre')
-    ]
-    h2h_matchup_features = [
-        col for col in df.columns
-        if 'h2h' in col or 'lane_matchup' in col or 'p2p' in col
-    ]
-    synergy_roster_features = [
-        col for col in df.columns
-        if 'roster' in col or 'duo' in col
-    ]
-    draft_champ_features = [
-        col for col in df.columns
-        if 'patch' in col or 'counter' in col or 'synergy' in col or 'cohesion' in col or 'comp' in col
-    ]
+    feature_cols = extract_features(df)
+
     champ_features = [
         'blue_top_champion', 'blue_jng_champion', 'blue_mid_champion', 'blue_bot_champion', 'blue_sup_champion',
         'red_top_champion', 'red_jng_champion', 'red_mid_champion', 'red_bot_champion', 'red_sup_champion'
     ]
     champ_features = [c for c in champ_features if c in df.columns]
-
-    feature_cols = (
-        elo_features +
-        series_features +
-        player_features +
-        h2h_matchup_features +
-        synergy_roster_features +
-        draft_champ_features +
-        champ_features
-    )
-    feature_cols = [col for col in dict.fromkeys(feature_cols) if col in df.columns]
 
     X = df[feature_cols].copy()
     y = df[target_col].values
@@ -573,7 +458,7 @@ if __name__ == "__main__":
     dataset_path = "../dataset/pregame/pregame_dataset_final_features.csv"
     i = 0
 
-    while i < 3:
+    while i < 1:
         # Optimize XGBoost
         optimize_xgboost_hyperparameters(
             filepath=dataset_path,

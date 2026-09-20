@@ -46,6 +46,7 @@ class LiveFeatureEngine:
 
         # 4. Build Lookup Maps
         self._build_elo_lookup()
+        self._build_momentum_lookup()
         self._build_player_and_champ_lookups()
 
     def _extract_model_feature_names(self) -> list:
@@ -76,6 +77,32 @@ class LiveFeatureEngine:
                 self.latest_elo[row['blue_team']] = float(row['blue_elo_pre'])
             if pd.notna(row.get('red_team')) and pd.notna(row.get('red_elo_pre')):
                 self.latest_elo[row['red_team']] = float(row['red_elo_pre'])
+
+    def _build_momentum_lookup(self):
+        """Builds dictionary of latest team momentum / streak / overperformance metrics."""
+        self.latest_momentum = {}
+        for _, row in self.df_hist.iterrows():
+            b_team = row.get('blue_team')
+            r_team = row.get('red_team')
+
+            def _clean_val(val, default=0.0):
+                return float(val) if pd.notna(val) else default
+
+            if pd.notna(b_team) and str(b_team).strip() != '':
+                self.latest_momentum[str(b_team)] = {
+                    'momentum': _clean_val(row.get('blue_momentum_pre', row.get('blue_recent_winrate_pre')), 0.50),
+                    'streak': _clean_val(row.get('blue_streak_pre', row.get('blue_win_streak_pre')), 0.0),
+                    'elo_delta_10': _clean_val(row.get('blue_elo_delta_10'), 0.0),
+                    'overperform_10': _clean_val(row.get('blue_overperform_10'), 0.0)
+                }
+
+            if pd.notna(r_team) and str(r_team).strip() != '':
+                self.latest_momentum[str(r_team)] = {
+                    'momentum': _clean_val(row.get('red_momentum_pre', row.get('red_recent_winrate_pre')), 0.50),
+                    'streak': _clean_val(row.get('red_streak_pre', row.get('red_win_streak_pre')), 0.0),
+                    'elo_delta_10': _clean_val(row.get('red_elo_delta_10'), 0.0),
+                    'overperform_10': _clean_val(row.get('red_overperform_10'), 0.0)
+                }
 
     def _build_player_and_champ_lookups(self):
         """Builds player and champion historical performance lookup dictionaries."""
@@ -127,7 +154,7 @@ class LiveFeatureEngine:
     def build_feature_vector(self, draft_payload: dict) -> pd.DataFrame:
         row = {}
 
-        # 1. Elo Features (Check for dynamically injected custom_elo_metrics)
+        # 1. Elo Features
         blue_team = draft_payload.get('blue_team', '')
         red_team = draft_payload.get('red_team', '')
         blue_fp = draft_payload.get('blue_firstpick', 1)
@@ -151,12 +178,39 @@ class LiveFeatureEngine:
         row['blue_elo_win_prob'] = blue_win_prob
         row['blue_firstpick'] = blue_fp
 
-        # 2. Series Context Features
+        # 2. Team Momentum Features
+        b_mom_data = self.latest_momentum.get(blue_team, {})
+        r_mom_data = self.latest_momentum.get(red_team, {})
+
+        b_mom = b_mom_data.get('momentum', 0.50)
+        r_mom = r_mom_data.get('momentum', 0.50)
+        b_streak = b_mom_data.get('streak', 0.0)
+        r_streak = r_mom_data.get('streak', 0.0)
+
+        b_delta_10 = b_mom_data.get('elo_delta_10', 0.0)
+        r_delta_10 = r_mom_data.get('elo_delta_10', 0.0)
+        b_overperform_10 = b_mom_data.get('overperform_10', 0.0)
+        r_overperform_10 = r_mom_data.get('overperform_10', 0.0)
+
+        row['blue_momentum_pre'] = b_mom
+        row['red_momentum_pre'] = r_mom
+        row['momentum_diff'] = b_mom - r_mom
+        row['blue_streak_pre'] = b_streak
+        row['red_streak_pre'] = r_streak
+
+        row['blue_elo_delta_10'] = b_delta_10
+        row['red_elo_delta_10'] = r_delta_10
+        row['elo_delta_diff_10'] = b_delta_10 - r_delta_10
+        row['blue_overperform_10'] = b_overperform_10
+        row['red_overperform_10'] = r_overperform_10
+        row['overperformance_diff_10'] = b_overperform_10 - r_overperform_10
+
+        # 3. Series Context Features
         row['game_number'] = draft_payload.get('game_number', 1)
         row['blue_series_lead'] = draft_payload.get('blue_series_lead', 0)
         row['blue_prev_win'] = draft_payload.get('blue_prev_win', 0)
 
-        # 3. Champion Picks & Players
+        # 4. Champion Picks & Players
         blue_champs = draft_payload.get('blue_champs', ['', '', '', '', ''])
         red_champs = draft_payload.get('red_champs', ['', '', '', '', ''])
         blue_players = draft_payload.get('blue_players', ['', '', '', '', ''])
@@ -199,6 +253,73 @@ class LiveFeatureEngine:
         live_df = live_df[[c for c in self.expected_features if c in live_df.columns]].copy()
 
         return live_df
+
+    def _categorize_features(self, columns: list) -> dict:
+        """Groups DataFrame columns into the 8 target feature categories."""
+        categories = {
+            'elo': [],
+            'momentum': [],
+            'series': [],
+            'player': [],
+            'h2h': [],
+            'synergy': [],
+            'draft_champ': [],
+            'champ': []
+        }
+
+        for col in columns:
+            if col in ['elo_diff', 'blue_elo_pre', 'red_elo_pre', 'blue_elo_win_prob', 'blue_firstpick']:
+                categories['elo'].append(col)
+            elif col in [
+                'blue_elo_delta_10', 'red_elo_delta_10', 'elo_delta_diff_10',
+                'blue_overperform_10', 'red_overperform_10', 'overperformance_diff_10',
+                'blue_momentum_pre', 'red_momentum_pre', 'momentum_diff',
+                'blue_streak_pre', 'red_streak_pre'
+            ] or 'momentum' in col or 'streak' in col or 'overperform' in col or 'delta' in col:
+                categories['momentum'].append(col)
+            elif col in ['game_number', 'blue_series_lead', 'blue_prev_win'] or 'series' in col:
+                categories['series'].append(col)
+            elif col.endswith('_player_games_pre') or col.endswith('_player_winrate_pre') or \
+                    col.endswith('_champ_games_pre') or col.endswith('_champ_winrate_pre') or \
+                    col.endswith('_player'):
+                categories['player'].append(col)
+            elif 'h2h' in col or 'lane_matchup' in col or 'p2p' in col:
+                categories['h2h'].append(col)
+            elif 'roster' in col or 'duo' in col:
+                categories['synergy'].append(col)
+            elif 'patch' in col or 'counter' in col or 'synergy' in col or 'cohesion' in col or 'comp' in col:
+                categories['draft_champ'].append(col)
+            elif col in [
+                'blue_top_champion', 'blue_jng_champion', 'blue_mid_champion', 'blue_bot_champion', 'blue_sup_champion',
+                'red_top_champion', 'red_jng_champion', 'red_mid_champion', 'red_bot_champion', 'red_sup_champion'
+            ] or col.endswith('_champion'):
+                categories['champ'].append(col)
+            else:
+                categories['draft_champ'].append(col)
+
+        return categories
+
+    def _create_neutral_df(self, aligned_df: pd.DataFrame) -> pd.DataFrame:
+        """Creates a baseline DataFrame with completely neutralized features."""
+        neutral_df = aligned_df.copy()
+        is_catboost = "catboost" in str(type(self.model)).lower()
+
+        for col in neutral_df.columns:
+            if col.endswith('_champion') or col.endswith('_player') or col.endswith('_team'):
+                neutral_df[col] = 'missing' if is_catboost else None
+            elif col.endswith('_winrate_pre') or col == 'blue_elo_win_prob':
+                neutral_df[col] = 0.50
+            elif col.endswith('_games_pre'):
+                neutral_df[col] = 10
+            elif 'elo' in col:
+                if 'diff' in col or 'delta' in col:
+                    neutral_df[col] = 0.0
+                else:
+                    neutral_df[col] = 1500.0
+            else:
+                neutral_df[col] = 0.0
+
+        return neutral_df
 
     def _align_dtypes_and_shape(self, df: pd.DataFrame) -> pd.DataFrame:
         """Aligns DataFrame column types and strictly forces model feature count."""
@@ -256,67 +377,77 @@ class LiveFeatureEngine:
 
         return df
 
+    def _eval_model_prob(self, df: pd.DataFrame) -> float:
+        """Utility runner for probability extraction."""
+        aligned = self._align_dtypes_and_shape(df)
+        if hasattr(self.model, "predict_proba"):
+            return float(self.model.predict_proba(aligned)[0][1])
+        else:
+            dmatrix = xgb.DMatrix(aligned, enable_categorical=True)
+            return float(self.model.predict(dmatrix)[0])
+
     def predict_match(self, draft_payload: dict) -> dict:
         feature_df = self.build_feature_vector(draft_payload)
         aligned_df = self._align_dtypes_and_shape(feature_df)
 
-        # 1. Full Final Prediction
-        if hasattr(self.model, "predict_proba"):
-            proba_blue = float(self.model.predict_proba(aligned_df)[0][1])
-        else:
-            dmatrix = xgb.DMatrix(aligned_df, enable_categorical=True)
-            proba_blue = float(self.model.predict(dmatrix)[0])
-
-        proba_red = 1.0 - proba_blue
-
-        # 2. Stage 1: Pure Elo Baseline (Check for custom_elo_metrics)
         blue_team = draft_payload.get('blue_team', 'Blue Team')
         red_team = draft_payload.get('red_team', 'Red Team')
-        custom_elo = draft_payload.get('custom_elo_metrics')
 
-        if custom_elo:
-            b_elo = custom_elo.get('blue_elo_pre', self.latest_elo.get(blue_team, 1500.0))
-            r_elo = custom_elo.get('red_elo_pre', self.latest_elo.get(red_team, 1500.0))
-            elo_diff = custom_elo.get('elo_diff', b_elo - r_elo)
-            elo_base_prob = custom_elo.get('blue_elo_win_prob', 1.0 / (1.0 + 10.0 ** (-elo_diff / 400.0)))
-        else:
-            b_elo = self.latest_elo.get(blue_team, 1500.0)
-            r_elo = self.latest_elo.get(red_team, 1500.0)
-            elo_diff = (b_elo + (10.0 if draft_payload.get('blue_firstpick', 1) == 1 else -10.0)) - r_elo
-            elo_base_prob = 1.0 / (1.0 + 10.0 ** (-elo_diff / 400.0))
+        # 1. Group columns into categories
+        cat_map = self._categorize_features(aligned_df.columns.tolist())
 
-        # 3. Stage 2: Elo + Player Mastery
-        player_stage_df = aligned_df.copy()
-        for col in player_stage_df.columns:
-            if col.endswith('_champion'):
-                player_stage_df[col] = 'missing' if 'catboost' in str(type(self.model)).lower() else None
-            elif col.endswith('_champ_winrate_pre'):
-                player_stage_df[col] = 0.50
-            elif col.endswith('_champ_games_pre'):
-                player_stage_df[col] = 10
-        player_stage_prob = None
-        try:
-            if hasattr(self.model, "predict_proba"):
-                player_stage_prob = float(self.model.predict_proba(player_stage_df)[0][1])
-            else:
-                dmatrix_p = xgb.DMatrix(player_stage_prob, enable_categorical=True)
-                player_stage_prob = float(self.model.predict(dmatrix_p)[0])
-        except Exception:
-            player_stage_prob = elo_base_prob
+        # 2. Build cumulative 8-stage DataFrame predictions
+        current_df = self._create_neutral_df(aligned_df)
 
-        # Calculate Swings
-        elo_pct = round(elo_base_prob * 100, 2)
-        player_pct = round(player_stage_prob * 100, 2)
-        final_pct = round(proba_blue * 100, 2)
+        # Base 50% state
+        base_pct = 50.0
 
-        player_swing = round(player_pct - elo_pct, 2)
-        draft_swing = round(final_pct - player_pct, 2)
+        stage_results = {}
+        category_order = [
+            ('elo', '1. Elo Rating'),
+            ('momentum', '2. Team Momentum'),
+            ('series', '3. Series Context'),
+            ('player', '4. Player Mastery'),
+            ('h2h', '5. Head-to-Head'),
+            ('synergy', '6. Roster Synergy'),
+            ('draft_champ', '7. Draft Synergy & Counters'),
+            ('champ', '8. Champion Picks')
+        ]
 
-        # Progression Map for Line/Waterfall Charts
+        prev_prob = 0.50
+
+        for cat_key, cat_label in category_order:
+            cols = cat_map[cat_key]
+            if cols:
+                # Inject actual feature values for this category
+                for col in cols:
+                    current_df[col] = aligned_df[col].values
+
+            try:
+                prob = self._eval_model_prob(current_df)
+            except Exception:
+                prob = prev_prob
+
+            stage_results[cat_key] = {
+                'label': cat_label,
+                'pct': round(prob * 100, 2),
+                'swing': round((prob - prev_prob) * 100, 2)
+            }
+            prev_prob = prob
+
+        final_pct = stage_results['champ']['pct']
+        proba_blue = final_pct / 100.0
+        proba_red = 1.0 - proba_blue
+
+        # Build Progression Map DataFrame for Plotly / Dashboard Waterfall
+        prog_stages = ["0. Baseline (50%)"] + [item['label'] for item in stage_results.values()] + ["Final Prediction"]
+        prog_vals = [base_pct] + [item['pct'] for item in stage_results.values()] + [final_pct]
+        prog_deltas = [0.0] + [item['swing'] for item in stage_results.values()] + [0.0]
+
         progression_data = pd.DataFrame({
-            "Stage": ["1. Elo Baseline", "2. Player Mastery Impact", "3. Champion Draft Impact", "4. Final Prediction"],
-            f"{blue_team} Win %": [elo_pct, player_pct, final_pct, final_pct],
-            "Impact Delta": [0.0, player_swing, draft_swing, 0.0]
+            "Stage": prog_stages,
+            f"{blue_team} Win %": prog_vals,
+            "Impact Delta": prog_deltas
         })
 
         # Role Breakdown
@@ -356,6 +487,9 @@ class LiveFeatureEngine:
         avg_blue_c_wr = np.mean([r['blue_c_wr'] for r in role_breakdown])
         avg_red_c_wr = np.mean([r['red_c_wr'] for r in role_breakdown])
 
+        b_elo = self.latest_elo.get(blue_team, 1500.0)
+        r_elo = self.latest_elo.get(red_team, 1500.0)
+
         return {
             'blue_win_probability': proba_blue,
             'red_win_probability': proba_red,
@@ -363,9 +497,15 @@ class LiveFeatureEngine:
             'red_win_percentage': round(proba_red * 100, 2),
             'progression_data': progression_data,
             'draft_swings': {
-                'player_swing': player_swing,
-                'draft_swing': draft_swing,
-                'total_swing': round(final_pct - elo_pct, 2)
+                'elo_swing': stage_results['elo']['swing'],
+                'momentum_swing': stage_results['momentum']['swing'],
+                'series_swing': stage_results['series']['swing'],
+                'player_swing': stage_results['player']['swing'],
+                'h2h_swing': stage_results['h2h']['swing'],
+                'synergy_swing': stage_results['synergy']['swing'],
+                'draft_champ_swing': stage_results['draft_champ']['swing'],
+                'champ_swing': stage_results['champ']['swing'],
+                'total_swing': round(final_pct - base_pct, 2)
             },
             'series_metrics': {
                 'game_number': draft_payload.get('game_number', 1),
@@ -375,8 +515,8 @@ class LiveFeatureEngine:
             'elo_metrics': {
                 'blue_elo': round(b_elo, 1),
                 'red_elo': round(r_elo, 1),
-                'elo_diff': round(elo_diff, 1),
-                'elo_implied_blue_winrate': elo_pct
+                'elo_diff': round(b_elo - r_elo, 1),
+                'elo_implied_blue_winrate': stage_results['elo']['pct']
             },
             'player_metrics': {
                 'avg_blue_p_wr': round(avg_blue_p_wr * 100, 2),

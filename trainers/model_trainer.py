@@ -10,6 +10,9 @@ from sklearn.metrics import (
     brier_score_loss,
     classification_report
 )
+from xgboost import XGBClassifier
+
+from trainers.trainer_helpers import extract_features, save_feature_importance
 
 
 def train_lol_prediction_model(
@@ -18,69 +21,24 @@ def train_lol_prediction_model(
         split_date: str = None,
         full_train: bool = False,
         params_filepath: str = "models/best_params.json",
-        output_model_path: str = "models/xgboost_model.json"
-) -> tuple[xgb.XGBClassifier, pd.DataFrame]:
-    """
-    Trains and evaluates an XGBoost model on pre-game LoL match features.
-
-    Parameters:
-        filepath (str): Path to enriched CSV dataset.
-        test_split_ratio (float): Proportion reserved for testing (if split_date is None and full_train=False).
-        split_date (str, optional): Cut-off date ('YYYY-MM-DD').
-        full_train (bool): If True, trains on 100% of historical data for production deployment.
-        params_filepath (str): Path to best_params.json created by hyperparameter_tuner.py.
-        output_model_path (str): Destination path to save the trained model binary.
-    """
-    # 1. Load dataset and sort chronologically
+        output_model_path: str = "models/xgboost_model.json",
+        importance_output_path: str = "metadata/xgboost_feature_importance.csv"
+) -> XGBClassifier:
+    """Trains and evaluates an XGBoost model on pre-game LoL match features including momentum."""
+    # 1. Load dataset, sort chronologically, and enrich with Momentum Features
     df = pd.read_csv(filepath, low_memory=False)
     df['date'] = pd.to_datetime(df['date'])
     df = df.sort_values('date').reset_index(drop=True)
 
     target_col = 'blue_win'
 
-    # 2. Identify feature subsets
-    elo_features = ['elo_diff', 'blue_elo_pre', 'red_elo_pre', 'blue_elo_win_prob', 'blue_firstpick']
-    series_features = ['game_number', 'blue_series_lead', 'blue_prev_win']
-
-    player_features = [
-        col for col in df.columns
-        if col.endswith('_player_games_pre') or
-           col.endswith('_player_winrate_pre') or
-           col.endswith('_champ_games_pre') or
-           col.endswith('_champ_winrate_pre')
-    ]
-
-    h2h_matchup_features = [
-        col for col in df.columns
-        if 'h2h' in col or 'lane_matchup' in col or 'p2p' in col
-    ]
-
-    synergy_roster_features = [
-        col for col in df.columns
-        if 'roster' in col or 'duo' in col
-    ]
-
-    draft_champ_features = [
-        col for col in df.columns
-        if 'patch' in col or 'counter' in col or 'synergy' in col or 'cohesion' in col or 'comp' in col
-    ]
+    feature_cols = extract_features(df)
 
     champ_features = [
         'blue_top_champion', 'blue_jng_champion', 'blue_mid_champion', 'blue_bot_champion', 'blue_sup_champion',
         'red_top_champion', 'red_jng_champion', 'red_mid_champion', 'red_bot_champion', 'red_sup_champion'
     ]
     champ_features = [c for c in champ_features if c in df.columns]
-
-    feature_cols = (
-            elo_features +
-            series_features +
-            player_features +
-            h2h_matchup_features +
-            synergy_roster_features +
-            draft_champ_features +
-            champ_features
-    )
-    feature_cols = [col for col in dict.fromkeys(feature_cols) if col in df.columns]
 
     print(f"Loaded {len(df)} matches. Total features selected for training: {len(feature_cols)}")
 
@@ -148,7 +106,6 @@ def train_lol_prediction_model(
     # 6. Train XGBoost Model
     model_params.pop('best_logloss', None)
     if full_train:
-        # Remove early_stopping_rounds when there is no evaluation set
         model_params.pop('early_stopping_rounds', None)
         model = xgb.XGBClassifier(**model_params)
         model.fit(X_train, y_train, verbose=False)
@@ -208,28 +165,11 @@ def train_lol_prediction_model(
         print(league_summary.to_string(index=False))
         print("=" * 55)
 
-    # 8. Feature Importance Analysis
-    importance_scores = model.feature_importances_
-    importance_df = pd.DataFrame({
-        'Feature': feature_cols,
-        'Importance': importance_scores
-    }).sort_values('Importance', ascending=False).reset_index(drop=True)
-
-    print("\nTop 15 Most Influential Features:")
-    print(importance_df.head(15).to_string(index=False))
+    # 8. Feature Importance Analysis & Export
+    save_feature_importance(model, feature_cols, importance_output_path)
 
     # 9. Export Trained Model Binary
     model.save_model(output_model_path)
-    print(f"\n[SUCCESS] Model binary successfully saved to '{output_model_path}'")
+    print(f"[SUCCESS] Model binary successfully saved to '{output_model_path}'")
 
-    return model, importance_df
-
-
-if __name__ == "__main__":
-    dataset_path = "multi_year_pregame_dataset_final_features.csv"
-
-    # Set full_train=True when training for live production deployment up to today
-    model, feature_importance = train_lol_prediction_model(
-        filepath=dataset_path,
-        full_train=True
-    )
+    return model
