@@ -34,7 +34,6 @@ if __name__ == '__main__':
     enriched_df, team_leaderboard = compute_team_elo_ratings(
         filepath="dataset/pregame/pregame.csv",
         output_filepath="dataset/pregame/pregame_dataset_with_elo.csv",
-        init_rating=1500,
         first_pick_bonus=10.0,
         season_soft_reset_factor=0.2
     )
