@@ -1,5 +1,7 @@
 import os
 import json
+from datetime import date, timedelta
+
 import joblib
 import pandas as pd
 import numpy as np
@@ -63,7 +65,7 @@ def extract_feature_matrix(df: pd.DataFrame):
 
 def train_catboost(
         filepath: str = DATASET_PATH,
-        split_date: str = "2026-04-01",
+        dynamic_test_window: int = 60,
         full_train: bool = False,
         params_path: str = PARAMS_PATH,
         output_model_path: str = MODEL_OUTPUT_PATH,
@@ -92,6 +94,8 @@ def train_catboost(
     print("=" * 60)
     print(f"Dataset Loaded: {len(df)} matches | Features: {len(X.columns)}")
     print(f"Categorical Features ({len(cat_features)}): {cat_features}")
+
+    split_date = date.today() - timedelta(days=dynamic_test_window)
 
     if full_train:
         print("🌐 Mode: FULL DATASET TRAINING (Ignoring split date)")

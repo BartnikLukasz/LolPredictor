@@ -1,5 +1,7 @@
 import os
 import json
+from datetime import date, timedelta
+
 import joblib
 import pandas as pd
 import numpy as np
@@ -13,7 +15,7 @@ def train_secondary_model(
         dataset_path: str = "dataset/pregame/pregame_dataset_final_features.csv",
         model_output_path: str = "models/lightgbm_model.pkl",
         params_path: str = "models/best_lightgbm_params.json",
-        test_start_date: str = "2024-01-01",
+        dynamic_test_window: int = 60,
         full_train: bool = False,
         importance_output_path: str = "metadata/lightgbm_feature_importance.csv"
 ):
@@ -24,7 +26,7 @@ def train_secondary_model(
         dataset_path (str): Path to final pregame feature dataset.
         model_output_path (str): Destination path for saved model artifact.
         params_path (str): Path to JSON file containing best tuned hyperparameters.
-        test_start_date (str): Cutoff date ('YYYY-MM-DD'). Matches on or after this date
+        split_date (str): Cutoff date ('YYYY-MM-DD'). Matches on or after this date
                                are placed into the test evaluation set (ignored if full_train=True).
         full_train (bool): If True, trains on 100% of the dataset without splitting or testing.
     """
@@ -48,6 +50,8 @@ def train_secondary_model(
         if col not in exclude_cols and df[col].dtype in [np.float64, np.int64, np.float32, np.int32]
     ]
 
+    split_date = date.today() - timedelta(days=dynamic_test_window)
+
     # 3. Handle Train / Test Data Selection
     if full_train:
         X_train = df[feature_cols]
@@ -59,7 +63,7 @@ def train_secondary_model(
         print(
             f"[*] FULL TRAIN MODE: Training LightGBM Model 2 on ALL {len(X_train)} matches ({start_dt} to {end_dt})...")
     else:
-        cutoff_dt = pd.to_datetime(test_start_date)
+        cutoff_dt = pd.to_datetime(split_date)
         train_mask = df["date"] < cutoff_dt
         test_mask = df["date"] >= cutoff_dt
 
@@ -72,7 +76,7 @@ def train_secondary_model(
             min_date = df['date'].min().strftime('%Y-%m-%d')
             max_date = df['date'].max().strftime('%Y-%m-%d')
             raise ValueError(
-                f"Invalid test_start_date '{test_start_date}'. "
+                f"Invalid split_date '{split_date}'. "
                 f"Dataset date range spans from {min_date} to {max_date}."
             )
 
@@ -133,7 +137,7 @@ def train_secondary_model(
         auc = roc_auc_score(y_val, val_probs)
 
         print("\n--- Model 2 (LightGBM) Performance ---")
-        print(f"Test Cutoff Date: {test_start_date}")
+        print(f"Test Cutoff Date: {split_date}")
         print(f"Test Accuracy:    {acc * 100:.2f}%")
         print(f"Test Log Loss:    {loss:.4f}")
         print(f"Test ROC AUC:     {auc:.4f}")

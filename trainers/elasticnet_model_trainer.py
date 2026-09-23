@@ -1,5 +1,7 @@
 import json
 import os
+from datetime import date, timedelta
+
 import joblib
 import pandas as pd
 import numpy as np
@@ -15,7 +17,7 @@ from trainers.trainer_helpers import extract_features, save_feature_importance
 
 def train_elasticnet_model(
         filepath: str = "dataset/pregame/pregame_dataset_final_features.csv",
-        split_date: str = "2026-04-01",
+        dynamic_test_window: int = 60,
         full_train: bool = False,
         params_json_path: str = "models/elasticnet_best_params.json",
         model_output_path: str = "models/elasticnet_model.joblib",
@@ -99,6 +101,8 @@ def train_elasticnet_model(
         ('preprocessor', preprocessor),
         ('classifier', LogisticRegression(**params))
     ])
+
+    split_date = date.today() - timedelta(days=dynamic_test_window)
 
     if full_train:
         print("=" * 60)

@@ -1,12 +1,12 @@
 {
-    "learning_rate": 0.06434864593782953,
-    "depth": 7,
-    "l2_leaf_reg": 7.855576031656704,
-    "random_strength": 14.677894361498627,
-    "bagging_temperature": 1.6576231804831354,
+    "learning_rate": 0.055200300848500077,
+    "depth": 9,
+    "l2_leaf_reg": 5.350415831441856,
+    "random_strength": 18.720210136437665,
+    "bagging_temperature": 2.332036454342044,
     "iterations": 1000,
     "eval_metric": "Logloss",
     "early_stopping_rounds": 30,
     "random_seed": 42,
-    "best_logloss": 0.618757
+    "best_logloss": 0.623647
 }

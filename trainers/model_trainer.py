@@ -1,8 +1,11 @@
 import os
 import json
+from datetime import date, timedelta
+
 import pandas as pd
 import numpy as np
 import xgboost as xgb
+from dateutil.utils import today
 from sklearn.metrics import (
     accuracy_score,
     log_loss,
@@ -18,7 +21,7 @@ from trainers.trainer_helpers import extract_features, save_feature_importance
 def train_lol_prediction_model(
         filepath: str,
         test_split_ratio: float = 0.20,
-        split_date: str = None,
+        dynamic_test_window: int = 60,
         full_train: bool = False,
         params_filepath: str = "models/best_params.json",
         output_model_path: str = "models/xgboost_model.json",
@@ -51,6 +54,8 @@ def train_lol_prediction_model(
 
     # 4. Determine Split Strategy
     latest_dataset_date = df['date'].max()
+
+    split_date = date.today() - timedelta(days=dynamic_test_window)
 
     if split_date:
         split_dt = pd.to_datetime(split_date)

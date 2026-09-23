@@ -1,5 +1,6 @@
 import os
 import json
+from datetime import date, timedelta
 import optuna
 import pandas as pd
 import numpy as np
@@ -24,7 +25,7 @@ optuna.logging.set_verbosity(optuna.logging.WARNING)
 def refresh_baseline_if_exists(output_json_path: str, eval_callback) -> float:
     """
     Evaluates saved parameters against the CURRENT dataset split using tuning-level
-    iteration limits, updates 'best_logloss' in the JSON file, and returns the baseline log-loss.
+    iteration limits. Updates 'best_logloss' in the JSON file ONLY if the dataset or score changed.
     """
     if not os.path.exists(output_json_path):
         print("[i] No existing parameter file found. Proceeding with fresh optimization search.")
@@ -34,6 +35,8 @@ def refresh_baseline_if_exists(output_json_path: str, eval_callback) -> float:
         with open(output_json_path, 'r') as f:
             saved_params = json.load(f)
 
+        previous_logloss = saved_params.get('best_logloss', None)
+
         meta_keys = ['best_logloss']
         clean_params = {k: v for k, v in saved_params.items() if k not in meta_keys}
 
@@ -41,12 +44,16 @@ def refresh_baseline_if_exists(output_json_path: str, eval_callback) -> float:
         baseline_logloss = eval_callback(clean_params)
         baseline_logloss = round(float(baseline_logloss), 6)
 
-        saved_params['best_logloss'] = baseline_logloss
-        os.makedirs(os.path.dirname(output_json_path) or '.', exist_ok=True)
-        with open(output_json_path, 'w') as f:
-            json.dump(saved_params, f, indent=4)
+        # Check if logloss actually changed compared to saved JSON value
+        if previous_logloss is None or round(float(previous_logloss), 6) != baseline_logloss:
+            saved_params['best_logloss'] = baseline_logloss
+            os.makedirs(os.path.dirname(output_json_path) or '.', exist_ok=True)
+            with open(output_json_path, 'w') as f:
+                json.dump(saved_params, f, indent=4)
+            print(f"[✓] Refreshed baseline Log-Loss on new dataset: {previous_logloss} -> {baseline_logloss:.6f}\n")
+        else:
+            print(f"[=] Baseline Log-Loss unchanged on current dataset ({baseline_logloss:.6f}). Keeping stored parameters.\n")
 
-        print(f"[✓] Refreshed baseline Log-Loss on current dataset: {baseline_logloss:.6f}\n")
         return baseline_logloss
 
     except Exception as e:
@@ -54,10 +61,59 @@ def refresh_baseline_if_exists(output_json_path: str, eval_callback) -> float:
         return float('inf')
 
 
-def save_best_params_if_improved(best_params: dict, current_logloss: float, output_json_path: str):
+def compute_sample_logloss(y_true: np.ndarray, y_proba: np.ndarray, eps: float = 1e-15) -> np.ndarray:
+    """Calculates individual binary log-loss for each sample."""
+    p = np.clip(y_proba, eps, 1 - eps)
+    return -(y_true * np.log(p) + (1 - y_true) * np.log(1 - p))
+
+
+def save_validation_predictions(
+        test_df: pd.DataFrame,
+        y_test: np.ndarray,
+        y_probs: np.ndarray,
+        output_csv_path: str
+):
+    """Saves match metadata, probabilities, ground truth, and log-loss to CSV matching live predictions schema."""
+    results_df = pd.DataFrame()
+
+    # Standardize date/datetime
+    if 'datetime' in test_df.columns:
+        results_df['datetime'] = pd.to_datetime(test_df['datetime']).dt.strftime('%Y-%m-%d %H:%M:%S')
+    elif 'date' in test_df.columns:
+        results_df['datetime'] = pd.to_datetime(test_df['date']).dt.strftime('%Y-%m-%d %H:%M:%S')
+    else:
+        results_df['datetime'] = "N/A"
+
+    # Match metadata
+    results_df['blue_team'] = test_df['blue_team'].values if 'blue_team' in test_df.columns else "Unknown"
+    results_df['red_team'] = test_df['red_team'].values if 'red_team' in test_df.columns else "Unknown"
+
+    # Prediction metrics
+    probs_blue = np.round(y_probs, 6)
+    results_df['prob_blue_win'] = probs_blue
+    results_df['prob_red_win'] = np.round(1.0 - probs_blue, 6)
+    results_df['actual_blue_win'] = y_test.astype(int)
+
+    # Calculate sample log-loss and accuracy flag
+    results_df['sample_logloss'] = np.round(compute_sample_logloss(y_test, probs_blue), 6)
+    results_df['is_correct'] = (probs_blue >= 0.5) == (y_test == 1)
+
+    os.makedirs(os.path.dirname(output_csv_path) or '.', exist_ok=True)
+    results_df.to_csv(output_csv_path, index=False)
+    print(f"[✓] Saved standardized validation predictions to '{output_csv_path}'")
+
+
+def save_best_params_if_improved(
+    best_params: dict,
+    current_logloss: float,
+    output_json_path: str,
+    test_df: pd.DataFrame = None,
+    y_test: np.ndarray = None,
+    best_y_probs: np.ndarray = None
+):
     """
-    Compares the current run's best log-loss against the refreshed log-loss in output_json_path.
-    Only updates the file if the current trial's log-loss is strictly better (lower).
+    Compares the current run's best log-loss against the stored log-loss.
+    Saves new parameters AND prediction CSV if an improvement is detected.
     """
     previous_logloss = float('inf')
 
@@ -84,6 +140,11 @@ def save_best_params_if_improved(best_params: dict, current_logloss: float, outp
         with open(output_json_path, 'w') as f:
             json.dump(best_params, f, indent=4)
         print(f"[✓] Improvement detected! Updated hyperparameters saved to '{output_json_path}'")
+
+        # Save predictions CSV alongside parameter JSON
+        if test_df is not None and y_test is not None and best_y_probs is not None:
+            output_csv_path = output_json_path.replace('models', 'metadata/predictions').replace('.json', '_predictions.csv')
+            save_validation_predictions(test_df, y_test, best_y_probs, output_csv_path)
     else:
         print(f"[!] Current run did not beat refreshed baseline ({previous_logloss:.6f}). Keeping existing JSON.")
     print("=" * 60 + "\n")
@@ -91,10 +152,11 @@ def save_best_params_if_improved(best_params: dict, current_logloss: float, outp
 
 def optimize_xgboost_hyperparameters(
         filepath: str,
-        split_date: str = "2026-04-01",
+        dynamic_test_window: int = 60,
         n_trials: int = 50,
         output_json_path: str = "models/best_params.json"
 ):
+    split_date = date.today() - timedelta(days=dynamic_test_window)
     df = pd.read_csv(filepath, low_memory=False)
     df['date'] = pd.to_datetime(df['date'])
     df = df.sort_values('date').reset_index(drop=True)
@@ -120,15 +182,15 @@ def optimize_xgboost_hyperparameters(
 
     X_train, y_train = X.iloc[:split_idx], y[:split_idx]
     X_test, y_test = X.iloc[split_idx:], y[split_idx:]
+    test_df_subset = df.iloc[split_idx:].copy()
 
     print("=" * 60)
     print("      XGBOOST HYPERPARAMETER OPTIMIZATION (OPTUNA)      ")
     print("=" * 60)
 
-    # Re-evaluate saved baseline using tuning n_estimators (200) for fair comparison
     def eval_xgb(params):
         p = params.copy()
-        p['n_estimators'] = 200  # Override final model 1000 estimators
+        p['n_estimators'] = 200
         p['eval_metric'] = 'logloss'
         p['enable_categorical'] = True
         p['early_stopping_rounds'] = 30
@@ -144,14 +206,14 @@ def optimize_xgboost_hyperparameters(
     def objective(trial: optuna.Trial) -> float:
         params = {
             'n_estimators': 200,
-            'learning_rate': trial.suggest_float('learning_rate', 0.02, 0.06, log=True),
-            'max_depth': trial.suggest_int('max_depth', 5, 10),
-            'subsample': trial.suggest_float('subsample', 0.4, 0.8),
-            'colsample_bytree': trial.suggest_float('colsample_bytree', 0.7, 0.99),
-            'min_child_weight': trial.suggest_int('min_child_weight', 5, 15),
-            'gamma': trial.suggest_float('gamma', 0.1, 1.0),
-            'reg_alpha': trial.suggest_float('reg_alpha', 5, 20.0, log=True),
-            'reg_lambda': trial.suggest_float('reg_lambda', 1, 10.0, log=True),
+            'learning_rate': trial.suggest_float('learning_rate', 0.04, 0.07, log=True),
+            'max_depth': trial.suggest_int('max_depth', 6, 11),
+            'subsample': trial.suggest_float('subsample', 0.2, 0.6),
+            'colsample_bytree': trial.suggest_float('colsample_bytree', 0.6, 0.8),
+            'min_child_weight': trial.suggest_int('min_child_weight', 7, 13),
+            'gamma': trial.suggest_float('gamma', 0.1, 0.7),
+            'reg_alpha': trial.suggest_float('reg_alpha', 10, 20.0, log=True),
+            'reg_lambda': trial.suggest_float('reg_lambda', 2, 8.0, log=True),
             'eval_metric': 'logloss',
             'enable_categorical': True,
             'early_stopping_rounds': 30,
@@ -166,22 +228,43 @@ def optimize_xgboost_hyperparameters(
     study = optuna.create_study(direction='minimize')
     study.optimize(objective, n_trials=n_trials, show_progress_bar=True)
 
-    best_params = study.best_params
-    best_params['n_estimators'] = 1000
-    best_params['eval_metric'] = 'logloss'
-    best_params['enable_categorical'] = True
-    best_params['early_stopping_rounds'] = 30
-    best_params['random_state'] = 42
+    # Re-predict using best trial parameters to capture test probabilities
+    best_eval_params = study.best_params.copy()
+    best_eval_params['n_estimators'] = 200
+    best_eval_params['eval_metric'] = 'logloss'
+    best_eval_params['enable_categorical'] = True
+    best_eval_params['early_stopping_rounds'] = 30
+    best_eval_params['random_state'] = 42
 
-    save_best_params_if_improved(best_params, study.best_value, output_json_path)
+    best_model = xgb.XGBClassifier(**best_eval_params)
+    best_model.fit(X_train, y_train, eval_set=[(X_test, y_test)], verbose=False)
+    best_preds_proba = best_model.predict_proba(X_test)[:, 1]
+
+    # Save hyperparams (with 1000 estimators for full training)
+    final_params = study.best_params.copy()
+    final_params['n_estimators'] = 1000
+    final_params['eval_metric'] = 'logloss'
+    final_params['enable_categorical'] = True
+    final_params['early_stopping_rounds'] = 30
+    final_params['random_state'] = 42
+
+    save_best_params_if_improved(
+        best_params=final_params,
+        current_logloss=study.best_value,
+        output_json_path=output_json_path,
+        test_df=test_df_subset,
+        y_test=y_test,
+        best_y_probs=best_preds_proba
+    )
 
 
 def optimize_lightgbm_hyperparameters(
         filepath: str,
-        split_date: str = "2026-04-01",
+        dynamic_test_window: int = 60,
         n_trials: int = 50,
         output_json_path: str = "models/best_lightgbm_params.json"
 ):
+    split_date = date.today() - timedelta(days=dynamic_test_window)
     df = pd.read_csv(filepath, low_memory=False)
     df['date'] = pd.to_datetime(df['date'])
     df = df.sort_values('date').reset_index(drop=True)
@@ -207,6 +290,7 @@ def optimize_lightgbm_hyperparameters(
 
     X_train, y_train = X.iloc[:split_idx], y[:split_idx]
     X_test, y_test = X.iloc[split_idx:], y[split_idx:]
+    test_df_subset = df.iloc[split_idx:].copy()
 
     print("=" * 60)
     print("      LIGHTGBM HYPERPARAMETER OPTIMIZATION (OPTUNA)     ")
@@ -235,15 +319,15 @@ def optimize_lightgbm_hyperparameters(
     def objective(trial: optuna.Trial) -> float:
         params = {
             'n_estimators': 200,
-            'learning_rate': trial.suggest_float('learning_rate', 0.001, 0.05, log=True),
-            'max_depth': trial.suggest_int('max_depth', 5, 10),
+            'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.1, log=True),
+            'max_depth': trial.suggest_int('max_depth', 6, 12),
             'num_leaves': trial.suggest_int('num_leaves', 30, 63),
             'min_child_samples': trial.suggest_int('min_child_samples', 30, 60),
-            'subsample': trial.suggest_float('subsample', 0.4, 0.8),
+            'subsample': trial.suggest_float('subsample', 0.3, 0.6),
             'subsample_freq': 1,
-            'colsample_bytree': trial.suggest_float('colsample_bytree', 0.5, 0.8),
-            'reg_alpha': trial.suggest_float('reg_alpha', 1e-3, 2.0, log=True),
-            'reg_lambda': trial.suggest_float('reg_lambda', 1e-3, 2.0, log=True),
+            'colsample_bytree': trial.suggest_float('colsample_bytree', 0.4, 0.7),
+            'reg_alpha': trial.suggest_float('reg_alpha', 1e-4, 1.0, log=True),
+            'reg_lambda': trial.suggest_float('reg_lambda', 1e-4, 1.0, log=True),
             'objective': 'binary',
             'metric': 'binary_logloss',
             'random_state': 42,
@@ -263,22 +347,47 @@ def optimize_lightgbm_hyperparameters(
     study = optuna.create_study(direction='minimize')
     study.optimize(objective, n_trials=n_trials, show_progress_bar=True)
 
-    best_params = study.best_params
-    best_params['n_estimators'] = 1000
-    best_params['objective'] = 'binary'
-    best_params['subsample_freq'] = 1
-    best_params['random_state'] = 42
-    best_params['verbosity'] = -1
+    # Generate probabilities for best trial parameters
+    best_eval_params = study.best_params.copy()
+    best_eval_params['n_estimators'] = 200
+    best_eval_params['objective'] = 'binary'
+    best_eval_params['subsample_freq'] = 1
+    best_eval_params['random_state'] = 42
+    best_eval_params['verbosity'] = -1
 
-    save_best_params_if_improved(best_params, study.best_value, output_json_path)
+    best_model = LGBMClassifier(**best_eval_params)
+    best_model.fit(
+        X_train, y_train,
+        eval_set=[(X_test, y_test)],
+        callbacks=[lgb.early_stopping(stopping_rounds=30, verbose=False)]
+    )
+    best_preds_proba = best_model.predict_proba(X_test)[:, 1]
+
+    # Final params for full training
+    final_params = study.best_params.copy()
+    final_params['n_estimators'] = 1000
+    final_params['objective'] = 'binary'
+    final_params['subsample_freq'] = 1
+    final_params['random_state'] = 42
+    final_params['verbosity'] = -1
+
+    save_best_params_if_improved(
+        best_params=final_params,
+        current_logloss=study.best_value,
+        output_json_path=output_json_path,
+        test_df=test_df_subset,
+        y_test=y_test,
+        best_y_probs=best_preds_proba
+    )
 
 
 def optimize_catboost_hyperparameters(
         filepath: str,
-        split_date: str = "2026-04-01",
+        dynamic_test_window: int = 60,
         n_trials: int = 50,
         output_json_path: str = "models/catboost_best_params.json"
 ):
+    split_date = date.today() - timedelta(days=dynamic_test_window)
     df = pd.read_csv(filepath, low_memory=False)
     df['date'] = pd.to_datetime(df['date'])
     df = df.sort_values('date').reset_index(drop=True)
@@ -305,6 +414,7 @@ def optimize_catboost_hyperparameters(
 
     X_train, y_train = X.iloc[:split_idx], y[:split_idx]
     X_test, y_test = X.iloc[split_idx:], y[split_idx:]
+    test_df_subset = df.iloc[split_idx:].copy()
 
     print("=" * 60)
     print("      CATBOOST HYPERPARAMETER OPTIMIZATION (OPTUNA)     ")
@@ -332,10 +442,10 @@ def optimize_catboost_hyperparameters(
     def objective(trial: optuna.Trial) -> float:
         params = {
             'iterations': 300,
-            'learning_rate': trial.suggest_float('learning_rate', 0.02, 0.07, log=True),
+            'learning_rate': trial.suggest_float('learning_rate', 0.04, 0.08, log=True),
             'depth': trial.suggest_int('depth', 5, 10),
             'l2_leaf_reg': trial.suggest_float('l2_leaf_reg', 1, 10.0, log=True),
-            'random_strength': trial.suggest_float('random_strength', 4, 20.0, log=True),
+            'random_strength': trial.suggest_float('random_strength', 6, 20.0, log=True),
             'bagging_temperature': trial.suggest_float('bagging_temperature', 0.8, 3.0),
             'eval_metric': 'Logloss',
             'thread_count': -1,
@@ -352,21 +462,42 @@ def optimize_catboost_hyperparameters(
     study = optuna.create_study(direction='minimize')
     study.optimize(objective, n_trials=n_trials, show_progress_bar=True)
 
-    best_params = study.best_params
-    best_params['iterations'] = 1000
-    best_params['eval_metric'] = 'Logloss'
-    best_params['early_stopping_rounds'] = 30
-    best_params['random_seed'] = 42
+    # Generate probabilities for best trial parameters
+    best_eval_params = study.best_params.copy()
+    best_eval_params['iterations'] = 300
+    best_eval_params['eval_metric'] = 'Logloss'
+    best_eval_params['thread_count'] = -1
+    best_eval_params['random_seed'] = 42
+    best_eval_params['verbose'] = False
 
-    save_best_params_if_improved(best_params, study.best_value, output_json_path)
+    best_model = CatBoostClassifier(**best_eval_params)
+    best_model.fit(train_pool, eval_set=test_pool, early_stopping_rounds=15, verbose=False)
+    best_preds_proba = best_model.predict_proba(test_pool)[:, 1]
+
+    # Final params for full training
+    final_params = study.best_params.copy()
+    final_params['iterations'] = 1000
+    final_params['eval_metric'] = 'Logloss'
+    final_params['early_stopping_rounds'] = 30
+    final_params['random_seed'] = 42
+
+    save_best_params_if_improved(
+        best_params=final_params,
+        current_logloss=study.best_value,
+        output_json_path=output_json_path,
+        test_df=test_df_subset,
+        y_test=y_test,
+        best_y_probs=best_preds_proba
+    )
 
 
 def optimize_elastictree_hyperparameters(
         filepath: str,
-        split_date: str = "2026-04-01",
+        dynamic_test_window: int = 60,
         n_trials: int = 50,
         output_json_path: str = "models/elastictree_best_params.json"
 ):
+    split_date = date.today() - timedelta(days=dynamic_test_window)
     df = pd.read_csv(filepath, low_memory=False)
     df['date'] = pd.to_datetime(df['date'])
     df = df.sort_values('date').reset_index(drop=True)
@@ -394,6 +525,7 @@ def optimize_elastictree_hyperparameters(
 
     X_train, y_train = X.iloc[:split_idx].copy(), y[:split_idx]
     X_test, y_test = X.iloc[split_idx:].copy(), y[split_idx:]
+    test_df_subset = df.iloc[split_idx:].copy()
 
     num_cols = X_train.select_dtypes(include=[np.number]).columns
     train_medians = X_train[num_cols].median()
@@ -427,9 +559,9 @@ def optimize_elastictree_hyperparameters(
         params = {
             'n_estimators': 50,
             'criterion': 'gini',
-            'max_depth': trial.suggest_int('max_depth', 10, 20),
-            'min_samples_split': trial.suggest_int('min_samples_split', 5, 15),
-            'min_samples_leaf': trial.suggest_int('min_samples_leaf', 2, 10),
+            'max_depth': trial.suggest_int('max_depth', 15, 30),
+            'min_samples_split': trial.suggest_int('min_samples_split', 3, 12),
+            'min_samples_leaf': trial.suggest_int('min_samples_leaf', 1, 8),
             'max_features': trial.suggest_float('max_features', 0.05, 0.2, step=0.05, log=False),
             'random_state': 42,
             'n_jobs': 1
@@ -444,20 +576,40 @@ def optimize_elastictree_hyperparameters(
     study = optuna.create_study(direction='minimize')
     study.optimize(objective, n_trials=n_trials, n_jobs=-1, show_progress_bar=True)
 
-    best_params = study.best_params
-    best_params['n_estimators'] = 1000
-    best_params['random_state'] = 42
-    best_params['n_jobs'] = -1
+    # Generate probabilities for best trial parameters
+    best_eval_params = study.best_params.copy()
+    best_eval_params['n_estimators'] = 50
+    best_eval_params['criterion'] = 'gini'
+    best_eval_params['random_state'] = 42
+    best_eval_params['n_jobs'] = -1
 
-    save_best_params_if_improved(best_params, study.best_value, output_json_path)
+    best_model = ExtraTreesClassifier(**best_eval_params)
+    best_model.fit(X_train_np, y_train_np)
+    best_preds_proba = best_model.predict_proba(X_test_np)[:, 1]
+
+    # Final params for full training
+    final_params = study.best_params.copy()
+    final_params['n_estimators'] = 1000
+    final_params['random_state'] = 42
+    final_params['n_jobs'] = -1
+
+    save_best_params_if_improved(
+        best_params=final_params,
+        current_logloss=study.best_value,
+        output_json_path=output_json_path,
+        test_df=test_df_subset,
+        y_test=y_test,
+        best_y_probs=best_preds_proba
+    )
 
 
 def optimize_elasticnet_hyperparameters(
         filepath: str,
-        split_date: str = "2026-04-01",
+        dynamic_test_window: int = 60,
         n_trials: int = 50,
         output_json_path: str = "models/elasticnet_best_params.json"
 ):
+    split_date = date.today() - timedelta(days=dynamic_test_window)
     df = pd.read_csv(filepath, low_memory=False)
     df['date'] = pd.to_datetime(df['date'])
     df = df.sort_values('date').reset_index(drop=True)
@@ -483,6 +635,7 @@ def optimize_elasticnet_hyperparameters(
 
     X_train, y_train = X.iloc[:split_idx], y[:split_idx]
     X_test, y_test = X.iloc[split_idx:], y[split_idx:]
+    test_df_subset = df.iloc[split_idx:].copy()
 
     print("=" * 60)
     print("     ELASTICNET HYPERPARAMETER OPTIMIZATION (OPTUNA)    ")
@@ -529,8 +682,8 @@ def optimize_elasticnet_hyperparameters(
         params = {
             'penalty': 'elasticnet',
             'solver': 'saga',
-            'C': trial.suggest_float('C', 1e-5, 1.0, log=True),
-            'l1_ratio': trial.suggest_float('l1_ratio', 0.0, 0.5),
+            'C': trial.suggest_float('C', 1e-6, 0.01, log=True),
+            'l1_ratio': trial.suggest_float('l1_ratio', 0.0, 0.3),
             'max_iter': 200,
             'tol': 1e-2,
             'random_state': 42
@@ -545,13 +698,33 @@ def optimize_elasticnet_hyperparameters(
     study = optuna.create_study(direction='minimize')
     study.optimize(objective, n_trials=n_trials, n_jobs=-1)
 
-    best_params = study.best_params
-    best_params['penalty'] = 'elasticnet'
-    best_params['solver'] = 'saga'
-    best_params['max_iter'] = 2000
-    best_params['random_state'] = 42
+    # Generate probabilities for best trial parameters
+    best_eval_params = study.best_params.copy()
+    best_eval_params['penalty'] = 'elasticnet'
+    best_eval_params['solver'] = 'saga'
+    best_eval_params['max_iter'] = 200
+    best_eval_params['tol'] = 1e-2
+    best_eval_params['random_state'] = 42
 
-    save_best_params_if_improved(best_params, study.best_value, output_json_path)
+    best_model = LogisticRegression(**best_eval_params)
+    best_model.fit(X_train_proc, y_train)
+    best_preds_proba = best_model.predict_proba(X_test_proc)[:, 1]
+
+    # Final params for full training
+    final_params = study.best_params.copy()
+    final_params['penalty'] = 'elasticnet'
+    final_params['solver'] = 'saga'
+    final_params['max_iter'] = 2000
+    final_params['random_state'] = 42
+
+    save_best_params_if_improved(
+        best_params=final_params,
+        current_logloss=study.best_value,
+        output_json_path=output_json_path,
+        test_df=test_df_subset,
+        y_test=y_test,
+        best_y_probs=best_preds_proba
+    )
 
 
 if __name__ == "__main__":
@@ -561,35 +734,30 @@ if __name__ == "__main__":
     while i < 8:
         optimize_xgboost_hyperparameters(
             filepath=dataset_path,
-            split_date="2026-04-01",
             n_trials=200,
             output_json_path="../models/best_params.json"
         )
 
         optimize_lightgbm_hyperparameters(
             filepath=dataset_path,
-            split_date="2026-04-01",
             n_trials=200,
             output_json_path="../models/best_lightgbm_params.json"
         )
 
         optimize_catboost_hyperparameters(
             filepath=dataset_path,
-            split_date="2026-04-01",
-            n_trials=40,
+            n_trials=60,
             output_json_path="../models/catboost_best_params.json"
         )
 
         optimize_elastictree_hyperparameters(
             filepath=dataset_path,
-            split_date="2026-04-01",
-            n_trials=150,
+            n_trials=200,
             output_json_path="../models/elastictree_best_params.json"
         )
 
         optimize_elasticnet_hyperparameters(
             filepath=dataset_path,
-            split_date="2026-04-01",
             n_trials=200,
             output_json_path="../models/elasticnet_best_params.json"
         )
