@@ -24,6 +24,8 @@ from app_helpers import (
 from live_feature_engine import LiveFeatureEngine
 from upstash_redis import Redis
 
+from util import generate_game_id
+
 st.set_page_config(page_title="LoL Match Predictor", layout="wide")
 
 TRACKING_KEY = "live_accuracy_tracking"
@@ -353,6 +355,14 @@ if st.button("Calculate Match Probabilities", type="primary", use_container_widt
     blue_series_wins = max(0, min(total_past_games, raw_blue_wins))
     red_series_wins = max(0, min(total_past_games, raw_red_wins))
 
+    game_id = generate_game_id(
+        blue_team=blue_team,
+        red_team=red_team,
+        blue_champs=blue_champs,
+        red_champs=red_champs,
+        first_pick=first_pick_side
+    )
+
     custom_elo_metrics = apply_live_series_elo_adjustment(
         df_hist=df_hist,
         blue_team=blue_team,
@@ -395,6 +405,7 @@ if st.button("Calculate Match Probabilities", type="primary", use_container_widt
     st.session_state["selected_actual_winner"] = blue_team
 
     st.session_state["active_prediction"] = {
+        "game_id": game_id,  # <-- ADDED HERE
         "blue_team": blue_team,
         "red_team": red_team,
         "model_results": all_model_results,
@@ -463,6 +474,7 @@ def render_model_dashboard(model_name: str, results: dict, active_pred: dict, h2
                     current_track_data["correct_predictions"] = current_track_data.get("correct_predictions", 0) + 1
 
                 current_track_data.setdefault("logs", []).append({
+                    "game_id": active_pred.get("game_id", ""),  # <-- ADDED HERE
                     "datetime": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                     "blue_team": b_team,
                     "red_team": r_team,

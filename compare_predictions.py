@@ -5,8 +5,9 @@ import numpy as np
 
 def compare_model_csvs(live_csv_path: str, optuna_csv_path: str, output_csv_path: str):
     """
-    Matches live predictions with Optuna validation predictions from newest to oldest
-    based on blue_team and red_team, generating a detailed comparison CSV.
+    Matches live predictions with Optuna validation predictions from newest to oldest.
+    Prioritizes 'game_id' matching if present in both datasets, falling back to
+    team-pair reverse matching for older records lacking game_id.
     """
     if not os.path.exists(live_csv_path):
         print(f"[!] Live CSV missing: '{live_csv_path}'")
@@ -25,6 +26,9 @@ def compare_model_csvs(live_csv_path: str, optuna_csv_path: str, output_csv_path
     df_live = df_live.sort_values('datetime').reset_index(drop=True)
     df_optuna = df_optuna.sort_values('datetime').reset_index(drop=True)
 
+    # Check if game_id is present in both dataframes
+    has_game_id = ('game_id' in df_live.columns) and ('game_id' in df_optuna.columns)
+
     used_optuna_indices = set()
     comparison_records = []
     unmatched_count = 0
@@ -35,15 +39,29 @@ def compare_model_csvs(live_csv_path: str, optuna_csv_path: str, output_csv_path
         blue = live_row['blue_team']
         red = live_row['red_team']
 
-        # Find the newest unused matching game in Optuna
+        live_gid = str(live_row['game_id']).strip() if (has_game_id and pd.notna(live_row.get('game_id'))) else None
         matched_optuna_idx = None
-        for opt_idx in reversed(range(len(df_optuna))):
-            if opt_idx in used_optuna_indices:
-                continue
-            opt_row = df_optuna.iloc[opt_idx]
-            if opt_row['blue_team'] == blue and opt_row['red_team'] == red:
-                matched_optuna_idx = opt_idx
-                break
+
+        # Strategy 1: Match by exact game_id if available
+        if live_gid:
+            for opt_idx in reversed(range(len(df_optuna))):
+                if opt_idx in used_optuna_indices:
+                    continue
+                opt_gid = str(df_optuna.iloc[opt_idx].get('game_id')).strip() if pd.notna(
+                    df_optuna.iloc[opt_idx].get('game_id')) else None
+                if opt_gid == live_gid:
+                    matched_optuna_idx = opt_idx
+                    break
+
+        # Strategy 2: Fallback to reverse team-pair matching if game_id match was not found
+        if matched_optuna_idx is None:
+            for opt_idx in reversed(range(len(df_optuna))):
+                if opt_idx in used_optuna_indices:
+                    continue
+                opt_row = df_optuna.iloc[opt_idx]
+                if opt_row['blue_team'] == blue and opt_row['red_team'] == red:
+                    matched_optuna_idx = opt_idx
+                    break
 
         if matched_optuna_idx is not None:
             used_optuna_indices.add(matched_optuna_idx)
@@ -63,7 +81,11 @@ def compare_model_csvs(live_csv_path: str, optuna_csv_path: str, output_csv_path
             opt_pred_winner = blue if opt_p_blue >= 0.5 else red
             winner_changed = live_pred_winner != opt_pred_winner
 
-            comparison_records.append({
+            record = {}
+            if has_game_id:
+                record['game_id'] = live_gid or str(opt_row.get('game_id', ''))
+
+            record.update({
                 'datetime_live': live_row['datetime'].strftime('%Y-%m-%d %H:%M:%S'),
                 'datetime_optuna': opt_row['datetime'].strftime('%Y-%m-%d %H:%M:%S'),
                 'blue_team': blue,
@@ -81,6 +103,7 @@ def compare_model_csvs(live_csv_path: str, optuna_csv_path: str, output_csv_path
                 'live_predicted_winner': live_pred_winner,
                 'optuna_predicted_winner': opt_pred_winner
             })
+            comparison_records.append(record)
         else:
             unmatched_count += 1
 

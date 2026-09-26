@@ -1,8 +1,30 @@
 import json
 import os
+import streamlit as st
 import numpy as np
 import pandas as pd
+from upstash_redis import Redis
 
+from app import TRACKING_KEY
+
+
+def get_redis_client():
+    return Redis(
+        url=st.secrets["UPSTASH_REDIS_REST_URL"],
+        token=st.secrets["UPSTASH_REDIS_REST_TOKEN"]
+    )
+
+
+redis = get_redis_client()
+
+
+def load_tracking_data() -> dict:
+    raw_data = redis.get(TRACKING_KEY)
+    if not raw_data:
+        return {"total_games": 0, "correct_predictions": 0, "logs": []}
+    if isinstance(raw_data, str):
+        return json.loads(raw_data)
+    return raw_data
 
 def compute_sample_logloss(y_true: float, p_blue: float, eps: float = 1e-15) -> float:
     """Calculates binary log-loss for a single match."""
@@ -10,17 +32,12 @@ def compute_sample_logloss(y_true: float, p_blue: float, eps: float = 1e-15) -> 
     return float(-(y_true * np.log(p) + (1 - y_true) * np.log(1 - p)))
 
 
-def convert_live_json_to_model_csvs(json_path: str, output_dir: str = "live_csvs"):
+def convert_live_json_to_model_csvs(output_dir: str = "live_csvs"):
     """
     Parses live predictions JSON and creates individual CSVs per model,
     using identical columns as Optuna validation output.
     """
-    if not os.path.exists(json_path):
-        print(f"[!] Error: File '{json_path}' not found.")
-        return
-
-    with open(json_path, 'r', encoding='utf-8') as f:
-        data = json.load(f)
+    data = load_tracking_data()
 
     # Handle both top-level list [...] or dict wrapped list {"games": [...]}
     games_list = data if isinstance(data, list) else data.get("logs", [data])
@@ -29,6 +46,7 @@ def convert_live_json_to_model_csvs(json_path: str, output_dir: str = "live_csvs
     model_records = {}
 
     for game in games_list:
+        game_id = game.get("game_id", "")
         dt = game.get("datetime", "N/A")
         blue_team = game.get("blue_team", "Unknown")
         red_team = game.get("red_team", "Unknown")
@@ -47,6 +65,7 @@ def convert_live_json_to_model_csvs(json_path: str, output_dir: str = "live_csvs
             is_correct = bool(m.get("is_correct", (prob_blue >= 0.5) == (actual_blue_win == 1)))
 
             record = {
+                "game_id": game_id,
                 "datetime": dt,
                 "blue_team": blue_team,
                 "red_team": red_team,
@@ -74,6 +93,5 @@ def convert_live_json_to_model_csvs(json_path: str, output_dir: str = "live_csvs
 
 if __name__ == "__main__":
     convert_live_json_to_model_csvs(
-        json_path="live-data/live_predictions.json",
         output_dir="live-data/"
     )

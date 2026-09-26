@@ -17,6 +17,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.metrics import log_loss
 
 from trainers.trainer_helpers import extract_features
+from util import generate_game_id
 
 # Silence Optuna's verbose per-trial logging
 optuna.logging.set_verbosity(optuna.logging.WARNING)
@@ -73,14 +74,35 @@ def save_validation_predictions(
         y_probs: np.ndarray,
         output_csv_path: str
 ):
-    """Saves match metadata, probabilities, ground truth, and log-loss to CSV matching live predictions schema."""
+    """Saves match metadata, probabilities, ground truth, and unique game_id to CSV."""
     results_df = pd.DataFrame()
 
-    # Standardize date/datetime
-    if 'datetime' in test_df.columns:
-        results_df['datetime'] = pd.to_datetime(test_df['datetime']).dt.strftime('%Y-%m-%d %H:%M:%S')
-    elif 'date' in test_df.columns:
-        results_df['datetime'] = pd.to_datetime(test_df['date']).dt.strftime('%Y-%m-%d %H:%M:%S')
+    # Define champion feature columns expected in test_df
+    blue_champ_cols = ['blue_top_champion', 'blue_jng_champion', 'blue_mid_champion', 'blue_bot_champion', 'blue_sup_champion']
+    red_champ_cols = ['red_top_champion', 'red_jng_champion', 'red_mid_champion', 'red_bot_champion', 'red_sup_champion']
+
+    # Filter columns that exist in the test dataframe
+    b_cols = [c for c in blue_champ_cols if c in test_df.columns]
+    r_cols = [c for c in red_champ_cols if c in test_df.columns]
+
+    # Deterministic game_id generation row by row
+    game_ids = []
+    for idx, row in test_df.iterrows():
+        b_team = row.get('blue_team', 'Unknown')
+        r_team = row.get('red_team', 'Unknown')
+        b_champs = [row[c] for c in b_cols]
+        r_champs = [row[c] for c in r_cols]
+        fp = row.get('blue_firstpick', row.get('blue_first_pick', row.get('first_pick', '')))
+
+        g_id = generate_game_id(b_team, r_team, b_champs, r_champs, fp)
+        game_ids.append(g_id)
+
+    results_df['game_id'] = game_ids  # <-- ADDED AS FIRST COLUMN
+
+    # Standardize date/datetime (using .values to avoid index alignment NaN drops)
+    date_col = 'datetime' if 'datetime' in test_df.columns else ('date' if 'date' in test_df.columns else None)
+    if date_col is not None:
+        results_df['datetime'] = pd.to_datetime(test_df[date_col]).dt.strftime('%Y-%m-%d %H:%M:%S').values
     else:
         results_df['datetime'] = "N/A"
 
@@ -100,7 +122,7 @@ def save_validation_predictions(
 
     os.makedirs(os.path.dirname(output_csv_path) or '.', exist_ok=True)
     results_df.to_csv(output_csv_path, index=False)
-    print(f"[✓] Saved standardized validation predictions to '{output_csv_path}'")
+    print(f"[✓] Saved standardized validation predictions with game_id to '{output_csv_path}'")
 
 
 def save_best_params_if_improved(
@@ -206,14 +228,14 @@ def optimize_xgboost_hyperparameters(
     def objective(trial: optuna.Trial) -> float:
         params = {
             'n_estimators': 200,
-            'learning_rate': trial.suggest_float('learning_rate', 0.04, 0.07, log=True),
+            'learning_rate': trial.suggest_float('learning_rate', 0.05, 0.09, log=True),
             'max_depth': trial.suggest_int('max_depth', 6, 11),
             'subsample': trial.suggest_float('subsample', 0.2, 0.6),
-            'colsample_bytree': trial.suggest_float('colsample_bytree', 0.6, 0.8),
+            'colsample_bytree': trial.suggest_float('colsample_bytree', 0.5, 0.8),
             'min_child_weight': trial.suggest_int('min_child_weight', 7, 13),
-            'gamma': trial.suggest_float('gamma', 0.1, 0.7),
-            'reg_alpha': trial.suggest_float('reg_alpha', 10, 20.0, log=True),
-            'reg_lambda': trial.suggest_float('reg_lambda', 2, 8.0, log=True),
+            'gamma': trial.suggest_float('gamma', 0.2, 0.7),
+            'reg_alpha': trial.suggest_float('reg_alpha', 7, 15.0, log=True),
+            'reg_lambda': trial.suggest_float('reg_lambda', 2, 5.0, log=True),
             'eval_metric': 'logloss',
             'enable_categorical': True,
             'early_stopping_rounds': 30,
@@ -321,11 +343,11 @@ def optimize_lightgbm_hyperparameters(
             'n_estimators': 200,
             'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.1, log=True),
             'max_depth': trial.suggest_int('max_depth', 6, 12),
-            'num_leaves': trial.suggest_int('num_leaves', 30, 63),
+            'num_leaves': trial.suggest_int('num_leaves', 30, 73),
             'min_child_samples': trial.suggest_int('min_child_samples', 30, 60),
-            'subsample': trial.suggest_float('subsample', 0.3, 0.6),
+            'subsample': trial.suggest_float('subsample', 0.2, 0.5),
             'subsample_freq': 1,
-            'colsample_bytree': trial.suggest_float('colsample_bytree', 0.4, 0.7),
+            'colsample_bytree': trial.suggest_float('colsample_bytree', 0.3, 0.7),
             'reg_alpha': trial.suggest_float('reg_alpha', 1e-4, 1.0, log=True),
             'reg_lambda': trial.suggest_float('reg_lambda', 1e-4, 1.0, log=True),
             'objective': 'binary',
@@ -443,10 +465,10 @@ def optimize_catboost_hyperparameters(
         params = {
             'iterations': 300,
             'learning_rate': trial.suggest_float('learning_rate', 0.04, 0.08, log=True),
-            'depth': trial.suggest_int('depth', 5, 10),
+            'depth': trial.suggest_int('depth', 6, 12),
             'l2_leaf_reg': trial.suggest_float('l2_leaf_reg', 1, 10.0, log=True),
-            'random_strength': trial.suggest_float('random_strength', 6, 20.0, log=True),
-            'bagging_temperature': trial.suggest_float('bagging_temperature', 0.8, 3.0),
+            'random_strength': trial.suggest_float('random_strength', 8, 24.0, log=True),
+            'bagging_temperature': trial.suggest_float('bagging_temperature', 0.8, 4.0),
             'eval_metric': 'Logloss',
             'thread_count': -1,
             'random_seed': 42,
@@ -558,11 +580,11 @@ def optimize_elastictree_hyperparameters(
     def objective(trial: optuna.Trial) -> float:
         params = {
             'n_estimators': 50,
-            'criterion': 'gini',
+            'criterion': trial.suggest_categorical('criterion', ['log_loss', 'gini']),
             'max_depth': trial.suggest_int('max_depth', 15, 30),
             'min_samples_split': trial.suggest_int('min_samples_split', 3, 12),
             'min_samples_leaf': trial.suggest_int('min_samples_leaf', 1, 8),
-            'max_features': trial.suggest_float('max_features', 0.05, 0.2, step=0.05, log=False),
+            'max_features': trial.suggest_float('max_features', 0.05, 0.3, step=0.05, log=False),
             'random_state': 42,
             'n_jobs': 1
         }
@@ -579,7 +601,6 @@ def optimize_elastictree_hyperparameters(
     # Generate probabilities for best trial parameters
     best_eval_params = study.best_params.copy()
     best_eval_params['n_estimators'] = 50
-    best_eval_params['criterion'] = 'gini'
     best_eval_params['random_state'] = 42
     best_eval_params['n_jobs'] = -1
 
@@ -731,7 +752,7 @@ if __name__ == "__main__":
     dataset_path = "../dataset/pregame/pregame_dataset_final_features.csv"
     i = 0
 
-    while i < 8:
+    while i < 10:
         optimize_xgboost_hyperparameters(
             filepath=dataset_path,
             n_trials=200,
@@ -752,7 +773,7 @@ if __name__ == "__main__":
 
         optimize_elastictree_hyperparameters(
             filepath=dataset_path,
-            n_trials=200,
+            n_trials=100,
             output_json_path="../models/elastictree_best_params.json"
         )
 
