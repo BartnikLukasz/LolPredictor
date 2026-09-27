@@ -1,4 +1,6 @@
 import os
+from collections import defaultdict, deque
+
 import pandas as pd
 import numpy as np
 
@@ -62,11 +64,12 @@ def compute_team_elo_ratings(
         k_factor: float = 32.0,
         first_pick_bonus: float = 20.0,
         season_soft_reset_factor: float = 0.5,
-        filter_active_year_only: bool = True
+        filter_active_year_only: bool = True,
+        momentum_window: int = 10  # <-- ADDED: Configurable window for team momentum
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Computes dynamic pre-match Elo ratings using region-aware base Elo initialization,
-    locks team home regions, and exports active team leaderboards.
+    locks team home regions, tracks team momentum, and exports active team leaderboards.
     """
     if region_categories is None:
         region_categories = DEFAULT_REGION_CATEGORIES
@@ -106,10 +109,13 @@ def compute_team_elo_ratings(
             if red_id not in team_home_regions:
                 team_home_regions[red_id] = league
 
-    # 3. Initialize locked base Elo ratings for all identified teams
+    # 3. Initialize locked base Elo ratings and momentum trackers for identified teams
     ratings = {}
     team_init_ratings = {}
     team_last_active_year = {}
+
+    # Track recent match outcomes (1.0 for win, 0.0 for loss) per team for momentum
+    team_recent_outcomes = defaultdict(lambda: deque(maxlen=momentum_window))
 
     for tid, home_region in team_home_regions.items():
         base_elo = get_region_base_elo(home_region, region_categories)
@@ -154,6 +160,11 @@ def compute_team_elo_ratings(
             team_init_ratings[red_team] = base_elo
             ratings[red_team] = base_elo
 
+        # Track recent match results for momentum computation
+        score_blue = 1.0 if blue_win == 1 else 0.0
+        team_recent_outcomes[blue_team].append(score_blue)
+        team_recent_outcomes[red_team].append(1.0 - score_blue)
+
         # Determine First Pick advantage allocation
         blue_has_first_pick = row.get('blue_firstpick', 1) == 1
 
@@ -172,7 +183,6 @@ def compute_team_elo_ratings(
 
         # Post-match rating update
         exp_blue_raw = 1.0 / (1.0 + 10.0 ** ((r_red - r_blue) / 400.0))
-        score_blue = 1.0 if blue_win == 1 else 0.0
 
         ratings[blue_team] = r_blue + k_factor * (score_blue - exp_blue_raw)
         ratings[red_team] = r_red + k_factor * ((1.0 - score_blue) - (1.0 - exp_blue_raw))
@@ -183,18 +193,25 @@ def compute_team_elo_ratings(
     df['elo_diff'] = df['blue_elo_pre'] - df['red_elo_pre']
     df['blue_elo_win_prob'] = blue_expected_win_prob
 
-    # 6. Generate Standalone Leaderboard
-    leaderboard_records = [
-        {
+    # 6. Enrich dataset with rolling momentum features
+    df = add_momentum_features_to_dataset(df, momentum_window)
+
+    # 7. Generate Standalone Leaderboard (with Momentum Score)
+    leaderboard_records = []
+    for tid, rating in ratings.items():
+        recent_outcomes = team_recent_outcomes[tid]
+        # Calculate recent win-rate momentum score (0.0 to 1.0)
+        momentum_score = round(sum(recent_outcomes) / len(recent_outcomes), 4) if recent_outcomes else 0.5000
+
+        leaderboard_records.append({
             'team_name': team_names.get(tid, str(tid)),
             'team_id': tid,
             'region': team_home_regions.get(tid, 'UNKNOWN'),
             'base_elo': team_init_ratings.get(tid, TIER_BASE_ELO[5]),
             'elo_rating': round(rating, 2),
+            'momentum_score': momentum_score,  # <-- ADDED FIELD
             'last_active_year': team_last_active_year.get(tid, 0)
-        }
-        for tid, rating in ratings.items()
-    ]
+        })
 
     leaderboard = pd.DataFrame(leaderboard_records).sort_values('elo_rating', ascending=False).reset_index(drop=True)
 
@@ -202,18 +219,17 @@ def compute_team_elo_ratings(
     if filter_active_year_only:
         leaderboard = leaderboard[leaderboard['last_active_year'] == latest_year].reset_index(drop=True)
 
-    df = add_momentum_features_to_dataset(df, 10)
-
-    # 7. Export enriched dataset
+    # 8. Export enriched dataset
     if output_filepath:
         df.to_csv(output_filepath, index=False)
         print(f"Successfully processed {len(df)} matches. Enriched dataset saved to {output_filepath}")
 
-    # 8. Save standalone Leaderboard
+    # 9. Save standalone Leaderboard
     if leaderboard_filepath:
         os.makedirs(os.path.dirname(leaderboard_filepath), exist_ok=True)
         leaderboard.to_csv(leaderboard_filepath, index=False)
-        print(f"Team Leaderboard ({'Active ' + str(latest_year) if filter_active_year_only else 'All-Time'}) saved to {leaderboard_filepath}")
+        print(
+            f"Team Leaderboard ({'Active ' + str(latest_year) if filter_active_year_only else 'All-Time'}) saved to {leaderboard_filepath}")
 
     return df, leaderboard
 
