@@ -15,7 +15,7 @@ from trainers.model_trainer import train_lol_prediction_model
 
 if __name__ == '__main__':
 
-    download_latest_match_data()
+    # download_latest_match_data()
     prepare_oracles_elixir_pregame(["dataset/match/2014_match_data.csv",
                                     "dataset/match/2015_match_data.csv",
                                     "dataset/match/2016_match_data.csv",
