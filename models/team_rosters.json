@@ -1,458 +1,24 @@
 {
-    "Inferno Esports": [
-        "1jw",
-        "BornThisWay",
-        "Celest",
-        "Austerity",
-        "Moopz"
+    "MAD Team": [
+        "Liang",
+        "Kongyue",
+        "Uniboy",
+        "Breeze",
+        "K"
     ],
-    "Meloncats": [
-        "MC Zeclipse",
-        "Gilius",
-        "Abaria",
-        "Krykiet",
-        "Dioud"
+    "Phong V\u0169 Buffalo": [
+        "Zeros",
+        "Meliodas",
+        "Naul",
+        "Bigkoro",
+        "Palette"
     ],
-    "ahq eSports Club": [
-        "Ziv",
-        "Alex",
-        "Apex",
-        "Wako",
-        "Ysera"
-    ],
-    "Assassin Sniper": [
-        "MapleSnow",
-        "M4",
-        "Achie",
-        "BeBe",
-        "Weiiii"
-    ],
-    "Vici Gaming": [
-        "Cube",
-        "Leyan",
-        "Zeka",
-        "iBoy",
-        "Maestro"
-    ],
-    "Genius Esports": [
-        "Coated",
-        "Yijin",
-        "Himmel",
-        "Bunzz",
-        "Biob"
-    ],
-    "L\u00d8S": [
-        "Zest",
-        "Curse",
-        "Feisty",
-        "Duduhh",
-        "Ackerman"
-    ],
-    "Rogue": [
-        "Adam",
-        "Trick",
-        "Larssen",
-        "Patrik",
-        "Malrang"
-    ],
-    "H2k-Gaming": [
-        "Jaeger",
-        "Caedrel",
-        "Nulu",
-        "Patrik",
-        "promisq"
-    ],
-    "Huma": [
-        "Werlyb",
-        "Mirror",
-        "Godbro",
-        "HolyPhoenix",
-        "Kaas"
-    ],
-    "Ever8 Winners": [
-        "WooFe",
-        "Hoglet",
-        "SSUN",
-        "HyBriD",
-        "Luci"
-    ],
-    "Cruzeiro eSports": [
-        "Truklax",
-        "Sephis",
-        "Pilot",
-        "Drop",
-        "Hawk"
-    ],
-    "Kaos Latin Gamers": [
-        "Nate",
-        "Tierwulf",
-        "Plugo",
-        "Fix",
-        "Slow"
-    ],
-    "Unicorns of Love": [
-        "WhiteKnight",
-        "Kold",
-        "Exile",
-        "Samux",
-        "Totoro"
-    ],
-    "Never Give Up": [
-        "Souma",
-        "tiphat",
-        "TT",
-        "Slowz",
-        "Seebulabu"
-    ],
-    "Afro Beast": [
-        "Jackpot",
-        "Butter",
-        "MoonBlack",
-        "Art",
-        "SkuLL"
-    ],
-    "Shifters": [
-        "Rooster",
-        "Sheo",
-        "nuc",
-        "Paduck",
-        "Stend"
-    ],
-    "Splyce": [
-        "Vizicsacsi",
-        "Xerxe",
-        "Humanoid",
-        "Kobbe",
-        "Tore"
-    ],
-    "Hong Kong Attitude": [
-        "3z",
-        "Crash",
-        "Mission",
-        "Unified",
-        "Kaiwing"
-    ],
-    "Enemy": [
-        "Flaresz",
-        "Kold",
-        "Innox",
-        "otter",
-        "Bodydrop"
-    ],
-    "HANJIN BRION": [
-        "Casting",
-        "GIDEON",
-        "Roamer",
-        "Teddy",
-        "Namgung"
-    ],
-    "Sky Gaming": [
-        "Darrys",
-        "Kaiz",
-        "C7N",
-        "Slayder",
-        "Hinn"
-    ],
-    "Conviction": [
-        "TF Blade",
-        "Perry",
-        "V1per",
-        "Cody Sun",
-        "Stunt"
-    ],
-    "Lowkey Esports.Vietnam": [
-        "Hani",
-        "DNK",
-        "Artifact",
-        "Celebrity",
-        "Yin"
-    ],
-    "MGN Vikings Academy": [
-        "Nanaue",
-        "SanSan",
-        "Chika",
-        "SkyK",
-        "Callian"
-    ],
-    "Papara SuperMassive": [
-        "Armut",
-        "KaKAO",
-        "Bolulu",
-        "Zeitnot",
-        "SnowFlower"
-    ],
-    "Dignitas": [
-        "Denathor",
-        "Dardoch",
-        "Palafox",
-        "FBI",
-        "Ignar"
-    ],
-    "Alliance": [
-        "Wickd",
-        "Shook",
-        "Froggen",
-        "Tabzz",
-        "Nyph"
-    ],
-    "LMQ": [
-        "GodLike",
-        "NONAME",
-        "xiaoweixiao",
-        "Vas1lii",
-        "Mor"
-    ],
-    "GenZ Gaming": [
-        "Coated",
-        "NtNt",
-        "Himmel",
-        "Vit",
-        "CBL"
-    ],
-    "Team Yetti": [
-        "Mist",
-        "Jjun",
-        "Joy",
-        "Holo",
-        "Coool"
-    ],
-    "MOUZ NXT": [
-        "beansu",
-        "Dan",
-        "Jinsh",
-        "Sedrion",
-        "MounTain"
-    ],
-    "GAM Esports": [
-        "Kiaya",
-        "Draktharr",
-        "Gloryy",
-        "Artemis",
-        "Taki"
-    ],
-    "KOI": [
-        "Szygenda",
-        "Malrang",
-        "Larssen",
-        "Comp",
-        "Advienne"
-    ],
-    "Brave e-Sports": [
-        "Thulz",
-        "4LaN",
-        "Evrot",
-        "Sarkis",
-        "Cabu"
-    ],
-    "SBENU Korea": [
-        "Soul",
-        "Flawless",
-        "SaSin",
-        "Nuclear",
-        "Lehends"
-    ],
-    "Friends Forever Gaming": [
-        "KingJ",
-        "DNK",
-        "Artifact",
-        "Celebrity",
-        "Venus"
-    ],
-    "Team Impulse": [
-        "Feng",
-        "Procxin",
-        "Pirean",
-        "Mash",
-        "Gate"
-    ],
-    "Elements": [
+    "ThunderBot SPARTA": [
         "Steve",
-        "Gilius",
-        "Eika",
-        "MrRallez",
-        "promisq"
-    ],
-    "Natus Vincere": [
-        "Maynter",
-        "Rhilech",
-        "Poby",
-        "SamD",
-        "Parus"
-    ],
-    "KaBuM! Black": [
-        "element",
-        "Danagorn",
-        "Vash",
-        "Matsukaze",
-        "Espeon"
-    ],
-    "Team BDS": [
-        "Rooster",
-        "Boukada",
-        "nuc",
-        "Ice",
-        "Parus"
-    ],
-    "Team Dynamics": [
-        "Rich",
-        "Beyond",
-        "Kuzan",
-        "deokdam",
-        "GuGer"
-    ],
-    "Team Heretics": [
-        "Tracyn",
-        "Daglas",
-        "Serin",
-        "Hype",
-        "Way"
-    ],
-    "UTM Esports": [
-        "Calm",
-        "Spot",
-        "Himmel",
-        "Zin",
-        "Tear"
-    ],
-    "Flamengo MDL": [
-        "Makes",
-        "Dizin",
-        "Envy",
-        "Trigo",
-        "Damage"
-    ],
-    "MGN Blue Esports": [
-        "Sparda",
-        "Phuc1",
-        "Vin",
-        "Sty1e",
-        "TQ"
-    ],
-    "paiN Gaming": [
-        "Boal",
-        "CarioK",
-        "Namiru",
-        "Hena",
-        "Ceos"
-    ],
-    "ROX Tigers": [
-        "Lindarang",
-        "SeongHwan",
-        "Lava",
-        "Sangyoon",
-        "Key"
-    ],
-    "Fnatic": [
-        "Soboro",
-        "Razork",
-        "Vladi",
-        "Upset",
-        "Lospa"
-    ],
-    "Unicorns of Love.CIS": [
-        "BOSS",
-        "AHaHaCiK",
-        "Nomanz",
-        "MDB",
-        "SaNTaS"
-    ],
-    "Team Liquid Academy": [
-        "Solo",
-        "Galen",
-        "Goldenglue",
-        "Piglet",
-        "Stunt"
-    ],
-    "Machi Esports": [
-        "PK",
-        "Gemini",
-        "Mission",
-        "Bruce",
-        "Koala"
-    ],
-    "Young Miracles": [
-        "Clowz",
-        "marilyn",
-        "Viper",
-        "Ning",
-        "Ming"
-    ],
-    "Uppercut esports": [
-        "Fitz",
-        "LeChase",
-        "Anyyy",
-        "Alternative",
-        "Damage"
-    ],
-    "Gravity": [
-        "Hauntzer",
-        "Move",
-        "Keane",
-        "Altec",
-        "Bunny FuFuu"
-    ],
-    "Isurus": [
-        "Zamudo",
-        "Josedeodo",
-        "Keine",
-        "Snaker",
-        "Ackerman"
-    ],
-    "Beyond Gaming": [
-        "Likai",
-        "Husha",
-        "Minji",
-        "Wako",
-        "Kino"
-    ],
-    "Chiefs Esports Club": [
-        "BioPanther",
-        "Whynot",
-        "JimieN",
-        "Slayder",
-        "Luon"
-    ],
-    "J Team": [
-        "Rest",
-        "Hana",
-        "FoFo",
-        "Lilv",
-        "Koala"
-    ],
-    "Movistar KOI": [
-        "Myrwn",
-        "Elyoya",
-        "Jojopyun",
-        "Supa",
-        "Alvaro"
-    ],
-    "V3 Esports": [
-        "Paz",
-        "Bugi",
-        "Acee",
-        "Archer",
-        "Raina"
-    ],
-    "Team Imagine": [
-        "Chunkyfresh",
-        "Galen",
-        "mancloud",
-        "Steeelback",
-        "Big"
-    ],
-    "Denial eSports.Europe": [
-        "Ippon",
-        "Kikis",
-        "niQ",
-        "Woolite",
-        "SuperAZE"
-    ],
-    "Team 8": [
-        "CaliTrlolz",
-        "Porpoise",
-        "Goldenglue",
-        "Nien",
-        "Dodo"
+        "Shaunz",
+        "ShLaYa",
+        "Nono",
+        "Lounet"
     ],
     "MeetYourMakers": [
         "Jwaow",
@@ -461,75 +27,12 @@
         "MrRallez",
         "Noxiak"
     ],
-    "\u0130stanbul Wildcats": [
-        "StarScreen",
-        "Ferret",
-        "Serin",
-        "HolyPhoenix",
-        "Farfetch"
-    ],
-    "100 Thieves": [
-        "Dhokla",
-        "River",
-        "Quid",
-        "FBI",
-        "Eyla"
-    ],
-    "PEACE": [
-        "Vizicsacsi",
-        "Babip",
-        "Tally",
-        "Violet",
-        "Aladoric"
-    ],
-    "Team ROCCAT": [
-        "Profit",
-        "Memento",
-        "Blanc",
-        "HeaQ",
-        "Tore"
-    ],
-    "Fnatic Academy": [
-        "Kikis",
-        "Amazing",
-        "Nisqy",
-        "MrRallez",
-        "Klaj"
-    ],
-    "Hall of Fame": [
-        "LL",
-        "Sorn",
-        "peka",
-        "Easylove",
-        "Shaoran"
-    ],
-    "ES Sharks": [
-        "Jisu",
-        "Catch",
-        "Kuzan",
-        "Light",
-        "GuGer"
-    ],
-    "BNK FEARX": [
-        "Clear",
-        "Raptor",
-        "VicLa",
-        "Taeyoon",
-        "Kellin"
-    ],
-    "Saint Gaming": [
-        "Acorn",
-        "chimin",
-        "OTTO",
-        "xQ",
-        "x1u"
-    ],
-    "JD Gaming": [
-        "Xiaoxu",
-        "JunJia",
-        "HongQ",
-        "GALA",
-        "Vampire"
+    "Rogue Warriors": [
+        "Zdz",
+        "Xiaohao",
+        "Forge",
+        "Betty",
+        "QiuQiu"
     ],
     "NRG": [
         "Dhokla",
@@ -538,208 +41,19 @@
         "FBI",
         "huhi"
     ],
+    "Elements": [
+        "Steve",
+        "Gilius",
+        "Eika",
+        "MrRallez",
+        "promisq"
+    ],
     "Winterfox": [
         "Avalon",
         "Helios",
         "Pobelter",
         "Altec",
         "Gleeb"
-    ],
-    "Team Dragon Knights": [
-        "Flaresz",
-        "Kez",
-        "Alex Ich",
-        "Ohq",
-        "Trance"
-    ],
-    "MVP": [
-        "ADD",
-        "Beyond",
-        "Ian",
-        "Pilot",
-        "Max"
-    ],
-    "Fukuoka SoftBank HAWKS gaming": [
-        "Evi",
-        "Van1",
-        "Aria",
-        "Marble",
-        "Vsta"
-    ],
-    "Midnight Sun Esports": [
-        "2188",
-        "Wulala",
-        "Mission",
-        "CorGi",
-        "Kaiwing"
-    ],
-    "Ilha da Macacada Gaming": [
-        "Fitz",
-        "CarioK",
-        "Anyyy",
-        "Sarkis",
-        "Cabu"
-    ],
-    "OverPower Esports": [
-        "Simon",
-        "Penguin",
-        "Jerry",
-        "Vit",
-        "H3"
-    ],
-    "Longzhu Gaming": [
-        "Khan",
-        "Cuzz",
-        "Bdd",
-        "PraY",
-        "GorillA"
-    ],
-    "FURIA": [
-        "Guigo",
-        "Tatu",
-        "Tutsz",
-        "Ayu",
-        "JoJo"
-    ],
-    "Saigon Dino": [
-        "Sparda",
-        "Tomrio",
-        "Pout",
-        "Samver",
-        "Bie"
-    ],
-    "Venus Gaming": [
-        "ZeuSs",
-        "DD1",
-        "PHT",
-        "Sehun",
-        "Suffer"
-    ],
-    "Immortals": [
-        "Castle",
-        "Armao",
-        "Mask",
-        "Tactical",
-        "Olleh"
-    ],
-    "LYON": [
-        "Dhokla",
-        "Inspired",
-        "Saint",
-        "Berserker",
-        "Isles"
-    ],
-    "Curse Academy": [
-        "Hauntzer",
-        "Saintvicious",
-        "Keane",
-        "Cop",
-        "Bunny FuFuu"
-    ],
-    "MAD Lions KOI": [
-        "Myrwn",
-        "Elyoya",
-        "Fresskowy",
-        "Supa",
-        "Alvaro"
-    ],
-    "Bangkok Titans": [
-        "WarL0cK",
-        "007x",
-        "G4",
-        "Lloyd",
-        "Moss"
-    ],
-    "Alpha Esports": [
-        "Leaky",
-        "Taizan",
-        "GYX",
-        "Thesnake",
-        "SkuLL"
-    ],
-    "Kongdoo Monster": [
-        "Roach",
-        "Wiz",
-        "Edge",
-        "Ssol",
-        "Secret"
-    ],
-    "NaJin White Shield": [
-        "Save",
-        "Watch",
-        "Ggoong",
-        "Zefa",
-        "GorillA"
-    ],
-    "Top Esports": [
-        "ZUIAN",
-        "Tian",
-        "Creme",
-        "JackeyLove",
-        "Zhuo"
-    ],
-    "PSG Talon": [
-        "Azhi",
-        "Karsa",
-        "Maple",
-        "Betty",
-        "Woody"
-    ],
-    "Alpha7 Esports": [
-        "Kiari",
-        "Drakehero",
-        "random",
-        "scuro",
-        "Telas"
-    ],
-    "Santos e-Sports": [
-        "Jackpot",
-        "Hyoga",
-        "Rainbow",
-        "Juzo",
-        "Hawk"
-    ],
-    "JAYOB e-Sports": [
-        "SkyBart",
-        "Turtle",
-        "Goku",
-        "Pdr",
-        "Baiano"
-    ],
-    "Zenith Esports": [
-        "Solo",
-        "MiMo",
-        "Easy",
-        "Frosty",
-        "k1"
-    ],
-    "Team Curse": [
-        "Quas",
-        "IWDominate",
-        "Voyboy",
-        "Cop",
-        "Xpecial"
-    ],
-    "Hanwha Life Esports": [
-        "Zeus",
-        "Kanavi",
-        "Zeka",
-        "Gumayusi",
-        "Delight"
-    ],
-    "Misfits Gaming": [
-        "Irrelevant",
-        "Zanzarah",
-        "Vetheo",
-        "Neon",
-        "Mersa"
-    ],
-    "Winners": [
-        "Lego77",
-        "Neo",
-        "NighT",
-        "GankZero",
-        "BokGu"
     ],
     "I May": [
         "AmazingJ",
@@ -748,558 +62,75 @@
         "Jinjiao",
         "Road"
     ],
-    "V Gaming Adonis": [
-        "KemKen",
-        "Hope",
-        "PHT",
-        "Vit",
-        "Zin"
+    "Team Flash": [
+        "Pun",
+        "Draktharr",
+        "playcool",
+        "Puddin",
+        "Soraaa"
     ],
-    "Sicar Esports": [
-        "Buggax",
-        "Pancake",
-        "Kiefer",
-        "Warangelus",
-        "Shu Hari"
-    ],
-    "Estral Esports": [
-        "Bwipo",
-        "Oddie",
-        "Envy",
-        "Brance",
-        "Telas"
-    ],
-    "SBTC Esports": [
-        "Nper",
-        "DNK",
-        "Dia1",
-        "Slayder",
-        "Palette"
-    ],
-    "ProGaming Esports": [
-        "fNb",
-        "Lima",
-        "Lynkez",
-        "Garo",
-        "Wos"
-    ],
-    "Gen.G": [
-        "Kiin",
-        "Canyon",
-        "Chovy",
-        "Ruler",
-        "Duro"
-    ],
-    "compLexity.White": [
-        "Westrice",
-        "Kez",
-        "Goldenglue",
-        "Mabrey",
-        "Lohpally"
-    ],
-    "Ng\u1ef1a H\u00ed Esports": [
-        "TiSaD",
-        "NtNt",
-        "Vin",
-        "VietThanh",
-        "Blue"
-    ],
-    "Team oNe eSports": [
-        "SkyBart",
-        "Ryuzaki",
-        "Brucer",
-        "pbO",
-        "Panj"
-    ],
-    "Samsung Blue": [
-        "Acorn",
-        "Spirit",
-        "Dade",
-        "Deft",
-        "Heart"
-    ],
-    "CJ Entus": [
-        "Soul",
-        "Winged",
-        "Candy",
-        "Veritas",
-        "Pure"
-    ],
-    "T1": [
-        "Doran",
-        "Oner",
-        "Faker",
-        "Peyz",
-        "Keria"
-    ],
-    "Cougar E-Sport": [
-        "CoolG",
-        "Kawa",
-        "KuKu",
-        "kane",
-        "Skywalk"
-    ],
-    "Dark Passage": [
-        "fabFabulous",
-        "Crystal",
-        "Naru",
-        "HolyPhoenix",
-        "Touch"
-    ],
-    "Tricked Esport": [
-        "Ippon",
-        "Mowarth",
-        "Tiridus",
-        "SA1NA",
-        "Niko3333"
-    ],
-    "SeolHaeOne Prince": [
-        "ikssu",
-        "Flawless",
-        "Keine",
-        "Trigger",
-        "Mia"
-    ],
-    "Fireball": [
-        "2188",
-        "Wind",
-        "Wulala",
-        "Enzz",
-        "SkuLL"
-    ],
-    "Fluxo W7M": [
-        "Zothve",
-        "Peach",
-        "cody",
-        "BAO",
-        "Momochi"
-    ],
-    "Origen": [
-        "Alphari",
-        "Xerxe",
-        "Nukeduck",
-        "Upset",
-        "Jactroll"
-    ],
-    "Raise Gaming": [
-        "PK",
-        "Laba",
-        "Wuji",
-        "Lilv",
-        "Koala"
-    ],
-    "Rebels Anarchy": [
-        "ikssu",
-        "Lira",
-        "Mickey",
-        "Sangyoon",
-        "SnowFlower"
-    ],
-    "Team Aze": [
-        "Lonely",
-        "Dimitry",
-        "Aloned",
-        "5kid",
-        "Stray"
-    ],
-    "Karmine Corp Blue": [
-        "Tao",
-        "Yukino",
-        "Kamiloo",
-        "Hazel",
-        "Prime"
-    ],
-    "Echo Fox": [
-        "Solo",
-        "MikeYeung",
-        "Fenix",
-        "Apollo",
-        "Hakuho"
-    ],
-    "Hanoi Rookies Esports": [
-        "Fireblade",
-        "P9",
-        "Hustle",
-        "Ouzi",
+    "HUTECH CHICKEN": [
+        "Nern",
+        "Kzt",
+        "Clyde",
+        "Xiao",
         "Piccolo"
     ],
-    "compLexity.Black": [
-        "i KeNNy u",
-        "CloudNguyen",
-        "pr0lly",
-        "ROBERTxLEE",
-        "Bubbadub"
+    "MOUZ NXT": [
+        "beansu",
+        "Dan",
+        "Jinsh",
+        "Sedrion",
+        "MounTain"
     ],
-    "Saving OCE": [
-        "Doraemon",
-        "Foreigner",
-        "Kyose",
-        "Violet",
-        "Scxtt"
+    "Vivo Keyd": [
+        "Hidan",
+        "Minerva",
+        "NOsFerus",
+        "Drop",
+        "Professor"
     ],
-    "Ascension": [
-        "Zvene",
-        "WRDN",
-        "Saulius",
-        "DarkSide",
-        "Angelas"
-    ],
-    "ORDER": [
-        "BioPanther",
-        "Kevy",
-        "Kisee",
-        "Puma",
-        "Corporal"
-    ],
-    "DAN Gaming": [
-        "Lies",
-        "fishball",
+    "NaJin White Shield": [
+        "Save",
+        "Watch",
         "Ggoong",
-        "Natz",
-        "Cat"
+        "Zefa",
+        "GorillA"
     ],
-    "Oh My God": [
-        "Hery",
-        "re0",
-        "haichao",
-        "Photic",
-        "Moham"
+    "Team 8": [
+        "CaliTrlolz",
+        "Porpoise",
+        "Goldenglue",
+        "Nien",
+        "Dodo"
     ],
-    "Phoenix1": [
-        "dshao",
-        "MikeYeung",
-        "Ryu",
-        "Arrow",
-        "Xpecial"
+    "Saigon Dino": [
+        "Sparda",
+        "Tomrio",
+        "Pout",
+        "Samver",
+        "Bie"
     ],
-    "Liiv SANDBOX": [
-        "Clear",
-        "Willer",
-        "Clozer",
-        "Teddy",
-        "Kael"
+    "Nongshim RedForce": [
+        "Kingen",
+        "Sponge",
+        "Scout",
+        "Diable",
+        "Lehends"
     ],
-    "Fission Esports": [
-        "Engo",
-        "Azingy",
-        "Abou222",
-        "I Am The IRS",
-        "Indivisible"
+    "KT Rolster": [
+        "PerfecT",
+        "Cuzz",
+        "Bdd",
+        "Jiwoo",
+        "Effort"
     ],
-    "Mila Gaming": [
-        "Nern",
-        "Selxiss",
-        "Hustle",
-        "Bumblebee",
-        "LDK"
-    ],
-    "VSG": [
-        "SoaR",
-        "Ryan",
-        "Ruby",
-        "Veritas",
-        "Pure"
-    ],
-    "Team Mist": [
-        "Rins",
-        "K",
-        "SIUSIU",
-        "Breeze",
-        "Rain"
-    ],
-    "Ascension Gaming": [
-        "Rockky",
-        "Lloyd",
-        "G4",
-        "Niksar",
-        "Rich"
-    ],
-    "Flash Wolves": [
-        "Hanabi",
-        "Enso",
-        "BUSH",
-        "Betty",
-        "ShiauC"
-    ],
-    "Rainbow Warriors": [
-        "2T",
-        "Spot",
-        "Artifact",
-        "Easylove",
-        "Zin"
-    ],
-    "MGN Vikings Esports": [
-        "Kratos",
-        "Gury",
-        "Kati",
-        "Shogun",
-        "SiuLoong"
-    ],
-    "Cloud9 Challenger": [
-        "BalIs",
-        "Contractz",
-        "Hai",
-        "Altec",
-        "LemonNation"
-    ],
-    "LP Gaming": [
-        "Twice",
-        "Aihgn",
-        "Escanor",
-        "Tofu",
-        "bByYoO"
-    ],
-    "Silent Storm Esports": [
-        "Jarvis",
-        "Kheng",
-        "Lozer",
-        "Neo",
-        "TQ"
-    ],
-    "Leviatan": [
-        "Devost",
-        "Booki",
-        "Enga",
-        "Strensh",
-        "Shiku"
-    ],
-    "Galions": [
-        "Carlsen",
-        "Thayger",
-        "OMON",
-        "HARPOON",
-        "Zoelys"
-    ],
-    "Bilibili Gaming": [
-        "Bin",
-        "Xun",
-        "Knight",
-        "Viper",
-        "ON"
-    ],
-    "g3nerationX": [
-        "Zantins",
-        "Snowlz",
-        "Tay",
-        "Skyer",
-        "Alocs"
-    ],
-    "Evil Geniuses": [
-        "Revenge",
-        "Sheiden",
-        "Jojopyun",
-        "UNF0RGIVEN",
-        "Eyla"
-    ],
-    "Overload": [
-        "Lynx",
-        "4LaN",
-        "Krastyel",
-        "DudsTheBoy",
-        "Espeon"
-    ],
-    "SUPA HOT CREW": [
-        "Mimer",
-        "Impaler",
-        "Nulu",
-        "MrRallez",
-        "Kasing"
-    ],
-    "Ultra Prime": [
-        "sasi",
-        "climber",
-        "Saber",
-        "Hena",
-        "Xiaoxia"
-    ],
-    "9z Globant": [
-        "Nate",
-        "Warsor",
-        "Aloned",
-        "FIX",
-        "Ux"
-    ],
-    "Infinity Esports": [
-        "ChumpJohn",
-        "xSojin",
-        "Arcsecond",
-        "Hoofspark",
-        "Hanjaro"
-    ],
-    "Saigon Warriors": [
-        "Nern",
-        "j1n5",
-        "AisyL",
-        "Aomine",
-        "Elio"
-    ],
-    "Team LoLPro": [
-        "Flaresz",
-        "Thinkcard",
-        "Yusui",
-        "Apollo",
-        "Keith"
-    ],
-    "Royal Youth": [
-        "Armut",
-        "Closer",
-        "cyeol",
-        "Pilot",
-        "Tolerant"
-    ],
-    "Cherry Esports": [
-        "Calm",
-        "Sorn",
-        "Gloryy",
-        "Pampy",
-        "Zin"
-    ],
-    "Solary": [
-        "Kryze",
-        "Zicssi",
-        "Jool",
-        "Aetinoth",
-        "Piero"
-    ],
-    "Team Coast": [
-        "Cris",
-        "Shrimp",
-        "Pekin Woof",
-        "Mash",
-        "Kwon"
-    ],
-    "Fluxo": [
-        "Kiari",
-        "Shini",
-        "Fuuu",
-        "Trigo",
-        "scamber"
-    ],
-    "Original Gaming": [
-        "Hamin",
-        "Zoro",
-        "Clyde",
-        "Tomoe",
-        "Mingi"
-    ],
-    "MAMMOTH": [
-        "Fudge",
-        "Babip",
-        "Triple",
-        "k1ng",
-        "destiny"
-    ],
-    "Seorabeol Gaming": [
-        "Thal",
-        "KaKAO",
-        "DanChung",
-        "Sangyoon",
-        "Nova"
-    ],
-    "Team Whales": [
-        "Hasmed",
-        "Sounda",
-        "Dove",
-        "Artemis",
-        "SiuLoong"
-    ],
-    "Dream or Reality": [
-        "CowardlyDog",
-        "HanJi",
-        "Kawai",
-        "HoneyRain",
-        "Melon"
-    ],
-    "Dire Wolves": [
-        "BioPanther",
-        "Shernfire",
-        "Triple",
-        "k1ng",
-        "Cupcake"
-    ],
-    "NaJin e-mFire": [
-        "Duke",
-        "Peanut",
-        "Tank",
-        "Ohq",
-        "Pure"
-    ],
-    "Taipei Assassins": [
-        "Morning",
-        "REFRA1N",
-        "FoFo",
-        "BeBe",
-        "Chieh"
-    ],
-    "Kowloon Esports (\u4e5d\u9f8d\u96fb\u7af6)": [
-        "Nexus",
-        "Holo",
-        "Faith",
-        "Tak",
-        "Yuen"
-    ],
-    "Team Vitality": [
-        "Naak Nako",
-        "Lyncas",
-        "FIESTA",
-        "Carzzy",
-        "Fleshy"
-    ],
-    "Team Liquid": [
-        "Morgan",
-        "Josedeodo",
-        "Quid",
-        "Yeon",
-        "CoreJJ"
-    ],
-    "ZEN Esports": [
-        "Solis",
-        "SCP",
-        "GiaQui",
-        "Charlington",
-        "Zin"
-    ],
-    "MVK Esports Academy": [
-        "Steller",
-        "Umi",
-        "Seany",
-        "Nuna",
-        "Callian"
-    ],
-    "Cloud9": [
-        "Thanatos",
-        "Blaber",
-        "Loki",
-        "Tactical",
-        "Vulcan"
-    ],
-    "FunPlus Phoenix": [
-        "sheer",
-        "Jiejie",
-        "Care",
-        "JiaQi",
-        "Jwei"
-    ],
-    "LNG Esports": [
-        "sheer",
-        "Weiwei",
-        "Nia",
-        "1xn",
-        "Ycx"
-    ],
-    "eStar": [
-        "zs",
-        "H4cker",
-        "irma",
-        "pqy",
-        "ShiauC"
-    ],
-    "Suning": [
-        "Bin",
-        "SofM",
-        "Angel",
-        "huanfeng",
-        "ON"
+    "SBENU Korea": [
+        "Soul",
+        "Flawless",
+        "SaSin",
+        "Nuclear",
+        "Lehends"
     ],
     "Giants Gaming": [
         "Ruin",
@@ -1308,19 +139,47 @@
         "Steeelback",
         "Nukes"
     ],
-    "Los Ratones": [
-        "Baus",
-        "Velja",
-        "Nemesis",
-        "Crownie",
-        "Rekkles"
+    "Estral Esports": [
+        "Bwipo",
+        "Oddie",
+        "Envy",
+        "Brance",
+        "Telas"
     ],
-    "Cloud9 Tempest": [
-        "Yazuki",
-        "Kez",
-        "Bischu",
-        "Altec",
-        "Gleeb"
+    "MEGA": [
+        "Rockky",
+        "Lloyd",
+        "G4",
+        "DeuL",
+        "Pop"
+    ],
+    "Call Gaming": [
+        "Darkblight",
+        "Iucid",
+        "Environmental",
+        "Rakin",
+        "Stunt"
+    ],
+    "Matrix Esport Gaming": [
+        "CHP",
+        "MEG Odriew",
+        "Genza",
+        "Jisoo",
+        "Zodiac"
+    ],
+    "LP Gaming": [
+        "Twice",
+        "Aihgn",
+        "Escanor",
+        "Tofu",
+        "bByYoO"
+    ],
+    "Karmine Corp Blue": [
+        "Tao",
+        "Yukino",
+        "Kamiloo",
+        "Hazel",
+        "Prime"
     ],
     "CYRUS": [
         "Be",
@@ -1329,33 +188,131 @@
         "Nemo",
         "Uncle4"
     ],
-    "XGamers": [
-        "Nexus",
-        "Kawa",
-        "Chingz",
-        "LBB",
-        "Zest"
+    "Movistar R7": [
+        "Summit",
+        "Oddie",
+        "Keine",
+        "ceo",
+        "Lyonz"
     ],
-    "CERBERUS Esports": [
-        "Pun",
-        "Meliodas",
+    "KaBuM! Black": [
+        "element",
+        "Danagorn",
+        "Vash",
+        "Matsukaze",
+        "Espeon"
+    ],
+    "QT DIG\u221e": [
+        "Washidai",
+        "Van1",
+        "DICE",
+        "Yuhi",
+        "Hetel"
+    ],
+    "Kiwoom DRX": [
+        "Frog",
+        "Willer",
+        "Ucal",
+        "Aiming",
+        "Minous"
+    ],
+    "17 Academy": [
+        "BoBo",
+        "Gengar",
+        "SIUSIU",
+        "pasa",
+        "Eason"
+    ],
+    "Leviatan": [
+        "Devost",
+        "Booki",
+        "Enga",
+        "Strensh",
+        "Shiku"
+    ],
+    "Sicar Esports": [
+        "Buggax",
+        "Pancake",
+        "Kiefer",
+        "Warangelus",
+        "Shu Hari"
+    ],
+    "Galatasaray Esports": [
+        "Crazy",
+        "Mojito",
+        "Bolulu",
+        "Alive",
+        "Zergsting"
+    ],
+    "Friends Forever Gaming": [
+        "KingJ",
+        "DNK",
+        "Artifact",
+        "Celebrity",
+        "Venus"
+    ],
+    "Origen": [
+        "Alphari",
+        "Xerxe",
+        "Nukeduck",
+        "Upset",
+        "Jactroll"
+    ],
+    "ProGaming Esports": [
+        "fNb",
+        "Lima",
+        "Lynkez",
+        "Garo",
+        "Wos"
+    ],
+    "Saigon Warriors": [
+        "Nern",
+        "j1n5",
         "AisyL",
-        "Slowz",
-        "Yume"
+        "Aomine",
+        "Elio"
     ],
-    "Rogue Warriors": [
-        "Zdz",
-        "Xiaohao",
-        "Forge",
-        "Betty",
-        "QiuQiu"
+    "MGN Vikings Esports": [
+        "Kratos",
+        "Gury",
+        "Kati",
+        "Shogun",
+        "SiuLoong"
     ],
-    "Rensga eSports": [
-        "zekas",
-        "Erasus",
-        "Evrot",
-        "NinjaKiwi",
-        "Mido"
+    "Ever8 Winners": [
+        "WooFe",
+        "Hoglet",
+        "SSUN",
+        "HyBriD",
+        "Luci"
+    ],
+    "Shopify Rebellion": [
+        "Fudge",
+        "Contractz",
+        "Zinie",
+        "Bvoy",
+        "Zeyzal"
+    ],
+    "FC Schalke 04 Esports": [
+        "BrokenBlade",
+        "Kirei",
+        "nuc",
+        "Neon",
+        "LIMIT"
+    ],
+    "T1": [
+        "Doran",
+        "Oner",
+        "Faker",
+        "Peyz",
+        "Keria"
+    ],
+    "Cloud9 Challenger": [
+        "BalIs",
+        "Contractz",
+        "Hai",
+        "Altec",
+        "LemonNation"
     ],
     "Team Secret": [
         "Pun",
@@ -1364,14 +321,1190 @@
         "Eddie",
         "Bie"
     ],
-    "Team WE": [
+    "Vivo Keyd Stars": [
+        "zekas",
+        "Disamis",
+        "Mireu",
+        "Jeskla",
+        "scamber"
+    ],
+    "SK Telecom T1": [
+        "Khan",
+        "Clid",
+        "Faker",
+        "Teddy",
+        "Mata"
+    ],
+    "ahq eSports Club": [
+        "Ziv",
+        "Alex",
+        "Apex",
+        "Wako",
+        "Ysera"
+    ],
+    "XGamers": [
+        "Nexus",
+        "Kawa",
+        "Chingz",
+        "LBB",
+        "Zest"
+    ],
+    "Isurus": [
+        "Zamudo",
+        "Josedeodo",
+        "Keine",
+        "Snaker",
+        "Ackerman"
+    ],
+    "G2 Esports": [
+        "BrokenBlade",
+        "SkewMond",
+        "Caps",
+        "Hans Sama",
+        "Labrov"
+    ],
+    "Golden Lions": [
+        "Brayaron",
+        "Ganks",
+        "Piqueos",
+        "Scenari0",
+        "Crecre"
+    ],
+    "Samsung Blue": [
+        "Acorn",
+        "Spirit",
+        "Dade",
+        "Deft",
+        "Heart"
+    ],
+    "Ninjas in Pyjamas": [
+        "HOYA",
+        "Guwon",
+        "Care",
+        "Photic",
+        "fengyue"
+    ],
+    "Bombers": [
+        "Mimic",
+        "BalKhan",
+        "Ryoma",
+        "FBI",
+        "Rogue"
+    ],
+    "Fnatic": [
+        "Soboro",
+        "Razork",
+        "Vladi",
+        "Upset",
+        "Lospa"
+    ],
+    "Royal Never Give Up": [
+        "Xiaoxu",
+        "milkyway",
+        "Tangyuan",
+        "JiaQi",
+        "Niket"
+    ],
+    "Chiefs Esports Club": [
+        "BioPanther",
+        "Whynot",
+        "JimieN",
+        "Slayder",
+        "Luon"
+    ],
+    "Final Five": [
+        "Rhux",
+        "ShorterACE",
+        "Gate",
+        "Prototype",
+        "Rule18"
+    ],
+    "Team Fusion": [
+        "Chunkyfresh",
+        "NintendudeX",
+        "huhi",
+        "Nien",
+        "Trance"
+    ],
+    "V3 Esports": [
+        "Paz",
+        "Bugi",
+        "Acee",
+        "Archer",
+        "Raina"
+    ],
+    "Zenith Esports": [
+        "Solo",
+        "MiMo",
+        "Easy",
+        "Frosty",
+        "k1"
+    ],
+    "Team Mist": [
+        "Rins",
+        "K",
+        "SIUSIU",
+        "Breeze",
+        "Rain"
+    ],
+    "Tricked Esport": [
+        "Ippon",
+        "Mowarth",
+        "Tiridus",
+        "SA1NA",
+        "Niko3333"
+    ],
+    "Luminosity Gaming": [
+        "FakeGod",
+        "Tomio",
+        "Insanity",
+        "Tactical",
+        "Zeyzal"
+    ],
+    "ZEN Esports": [
+        "Solis",
+        "SCP",
+        "GiaQui",
+        "Charlington",
+        "Zin"
+    ],
+    "ThunderTalk Gaming": [
+        "Keshi",
+        "Junhao",
+        "Heru",
+        "Ahn",
+        "Feather"
+    ],
+    "JD Gaming": [
+        "Xiaoxu",
+        "JunJia",
+        "HongQ",
+        "GALA",
+        "Vampire"
+    ],
+    "Samsung White": [
+        "Looper",
+        "DanDy",
+        "PawN",
+        "imp",
+        "Mata"
+    ],
+    "Team Curse": [
+        "Quas",
+        "IWDominate",
+        "Voyboy",
+        "Cop",
+        "Xpecial"
+    ],
+    "Fukuoka SoftBank HAWKS gaming": [
+        "Evi",
+        "Van1",
+        "Aria",
+        "Marble",
+        "Vsta"
+    ],
+    "MGN Blue Esports": [
+        "Sparda",
+        "Phuc1",
+        "Vin",
+        "Sty1e",
+        "TQ"
+    ],
+    "Cruzeiro eSports": [
+        "Truklax",
+        "Sephis",
+        "Pilot",
+        "Drop",
+        "Hawk"
+    ],
+    "Logitech G Snipers": [
+        "3z",
+        "yo",
+        "Breaker",
+        "RD",
+        "Ysera"
+    ],
+    "Flash Husky": [
+        "Cyo",
+        "Betty",
+        "SIUSIU",
+        "Breeze",
+        "Rain"
+    ],
+    "Farenvehn": [
+        "Chordy",
+        "Follow",
+        "Enga",
+        "ianshaka",
+        "Shadow"
+    ],
+    "Millenium": [
+        "Kaze",
+        "Djoko",
+        "PrettyGRE",
+        "Tabzz",
+        "masterwork"
+    ],
+    "Team Secret Whales": [
+        "Pun",
+        "Hizto",
+        "Dire",
+        "Eddie",
+        "Bie"
+    ],
+    "Victory Five": [
+        "Rich",
+        "Karsa",
+        "Rookie",
+        "Photic",
+        "ppgod"
+    ],
+    "SK Gaming Prime": [
+        "beansu",
+        "Kold",
+        "Godbro",
+        "Steeelback",
+        "BarneyD"
+    ],
+    "Echo Fox": [
+        "Solo",
+        "MikeYeung",
+        "Fenix",
+        "Apollo",
+        "Hakuho"
+    ],
+    "Midnight Sun Esports": [
+        "2188",
+        "Wulala",
+        "Mission",
+        "CorGi",
+        "Kaiwing"
+    ],
+    "compLexity.White": [
+        "Westrice",
+        "Kez",
+        "Goldenglue",
+        "Mabrey",
+        "Lohpally"
+    ],
+    "Sentinels": [
+        "Impact",
+        "HamBak",
+        "DARKWINGS",
+        "Rahel",
+        "huhi"
+    ],
+    "Legacy Esports": [
+        "Topoon",
+        "Babip",
+        "Tally",
+        "Raes",
+        "Isles"
+    ],
+    "Team Dragon Knights": [
+        "Flaresz",
+        "Kez",
+        "Alex Ich",
+        "Ohq",
+        "Trance"
+    ],
+    "Vici Gaming": [
         "Cube",
-        "Monki",
-        "Karis",
-        "About",
-        "Erha"
+        "Leyan",
+        "Zeka",
+        "iBoy",
+        "Maestro"
+    ],
+    "Suning": [
+        "Bin",
+        "SofM",
+        "Angel",
+        "huanfeng",
+        "ON"
+    ],
+    "Top Esports": [
+        "ZUIAN",
+        "Tian",
+        "Creme",
+        "JackeyLove",
+        "Zhuo"
+    ],
+    "KaBuM! Ilha das Lendas": [
+        "Yupps",
+        "SCARY",
+        "Grevthar",
+        "Kojima",
+        "Guigs"
+    ],
+    "Natus Vincere": [
+        "Maynter",
+        "Rhilech",
+        "Poby",
+        "SamD",
+        "Parus"
+    ],
+    "Mysterious Monkeys": [
+        "Kikis",
+        "Amazing",
+        "CozQ",
+        "Yuuki60",
+        "Dreams"
+    ],
+    "Anyone's Legend": [
+        "Breathe",
+        "Tarzan",
+        "Shanks",
+        "Hope",
+        "Kael"
+    ],
+    "Taipei Assassins": [
+        "Morning",
+        "REFRA1N",
+        "FoFo",
+        "BeBe",
+        "Chieh"
+    ],
+    "DarlingYou": [
+        "MapleSnow",
+        "ILLusion",
+        "CooCooDai",
+        "Unlimited",
+        "Rain"
+    ],
+    "Gen.G": [
+        "Kiin",
+        "Canyon",
+        "Chovy",
+        "Ruler",
+        "Duro"
+    ],
+    "SeolHaeOne Prince": [
+        "ikssu",
+        "Flawless",
+        "Keine",
+        "Trigger",
+        "Mia"
+    ],
+    "Machi Esports": [
+        "PK",
+        "Gemini",
+        "Mission",
+        "Bruce",
+        "Koala"
+    ],
+    "MVK Esports Academy": [
+        "Steller",
+        "Umi",
+        "Seany",
+        "Nuna",
+        "Callian"
+    ],
+    "DetonatioN FocusMe": [
+        "Momo",
+        "Citrus",
+        "Fisher",
+        "Kakkun",
+        "Woody"
+    ],
+    "Hanoi Rookies Esports": [
+        "Fireblade",
+        "P9",
+        "Hustle",
+        "Ouzi",
+        "Piccolo"
+    ],
+    "Vikings Gaming": [
+        "Calm",
+        "Light",
+        "Pampy",
+        "Vit",
+        "CBL"
+    ],
+    "G-Rex": [
+        "PK",
+        "Gemini",
+        "Candy",
+        "Bruce",
+        "Yoon"
+    ],
+    "Gamers2": [
+        "Jaeger",
+        "Kikis",
+        "Perkz",
+        "Jesiz",
+        "Hybrid"
+    ],
+    "Mila Gaming": [
+        "Nern",
+        "Selxiss",
+        "Hustle",
+        "Bumblebee",
+        "LDK"
+    ],
+    "Cherry Esports": [
+        "Calm",
+        "Sorn",
+        "Gloryy",
+        "Pampy",
+        "Zin"
+    ],
+    "1TAP Dino": [
+        "Nanaue",
+        "Wady",
+        "TT",
+        "Vinboiz",
+        "Tahahy"
+    ],
+    "Hong Kong Esports": [
+        "MapleSnow",
+        "Gemini",
+        "KuKu",
+        "GodKwai",
+        "OzoraVeki"
+    ],
+    "Incredible Miracle": [
+        "Expession",
+        "TusiN",
+        "Frozen",
+        "Sonstar",
+        "Ignar"
+    ],
+    "Winners": [
+        "Lego77",
+        "Neo",
+        "NighT",
+        "GankZero",
+        "BokGu"
+    ],
+    "Karmine Corp": [
+        "Canna",
+        "Yike",
+        "kyeahoo",
+        "Caliste",
+        "Busio"
+    ],
+    "Lyon Gaming": [
+        "Jirall",
+        "Oddie",
+        "Seiya",
+        "WhiteLotus",
+        "Genthix"
+    ],
+    "Virtus.pro": [
+        "Doxy",
+        "Kreox",
+        "Paranoia",
+        "Blasting",
+        "SaNTaS"
+    ],
+    "VSG": [
+        "SoaR",
+        "Ryan",
+        "Ruby",
+        "Veritas",
+        "Pure"
+    ],
+    "Dream or Reality": [
+        "CowardlyDog",
+        "HanJi",
+        "Kawai",
+        "HoneyRain",
+        "Melon"
+    ],
+    "compLexity.Black": [
+        "i KeNNy u",
+        "CloudNguyen",
+        "pr0lly",
+        "ROBERTxLEE",
+        "Bubbadub"
+    ],
+    "Team ROCCAT": [
+        "Profit",
+        "Memento",
+        "Blanc",
+        "HeaQ",
+        "Tore"
+    ],
+    "Fission Esports": [
+        "Engo",
+        "Azingy",
+        "Abou222",
+        "I Am The IRS",
+        "Indivisible"
+    ],
+    "Alpha Esports": [
+        "Leaky",
+        "Taizan",
+        "GYX",
+        "Thesnake",
+        "SkuLL"
+    ],
+    "Team Afro": [
+        "2188",
+        "Epic",
+        "Rainbow",
+        "Art",
+        "Zest"
+    ],
+    "\u0130stanbul Wildcats": [
+        "StarScreen",
+        "Ferret",
+        "Serin",
+        "HolyPhoenix",
+        "Farfetch"
+    ],
+    "Prime Clan": [
+        "Soul",
+        "Catch",
+        "SaSin",
+        "Nuclear",
+        "Secret"
+    ],
+    "Machi Crew": [
+        "HanShao",
+        "HanJi",
+        "LeeMid",
+        "HoneyRain",
+        "Melon"
+    ],
+    "AS Esports": [
+        "Rigel",
+        "j1n5",
+        "playcool",
+        "Ouzi",
+        "Zin"
+    ],
+    "eStar": [
+        "zs",
+        "H4cker",
+        "irma",
+        "pqy",
+        "ShiauC"
+    ],
+    "Ascension": [
+        "Zvene",
+        "WRDN",
+        "Saulius",
+        "DarkSide",
+        "Angelas"
+    ],
+    "Team Imagine": [
+        "Chunkyfresh",
+        "Galen",
+        "mancloud",
+        "Steeelback",
+        "Big"
+    ],
+    "SDM Tigres": [
+        "Jauny",
+        "Mataz",
+        "Skyy",
+        "VirusFx",
+        "Ichiwin"
+    ],
+    "Unicorns of Love": [
+        "WhiteKnight",
+        "Kold",
+        "Exile",
+        "Samux",
+        "Totoro"
+    ],
+    "Ground Zero Gaming": [
+        "1Jiang",
+        "Husha",
+        "Uniboy",
+        "Betty",
+        "Kaiwing"
+    ],
+    "Dark Wolves": [
+        "Cube",
+        "Krvavy",
+        "Kyle",
+        "Chelly",
+        "Jelly"
+    ],
+    "New Power Esports": [
+        "Yoshino",
+        "Vormund",
+        "NP Jedi",
+        "Sehun",
+        "NP Killua"
+    ],
+    "Solary": [
+        "Kryze",
+        "Zicssi",
+        "Jool",
+        "Aetinoth",
+        "Piero"
+    ],
+    "PENTAGRAM": [
+        "Paz",
+        "Once",
+        "Ramune",
+        "Moyashi",
+        "Gaeng"
+    ],
+    "LNG Esports": [
+        "sheer",
+        "Weiwei",
+        "Nia",
+        "1xn",
+        "Ycx"
+    ],
+    "Team EnVyUs": [
+        "SERAPH",
+        "Lira",
+        "Nisqy",
+        "Apollo",
+        "Hakuho"
+    ],
+    "Alliance": [
+        "Wickd",
+        "Shook",
+        "Froggen",
+        "Tabzz",
+        "Nyph"
+    ],
+    "Team Dynamics": [
+        "Rich",
+        "Beyond",
+        "Kuzan",
+        "deokdam",
+        "GuGer"
+    ],
+    "9z Globant": [
+        "Nate",
+        "Warsor",
+        "Aloned",
+        "FIX",
+        "Ux"
+    ],
+    "Unicorns of Love.CIS": [
+        "BOSS",
+        "AHaHaCiK",
+        "Nomanz",
+        "MDB",
+        "SaNTaS"
+    ],
+    "Taipei Berserkers": [
+        "Yue",
+        "Laba",
+        "Fish",
+        "Lilv",
+        "Koala"
+    ],
+    "CTBC Flying Oyster": [
+        "Rest",
+        "Shad0w",
+        "Pout",
+        "Doggo",
+        "Kino"
+    ],
+    "GiantX": [
+        "Oscarinin",
+        "ISMA",
+        "Jackies",
+        "Flakked",
+        "Jun"
+    ],
+    "MGN Vikings Academy": [
+        "Nanaue",
+        "SanSan",
+        "Chika",
+        "SkyK",
+        "Callian"
+    ],
+    "H2k-Gaming": [
+        "Jaeger",
+        "Caedrel",
+        "Nulu",
+        "Patrik",
+        "promisq"
+    ],
+    "Cloud9 Tempest": [
+        "Yazuki",
+        "Kez",
+        "Bischu",
+        "Altec",
+        "Gleeb"
+    ],
+    "e-Champ Gaming": [
+        "Matheushn",
+        "Freire",
+        "Krastyel",
+        "DudsTheBoy",
+        "k0ga"
+    ],
+    "WingsOflibeRty": [
+        "indra",
+        "Hibon",
+        "CDD",
+        "DanDan",
+        "Cola"
+    ],
+    "ESC Ever": [
+        "Crazy",
+        "Bless",
+        "Tempt",
+        "LokeN",
+        "Totoro"
+    ],
+    "compLexity Gaming": [
+        "Westrice",
+        "Kez",
+        "pr0lly",
+        "ROBERTxLEE",
+        "Bubbadub"
+    ],
+    "Galions": [
+        "Carlsen",
+        "Thayger",
+        "OMON",
+        "HARPOON",
+        "Zoelys"
+    ],
+    "Hong Kong Attitude": [
+        "3z",
+        "Crash",
+        "Mission",
+        "Unified",
+        "Kaiwing"
+    ],
+    "Liiv SANDBOX": [
+        "Clear",
+        "Willer",
+        "Clozer",
+        "Teddy",
+        "Kael"
+    ],
+    "Rensga eSports": [
+        "zekas",
+        "Erasus",
+        "Evrot",
+        "NinjaKiwi",
+        "Mido"
+    ],
+    "Meloncats": [
+        "MC Zeclipse",
+        "Gilius",
+        "Abaria",
+        "Krykiet",
+        "Dioud"
+    ],
+    "Noble Truth": [
+        "Tonington",
+        "Razelock",
+        "Leonard",
+        "Nocturnal",
+        "Ralara"
+    ],
+    "Astralis": [
+        "Finn",
+        "113",
+        "LIDER",
+        "Kobbe",
+        "Execute"
+    ],
+    "Gold Coin United": [
+        "Solo",
+        "Santorin",
+        "Fly",
+        "Rikara",
+        "MadLife"
+    ],
+    "Flamengo MDL": [
+        "Makes",
+        "Dizin",
+        "Envy",
+        "Trigo",
+        "Damage"
+    ],
+    "Wayi Spider": [
+        "Nexus",
+        "Epic",
+        "Wako",
+        "Breeze",
+        "K"
+    ],
+    "BNK FEARX": [
+        "Clear",
+        "Raptor",
+        "VicLa",
+        "Taeyoon",
+        "Kellin"
+    ],
+    "Big Gods": [
+        "Ranger",
+        "Tierwulf",
+        "Rakin",
+        "Luskka",
+        "RedBert"
+    ],
+    "Team BDS": [
+        "Rooster",
+        "Boukada",
+        "nuc",
+        "Ice",
+        "Parus"
+    ],
+    "OpTic Gaming": [
+        "Dhokla",
+        "Meteos",
+        "Crown",
+        "Arrow",
+        "Big"
+    ],
+    "Snake Esports": [
+        "Flandre",
+        "SofM",
+        "Fenfen",
+        "Asura",
+        "Maestro"
+    ],
+    "Renegades": [
+        "SERAPH",
+        "Crumbz",
+        "Ninja",
+        "Freeze",
+        "Hakuho"
+    ],
+    "Genius Esports": [
+        "Coated",
+        "Yijin",
+        "Himmel",
+        "Bunzz",
+        "Biob"
+    ],
+    "Team Vitality": [
+        "Naak Nako",
+        "Lyncas",
+        "FIESTA",
+        "Carzzy",
+        "Fleshy"
+    ],
+    "INTZ": [
+        "Yupps",
+        "Yampi",
+        "Dioge",
+        "NinjaKiwi",
+        "Damage"
+    ],
+    "APOLLO GAMING": [
+        "Yuki",
+        "Tomrio",
+        "Vin",
+        "Kwhite",
+        "Seebulabu"
+    ],
+    "MVP": [
+        "ADD",
+        "Beyond",
+        "Ian",
+        "Pilot",
+        "Max"
+    ],
+    "EDward Gaming": [
+        "Zdz",
+        "Jiejie",
+        "BuLLDoG",
+        "Leave",
+        "Parukia"
+    ],
+    "Team BattleComics": [
+        "SoaR",
+        "OnFleek",
+        "Dove",
+        "Hollow",
+        "Joker"
+    ],
+    "Sky Gaming": [
+        "Darrys",
+        "Kaiz",
+        "C7N",
+        "Slayder",
+        "Hinn"
+    ],
+    "n!faculty": [
+        "Xaxus",
+        "Obvious",
+        "SozPurefect",
+        "Sedrion",
+        "MounTain"
     ],
     "Apex Predator": [
+        "Coated",
+        "NtNt",
+        "Himmel",
+        "Vit",
+        "CBL"
+    ],
+    "Clutch Gaming": [
+        "Huni",
+        "Lira",
+        "Damonte",
+        "Cody Sun",
+        "Vulcan"
+    ],
+    "QTV Gaming": [
+        "Hiro02",
+        "Kaiz",
+        "Genza",
+        "Jisoo",
+        "Zodiac"
+    ],
+    "LMQ": [
+        "GodLike",
+        "NONAME",
+        "xiaoweixiao",
+        "Vas1lii",
+        "Mor"
+    ],
+    "Alpha7 Esports": [
+        "Kiari",
+        "Drakehero",
+        "random",
+        "scuro",
+        "Telas"
+    ],
+    "Team Liquid": [
+        "Morgan",
+        "Josedeodo",
+        "Quid",
+        "Yeon",
+        "CoreJJ"
+    ],
+    "Immortals": [
+        "Castle",
+        "Armao",
+        "Mask",
+        "Tactical",
+        "Olleh"
+    ],
+    "DAN Gaming": [
+        "Lies",
+        "fishball",
+        "Ggoong",
+        "Natz",
+        "Cat"
+    ],
+    "Isurus Estral": [
+        "Summit",
+        "Josedeodo",
+        "Mireu",
+        "Snaker",
+        "Ackerman"
+    ],
+    "Kingzone DragonX": [
+        "Rascal",
+        "Cuzz",
+        "Naehyun",
+        "Deft",
+        "TusiN"
+    ],
+    "Saigon Secret": [
+        "Rigel",
+        "Phuc1",
+        "Seany",
+        "Harky",
+        "Tahahy"
+    ],
+    "Xenics": [
+        "KaKaRoT",
+        "ARK",
+        "Candy",
+        "Stitch",
+        "Key"
+    ],
+    "paiN Gaming": [
+        "Boal",
+        "CarioK",
+        "Namiru",
+        "Hena",
+        "Ceos"
+    ],
+    "FTV Esports": [
+        "Victory",
+        "Kuroko1",
+        "Froggy",
+        "Aomine",
+        "Akeno"
+    ],
+    "Miners": [
+        "DoRun",
+        "Hugato",
+        "Anyyy",
+        "Celo",
+        "Sive"
+    ],
+    "Fluxo W7M": [
+        "Zothve",
+        "Peach",
+        "cody",
+        "BAO",
+        "Momochi"
+    ],
+    "MAD Lions KOI": [
+        "Myrwn",
+        "Elyoya",
+        "Fresskowy",
+        "Supa",
+        "Alvaro"
+    ],
+    "Team Yetti": [
+        "Mist",
+        "Jjun",
+        "Joy",
+        "Holo",
+        "Coool"
+    ],
+    "Royal Youth": [
+        "Armut",
+        "Closer",
+        "cyeol",
+        "Pilot",
+        "Tolerant"
+    ],
+    "Seorabeol Gaming": [
+        "Thal",
+        "KaKAO",
+        "DanChung",
+        "Sangyoon",
+        "Nova"
+    ],
+    "Apex Gaming": [
+        "Ray",
+        "Shrimp",
+        "Keane",
+        "Apollo",
+        "Xpecial"
+    ],
+    "Santos e-Sports": [
+        "Jackpot",
+        "Hyoga",
+        "Rainbow",
+        "Juzo",
+        "Hawk"
+    ],
+    "Beyond Gaming": [
+        "Likai",
+        "Husha",
+        "Minji",
+        "Wako",
+        "Kino"
+    ],
+    "Excel Esports": [
+        "Odoamne",
+        "Peach",
+        "Abbedagge",
+        "Patrik",
+        "LIMIT"
+    ],
+    "Never Give Up": [
+        "Souma",
+        "tiphat",
+        "TT",
+        "Slowz",
+        "Seebulabu"
+    ],
+    "Cyber Gaming": [
+        "Idyiom",
+        "Shiage",
+        "S\u00e2yn",
+        "Tarky",
+        "Cejlon"
+    ],
+    "Gambit Esports": [
+        "PvPStejos",
+        "Diamondprox",
+        "Kira",
+        "Lodik",
+        "Edward"
+    ],
+    "GAM Esports": [
+        "Kiaya",
+        "Draktharr",
+        "Gloryy",
+        "Artemis",
+        "Taki"
+    ],
+    "Vega Squadron": [
+        "BOSS",
+        "AHaHaCiK",
+        "Nomanz",
+        "Gadget",
+        "SaNTaS"
+    ],
+    "e-mFire": [
+        "Roach",
+        "Crush",
+        "Edge",
+        "Ssol",
+        "GuGer"
+    ],
+    "Saint Gaming": [
+        "Acorn",
+        "chimin",
+        "OTTO",
+        "xQ",
+        "x1u"
+    ],
+    "Griffin": [
+        "Untara",
+        "Tarzan",
+        "Ucal",
+        "Viper",
+        "sanghyeon"
+    ],
+    "Game Talents": [
+        "GimGoon",
+        "aqiu",
+        "Grail",
+        "West",
+        "Savoki"
+    ],
+    "T Show": [
+        "b4dd",
+        "Danagorn",
+        "Krastyel",
+        "Theusma",
+        "Ceos"
+    ],
+    "J Team": [
+        "Rest",
+        "Hana",
+        "FoFo",
+        "Lilv",
+        "Koala"
+    ],
+    "TSM": [
+        "Hauntzer",
+        "Bugi",
+        "Insanity",
+        "WildTurtle",
+        "Chime"
+    ],
+    "Bangkok Titans": [
+        "WarL0cK",
+        "007x",
+        "G4",
+        "Lloyd",
+        "Moss"
+    ],
+    "UTM Esports": [
+        "Calm",
+        "Spot",
+        "Himmel",
+        "Zin",
+        "Tear"
+    ],
+    "Rogue": [
+        "Adam",
+        "Trick",
+        "Larssen",
+        "Patrik",
+        "Malrang"
+    ],
+    "GenZ Gaming": [
         "Coated",
         "NtNt",
         "Himmel",
@@ -1385,26 +1518,103 @@
         "Klaus",
         "Alocs"
     ],
-    "PENTAGRAM": [
-        "Paz",
-        "Once",
-        "Ramune",
-        "Moyashi",
-        "Gaeng"
+    "Huma": [
+        "Werlyb",
+        "Mirror",
+        "Godbro",
+        "HolyPhoenix",
+        "Kaas"
     ],
-    "Albus NoX Luna": [
-        "Smurf",
-        "PvPStejos",
-        "Kira",
-        "Onesh0tiq",
-        "Likkrit"
+    "Redemption eSports Porto Alegre": [
+        "Glow",
+        "Sephis",
+        "Aithusa",
+        "Krastyel",
+        "BocaJR"
     ],
-    "Be\u015fikta\u015f Esports": [
-        "Thaldrin",
-        "Theokoles",
-        "Energy",
-        "Nardeus",
-        "Dumbledoge"
+    "g3nerationX": [
+        "Zantins",
+        "Snowlz",
+        "Tay",
+        "Skyer",
+        "Alocs"
+    ],
+    "Misfits Academy": [
+        "Jisu",
+        "Pridestalkr",
+        "CozQ",
+        "Yuuki60",
+        "Dreams"
+    ],
+    "INTZ.Genesis": [
+        "VVvert",
+        "Shini",
+        "Marfz",
+        "Absolut",
+        "RedBert"
+    ],
+    "MAMMOTH": [
+        "Fudge",
+        "Babip",
+        "Triple",
+        "k1ng",
+        "destiny"
+    ],
+    "Dark Passage": [
+        "fabFabulous",
+        "Crystal",
+        "Naru",
+        "HolyPhoenix",
+        "Touch"
+    ],
+    "Vorax Liberty": [
+        "fNb",
+        "Yampi",
+        "Krastyel",
+        "Matsukaze",
+        "Wos"
+    ],
+    "Kowloon Esports (\u4e5d\u9f8d\u96fb\u7af6)": [
+        "Nexus",
+        "Holo",
+        "Faith",
+        "Tak",
+        "Yuen"
+    ],
+    "Team Genesis": [
+        "Fitz",
+        "Shini",
+        "RIVA",
+        "Absolut",
+        "BocaJR"
+    ],
+    "PEACE": [
+        "Vizicsacsi",
+        "Babip",
+        "Tally",
+        "Violet",
+        "Aladoric"
+    ],
+    "Cube Adonis": [
+        "yT",
+        "Sorn",
+        "peka",
+        "Easylove",
+        "Kit"
+    ],
+    "ahq Fighter": [
+        "Liang",
+        "Benny",
+        "Uniboy",
+        "Rock",
+        "Tuna"
+    ],
+    "XDG Gaming": [
+        "Benny",
+        "Xmithie",
+        "mancloud",
+        "Zuna",
+        "Sheep"
     ],
     "Liberty": [
         "Makes",
@@ -1413,12 +1623,488 @@
         "Leandrinn",
         "Cavalo"
     ],
-    "Vivo Keyd Stars": [
-        "zekas",
-        "Disamis",
-        "Mireu",
-        "Jeskla",
-        "scamber"
+    "CNB e-Sports Club": [
+        "Duclou",
+        "Freire",
+        "Aslan",
+        "pbO",
+        "Hawk"
+    ],
+    "Dire Wolves": [
+        "BioPanther",
+        "Shernfire",
+        "Triple",
+        "k1ng",
+        "Cupcake"
+    ],
+    "Dominus Esports": [
+        "Chelizi",
+        "xiaopeng",
+        "Twila",
+        "wynn",
+        "Yui"
+    ],
+    "Los Ratones": [
+        "Baus",
+        "Velja",
+        "Nemesis",
+        "Crownie",
+        "Rekkles"
+    ],
+    "KaBuM! Esports": [
+        "Lonely",
+        "SCARY",
+        "Hauz",
+        "Netuno",
+        "Ceos"
+    ],
+    "Rebels Anarchy": [
+        "ikssu",
+        "Lira",
+        "Mickey",
+        "Sangyoon",
+        "SnowFlower"
+    ],
+    "V Gaming Adonis": [
+        "KemKen",
+        "Hope",
+        "PHT",
+        "Vit",
+        "Zin"
+    ],
+    "Team Coast": [
+        "Cris",
+        "Shrimp",
+        "Pekin Woof",
+        "Mash",
+        "Kwon"
+    ],
+    "Percent Esports": [
+        "yT",
+        "Draktharr",
+        "Gloryy",
+        "Aomine",
+        "Elio"
+    ],
+    "HST": [
+        "VietThanh",
+        "HST Wady",
+        "HST Terry",
+        "HST DinhViet",
+        "Blue"
+    ],
+    "ROX Tigers": [
+        "Lindarang",
+        "SeongHwan",
+        "Lava",
+        "Sangyoon",
+        "Key"
+    ],
+    "Enemy": [
+        "Flaresz",
+        "Kold",
+        "Innox",
+        "otter",
+        "Bodydrop"
+    ],
+    "SBTC Esports": [
+        "Nper",
+        "DNK",
+        "Dia1",
+        "Slayder",
+        "Palette"
+    ],
+    "LYON": [
+        "Dhokla",
+        "Inspired",
+        "Saint",
+        "Berserker",
+        "Isles"
+    ],
+    "Prodigy Esports": [
+        "fNb",
+        "Yampi",
+        "dyNquedo",
+        "Garo",
+        "Wos"
+    ],
+    "Royal Club": [
+        "Letme",
+        "inSec",
+        "Corn",
+        "Bvoy",
+        "Ley"
+    ],
+    "inf": [
+        "Buggax",
+        "Solid",
+        "cody",
+        "WhiteLotus",
+        "Ackerman"
+    ],
+    "Uppercut esports": [
+        "Fitz",
+        "LeChase",
+        "Anyyy",
+        "Alternative",
+        "Damage"
+    ],
+    "NaJin e-mFire": [
+        "Duke",
+        "Peanut",
+        "Tank",
+        "Ohq",
+        "Pure"
+    ],
+    "Splyce": [
+        "Vizicsacsi",
+        "Xerxe",
+        "Humanoid",
+        "Kobbe",
+        "Tore"
+    ],
+    "Overload": [
+        "Lynx",
+        "4LaN",
+        "Krastyel",
+        "DudsTheBoy",
+        "Espeon"
+    ],
+    "Young Generation": [
+        "yT",
+        "Venus",
+        "Naul",
+        "Bigkoro",
+        "Palette"
+    ],
+    "Silent Storm Esports": [
+        "Jarvis",
+        "Kheng",
+        "Lozer",
+        "Neo",
+        "TQ"
+    ],
+    "Jin Air Green Wings": [
+        "TaNa",
+        "Malrang",
+        "Yaharong",
+        "Route",
+        "Kellin"
+    ],
+    "Cougar E-Sport": [
+        "CoolG",
+        "Kawa",
+        "KuKu",
+        "kane",
+        "Skywalk"
+    ],
+    "Shifters": [
+        "Rooster",
+        "Sheo",
+        "nuc",
+        "Paduck",
+        "Stend"
+    ],
+    "ORDER": [
+        "BioPanther",
+        "Kevy",
+        "Kisee",
+        "Puma",
+        "Corporal"
+    ],
+    "Team Whales": [
+        "Hasmed",
+        "Sounda",
+        "Dove",
+        "Artemis",
+        "SiuLoong"
+    ],
+    "ES Sharks": [
+        "Jisu",
+        "Catch",
+        "Kuzan",
+        "Light",
+        "GuGer"
+    ],
+    "Cloud9 Eclipse": [
+        "Odoamne",
+        "Santorin",
+        "FEBIVEN",
+        "Hjarnan",
+        "Voidle"
+    ],
+    "INTZ Red": [
+        "Jockster",
+        "Caos",
+        "Brucer",
+        "Sacy",
+        "Eryon"
+    ],
+    "CJ Entus": [
+        "Soul",
+        "Winged",
+        "Candy",
+        "Veritas",
+        "Pure"
+    ],
+    "JAYOB e-Sports": [
+        "SkyBart",
+        "Turtle",
+        "Goku",
+        "Pdr",
+        "Baiano"
+    ],
+    "RED Canids": [
+        "zynts",
+        "STEPZ",
+        "Fuuu",
+        "Morttheus",
+        "Manel"
+    ],
+    "Raise Gaming": [
+        "PK",
+        "Laba",
+        "Wuji",
+        "Lilv",
+        "Koala"
+    ],
+    "Kongdoo Monster": [
+        "Roach",
+        "Wiz",
+        "Edge",
+        "Ssol",
+        "Secret"
+    ],
+    "Team WE": [
+        "Cube",
+        "Monki",
+        "Karis",
+        "About",
+        "Erha"
+    ],
+    "Bilibili Gaming": [
+        "Bin",
+        "Xun",
+        "Knight",
+        "Viper",
+        "ON"
+    ],
+    "FunPlus Phoenix": [
+        "sheer",
+        "Jiejie",
+        "Care",
+        "JiaQi",
+        "Jwei"
+    ],
+    "KOI": [
+        "Szygenda",
+        "Malrang",
+        "Larssen",
+        "Comp",
+        "Advienne"
+    ],
+    "Young Miracles": [
+        "Clowz",
+        "marilyn",
+        "Viper",
+        "Ning",
+        "Ming"
+    ],
+    "Fenerbah\u00e7e Esports": [
+        "Ruin",
+        "Kirei",
+        "Bolulu",
+        "Ellam",
+        "Only35"
+    ],
+    "Afro Beast": [
+        "Jackpot",
+        "Butter",
+        "MoonBlack",
+        "Art",
+        "SkuLL"
+    ],
+    "OverPower Esports": [
+        "Simon",
+        "Penguin",
+        "Jerry",
+        "Vit",
+        "H3"
+    ],
+    "LOUD": [
+        "xyno",
+        "Sinatra",
+        "Kaze",
+        "Rabelo",
+        "uZent"
+    ],
+    "QG Reapers": [
+        "Kabe",
+        "Clid",
+        "Doinb",
+        "Alone",
+        "CL0UD"
+    ],
+    "bbq Olivers": [
+        "Crazy",
+        "Trick",
+        "Tempt",
+        "Ghost",
+        "Ignar"
+    ],
+    "Cloud9": [
+        "Thanatos",
+        "Blaber",
+        "Loki",
+        "Tactical",
+        "Vulcan"
+    ],
+    "Santos Dexterity": [
+        "Pizzayolo",
+        "Zuao",
+        "prZo",
+        "Theusma",
+        "Anjinho"
+    ],
+    "Dragon Gate Team": [
+        "2188",
+        "JGY",
+        "MoonBlack",
+        "Soul",
+        "pasa"
+    ],
+    "Team oNe eSports": [
+        "SkyBart",
+        "Ryuzaki",
+        "Brucer",
+        "pbO",
+        "Panj"
+    ],
+    "NonHK": [
+        "BD",
+        "Gemini",
+        "Unified",
+        "GodKwai",
+        "FongXiang"
+    ],
+    "Fireball": [
+        "2188",
+        "Wind",
+        "Wulala",
+        "Enzz",
+        "SkuLL"
+    ],
+    "Evil Geniuses": [
+        "Revenge",
+        "Sheiden",
+        "Jojopyun",
+        "UNF0RGIVEN",
+        "Eyla"
+    ],
+    "L\u00d8S": [
+        "Zest",
+        "Curse",
+        "Feisty",
+        "Duduhh",
+        "Ackerman"
+    ],
+    "Rare Atom": [
+        "Xiaoxu",
+        "Xiaohao",
+        "VicLa",
+        "Assum",
+        "Jwei"
+    ],
+    "Hyper Vortex Esports": [
+        "Sparda",
+        "Tomrio",
+        "Vin",
+        "Aomine",
+        "Bie"
+    ],
+    "Ascension Gaming": [
+        "Rockky",
+        "Lloyd",
+        "G4",
+        "Niksar",
+        "Rich"
+    ],
+    "Hall of Fame": [
+        "LL",
+        "Sorn",
+        "peka",
+        "Easylove",
+        "Shaoran"
+    ],
+    "CERBERUS Esports": [
+        "Pun",
+        "Meliodas",
+        "AisyL",
+        "Slowz",
+        "Yume"
+    ],
+    "Ultra Prime": [
+        "sasi",
+        "climber",
+        "Saber",
+        "Hena",
+        "Xiaoxia"
+    ],
+    "Burst The Sky Esports": [
+        "Ryuk",
+        "Draktharr",
+        "Gloryy",
+        "Aomine",
+        "Elio"
+    ],
+    "Papara SuperMassive": [
+        "Armut",
+        "KaKAO",
+        "Bolulu",
+        "Zeitnot",
+        "SnowFlower"
+    ],
+    "Evil genius": [
+        "Yuta",
+        "Jcom",
+        "Raiderr",
+        "Ratel",
+        "ZeeTee"
+    ],
+    "Misfits Gaming": [
+        "Irrelevant",
+        "Zanzarah",
+        "Vetheo",
+        "Neon",
+        "Mersa"
+    ],
+    "Hanwha Life Esports": [
+        "Zeus",
+        "Kanavi",
+        "Zeka",
+        "Gumayusi",
+        "Delight"
+    ],
+    "Luxury Esports": [
+        "Coated",
+        "Killerqueen",
+        "Himmel",
+        "Vit",
+        "CBL"
+    ],
+    "Saving OCE": [
+        "Doraemon",
+        "Foreigner",
+        "Kyose",
+        "Violet",
+        "Scxtt"
+    ],
+    "Team Liquid Academy": [
+        "Solo",
+        "Galen",
+        "Goldenglue",
+        "Piglet",
+        "Stunt"
     ],
     "Gambit Gaming": [
         "Cabochard",
@@ -1427,12 +2113,236 @@
         "P1noy",
         "Edward"
     ],
-    "Millenium": [
-        "Kaze",
-        "Djoko",
-        "PrettyGRE",
-        "Tabzz",
-        "masterwork"
+    "Team Strix": [
+        "TS K3nSt3r",
+        "TS MaybeNickName",
+        "TS Heavenstrike",
+        "TS SirAlphaQ",
+        "Vio"
+    ],
+    "Denial eSports.Europe": [
+        "Ippon",
+        "Kikis",
+        "niQ",
+        "Woolite",
+        "SuperAZE"
+    ],
+    "SK Gaming": [
+        "Wunder",
+        "Skeanz",
+        "SlowQ",
+        "Jopa",
+        "Mikyx"
+    ],
+    "Deep Cross Gaming": [
+        "Flauren",
+        "Pop9",
+        "HongSuo",
+        "Feng",
+        "ShiauC"
+    ],
+    "Curse Academy": [
+        "Hauntzer",
+        "Saintvicious",
+        "Keane",
+        "Cop",
+        "Bunny FuFuu"
+    ],
+    "Super Guy Destroys": [
+        "Gaksital",
+        "Penguin",
+        "Kati",
+        "Sty1e",
+        "Tear"
+    ],
+    "Newbee": [
+        "Skye",
+        "Swift",
+        "Coco",
+        "Lwx",
+        "Crisp"
+    ],
+    "Rainbow Warriors": [
+        "2T",
+        "Spot",
+        "Artifact",
+        "Easylove",
+        "Zin"
+    ],
+    "V Gaming": [
+        "Sparda",
+        "VGM 5L",
+        "Victory",
+        "Jetsu",
+        "1Ground"
+    ],
+    "Samsung Galaxy": [
+        "CuVee",
+        "Ambition",
+        "Crown",
+        "Ruler",
+        "CoreJJ"
+    ],
+    "Copenhagen Wolves Academy": [
+        "Morsu",
+        "Kirei",
+        "CozQ",
+        "Vizility",
+        "Hybrid"
+    ],
+    "Golden Guardians": [
+        "Licorice",
+        "River",
+        "Gori",
+        "Stixxay",
+        "huhi"
+    ],
+    "Gravity": [
+        "Hauntzer",
+        "Move",
+        "Keane",
+        "Altec",
+        "Bunny FuFuu"
+    ],
+    "EVOS Esports": [
+        "Zeros",
+        "Sorn",
+        "Hiro02",
+        "Divkid",
+        "Bie"
+    ],
+    "Flash Wolves": [
+        "Hanabi",
+        "Enso",
+        "BUSH",
+        "Betty",
+        "ShiauC"
+    ],
+    "Team Heretics": [
+        "Tracyn",
+        "Daglas",
+        "Serin",
+        "Hype",
+        "Way"
+    ],
+    "KSV eSports": [
+        "CuVee",
+        "Ambition",
+        "Crown",
+        "Ruler",
+        "CoreJJ"
+    ],
+    "Disguised": [
+        "Srtty",
+        "KryRa",
+        "Callme",
+        "sajed",
+        "Lyonz"
+    ],
+    "FURIA": [
+        "Guigo",
+        "Tatu",
+        "Tutsz",
+        "Ayu",
+        "JoJo"
+    ],
+    "Infinity Esports": [
+        "ChumpJohn",
+        "xSojin",
+        "Arcsecond",
+        "Hoofspark",
+        "Hanjaro"
+    ],
+    "Dplus Kia": [
+        "Siwoo",
+        "Lucid",
+        "ShowMaker",
+        "Smash",
+        "Career"
+    ],
+    "Copenhagen Wolves": [
+        "Wickd",
+        "k0u",
+        "Caedrel",
+        "P1noy",
+        "Nukes"
+    ],
+    "Saigon Buffalo": [
+        "Coated",
+        "Gury",
+        "Himmel",
+        "Shogun",
+        "Slay"
+    ],
+    "PSG Talon": [
+        "Azhi",
+        "Karsa",
+        "Maple",
+        "Betty",
+        "Woody"
+    ],
+    "Counter Logic Gaming": [
+        "Dhokla",
+        "Contractz",
+        "Palafox",
+        "Luger",
+        "Poome"
+    ],
+    "Rampage": [
+        "Evi",
+        "Tussle",
+        "Ramune",
+        "Moyashi",
+        "Dara"
+    ],
+    "Phoenix1": [
+        "dshao",
+        "MikeYeung",
+        "Ryu",
+        "Arrow",
+        "Xpecial"
+    ],
+    "Operation Kino e-Sports": [
+        "Aoshi",
+        "Yampi",
+        "dyNquedo",
+        "Garo",
+        "BocaJR"
+    ],
+    "100 Thieves": [
+        "Dhokla",
+        "River",
+        "Quid",
+        "FBI",
+        "Eyla"
+    ],
+    "SinoDragon Gaming": [
+        "Changhong",
+        "xiaopeng",
+        "Twila",
+        "GALA",
+        "Mark"
+    ],
+    "SUPA HOT CREW": [
+        "Mimer",
+        "Impaler",
+        "Nulu",
+        "MrRallez",
+        "Kasing"
+    ],
+    "Reason Gaming": [
+        "Kubon",
+        "Xayoo",
+        "Takefun",
+        "Celaver",
+        "Libik"
+    ],
+    "Albus NoX Luna": [
+        "Smurf",
+        "PvPStejos",
+        "Kira",
+        "Onesh0tiq",
+        "Likkrit"
     ],
     "LGD Gaming": [
         "Burdol",
@@ -1448,411 +2358,33 @@
         "Deftly",
         "Zeyzal"
     ],
-    "Nongshim RedForce": [
-        "Kingen",
-        "Sponge",
-        "Scout",
-        "Diable",
-        "Lehends"
-    ],
-    "Ninjas in Pyjamas": [
-        "HOYA",
-        "Guwon",
-        "Care",
-        "Photic",
-        "fengyue"
-    ],
-    "Apex Gaming": [
-        "Ray",
-        "Shrimp",
-        "Keane",
-        "Apollo",
-        "Xpecial"
-    ],
-    "Vega Squadron": [
-        "BOSS",
-        "AHaHaCiK",
-        "Nomanz",
-        "Gadget",
-        "SaNTaS"
-    ],
-    "Team BattleComics": [
-        "SoaR",
-        "OnFleek",
-        "Dove",
-        "Hollow",
-        "Joker"
-    ],
-    "Young Generation": [
-        "yT",
-        "Venus",
-        "Naul",
-        "Bigkoro",
-        "Palette"
-    ],
-    "FTV Esports": [
-        "Victory",
-        "Kuroko1",
-        "Froggy",
-        "Aomine",
-        "Akeno"
-    ],
-    "Team Strix": [
-        "TS K3nSt3r",
-        "TS MaybeNickName",
-        "TS Heavenstrike",
-        "TS SirAlphaQ",
-        "Vio"
-    ],
-    "Matrix Esport Gaming": [
-        "CHP",
-        "MEG Odriew",
-        "Genza",
-        "Jisoo",
-        "Zodiac"
-    ],
-    "Gold Coin United": [
-        "Solo",
-        "Santorin",
-        "Fly",
-        "Rikara",
-        "MadLife"
-    ],
-    "1TAP Dino": [
-        "Nanaue",
-        "Wady",
-        "TT",
-        "Vinboiz",
-        "Tahahy"
-    ],
-    "Samsung White": [
-        "Looper",
-        "DanDy",
-        "PawN",
-        "imp",
-        "Mata"
-    ],
-    "Logitech G Snipers": [
-        "3z",
-        "yo",
-        "Breaker",
-        "RD",
-        "Ysera"
-    ],
-    "Galatasaray Esports": [
-        "Crazy",
-        "Mojito",
-        "Bolulu",
-        "Alive",
-        "Zergsting"
-    ],
-    "DarlingYou": [
-        "MapleSnow",
-        "ILLusion",
-        "CooCooDai",
-        "Unlimited",
-        "Rain"
-    ],
-    "Vivo Keyd": [
-        "Hidan",
-        "Minerva",
-        "NOsFerus",
-        "Drop",
-        "Professor"
-    ],
-    "Vorax Liberty": [
-        "fNb",
-        "Yampi",
-        "Krastyel",
-        "Matsukaze",
-        "Wos"
-    ],
-    "SinoDragon Gaming": [
-        "Changhong",
-        "xiaopeng",
-        "Twila",
-        "GALA",
-        "Mark"
-    ],
-    "MEGA": [
-        "Rockky",
-        "Lloyd",
-        "G4",
-        "DeuL",
-        "Pop"
-    ],
-    "Counter Logic Gaming": [
-        "Dhokla",
-        "Contractz",
-        "Palafox",
-        "Luger",
-        "Poome"
-    ],
-    "XDG Gaming": [
-        "Benny",
-        "Xmithie",
-        "mancloud",
-        "Zuna",
-        "Sheep"
-    ],
-    "Super Guy Destroys": [
-        "Gaksital",
-        "Penguin",
-        "Kati",
-        "Sty1e",
-        "Tear"
-    ],
-    "NonHK": [
-        "BD",
-        "Gemini",
-        "Unified",
-        "GodKwai",
-        "FongXiang"
-    ],
-    "Copenhagen Wolves": [
-        "Wickd",
-        "k0u",
-        "Caedrel",
-        "P1noy",
-        "Nukes"
-    ],
-    "Rare Atom": [
-        "Xiaoxu",
-        "Xiaohao",
-        "VicLa",
-        "Assum",
-        "Jwei"
-    ],
-    "LOUD": [
-        "xyno",
-        "Sinatra",
-        "Kaze",
-        "Rabelo",
-        "uZent"
-    ],
-    "Gambit Esports": [
-        "PvPStejos",
-        "Diamondprox",
-        "Kira",
-        "Lodik",
-        "Edward"
-    ],
-    "KaBuM! Ilha das Lendas": [
-        "Yupps",
-        "SCARY",
-        "Grevthar",
-        "Kojima",
-        "Guigs"
-    ],
-    "Luminosity Gaming": [
-        "FakeGod",
-        "Tomio",
-        "Insanity",
-        "Tactical",
-        "Zeyzal"
-    ],
-    "MAD Team": [
-        "Liang",
-        "Kongyue",
-        "Uniboy",
-        "Breeze",
-        "K"
-    ],
-    "QT DIG\u221e": [
-        "Washidai",
-        "Van1",
-        "DICE",
-        "Yuhi",
-        "Hetel"
-    ],
-    "QG Reapers": [
-        "Kabe",
-        "Clid",
-        "Doinb",
-        "Alone",
-        "CL0UD"
-    ],
-    "Xenics": [
-        "KaKaRoT",
-        "ARK",
-        "Candy",
-        "Stitch",
-        "Key"
-    ],
-    "Excel Esports": [
-        "Odoamne",
-        "Peach",
-        "Abbedagge",
-        "Patrik",
-        "LIMIT"
-    ],
-    "ThunderTalk Gaming": [
-        "Keshi",
-        "Junhao",
-        "Heru",
-        "Ahn",
-        "Feather"
-    ],
-    "Prime Clan": [
-        "Soul",
-        "Catch",
-        "SaSin",
-        "Nuclear",
-        "Secret"
-    ],
-    "Saigon Secret": [
-        "Rigel",
-        "Phuc1",
-        "Seany",
-        "Harky",
-        "Tahahy"
-    ],
-    "RED Canids": [
-        "zynts",
-        "STEPZ",
-        "Fuuu",
-        "Morttheus",
-        "Manel"
-    ],
-    "Astralis": [
-        "Finn",
-        "113",
-        "LIDER",
-        "Kobbe",
-        "Execute"
-    ],
-    "KaBuM! Esports": [
+    "Team Aze": [
         "Lonely",
-        "SCARY",
-        "Hauz",
-        "Netuno",
-        "Ceos"
+        "Dimitry",
+        "Aloned",
+        "5kid",
+        "Stray"
     ],
-    "Redemption eSports Porto Alegre": [
-        "Glow",
-        "Sephis",
-        "Aithusa",
-        "Krastyel",
-        "BocaJR"
+    "Oh My God": [
+        "Hery",
+        "re0",
+        "haichao",
+        "Photic",
+        "Moham"
     ],
-    "Percent Esports": [
-        "yT",
-        "Draktharr",
-        "Gloryy",
-        "Aomine",
-        "Elio"
+    "Ilha da Macacada Gaming": [
+        "Fitz",
+        "CarioK",
+        "Anyyy",
+        "Sarkis",
+        "Cabu"
     ],
-    "Gamers2": [
-        "Jaeger",
+    "Fnatic Academy": [
         "Kikis",
-        "Perkz",
-        "Jesiz",
-        "Hybrid"
-    ],
-    "Sentinels": [
-        "Impact",
-        "HamBak",
-        "DARKWINGS",
-        "Rahel",
-        "huhi"
-    ],
-    "Movistar R7": [
-        "Summit",
-        "Oddie",
-        "Keine",
-        "ceo",
-        "Lyonz"
-    ],
-    "Flash Husky": [
-        "Cyo",
-        "Betty",
-        "SIUSIU",
-        "Breeze",
-        "Rain"
-    ],
-    "Wayi Spider": [
-        "Nexus",
-        "Epic",
-        "Wako",
-        "Breeze",
-        "K"
-    ],
-    "Evil genius": [
-        "Yuta",
-        "Jcom",
-        "Raiderr",
-        "Ratel",
-        "ZeeTee"
-    ],
-    "Team EnVyUs": [
-        "SERAPH",
-        "Lira",
+        "Amazing",
         "Nisqy",
-        "Apollo",
-        "Hakuho"
-    ],
-    "Samsung Galaxy": [
-        "CuVee",
-        "Ambition",
-        "Crown",
-        "Ruler",
-        "CoreJJ"
-    ],
-    "HUTECH CHICKEN": [
-        "Nern",
-        "Kzt",
-        "Clyde",
-        "Xiao",
-        "Piccolo"
-    ],
-    "Royal Never Give Up": [
-        "Xiaoxu",
-        "milkyway",
-        "Tangyuan",
-        "JiaQi",
-        "Niket"
-    ],
-    "New Power Esports": [
-        "Yoshino",
-        "Vormund",
-        "NP Jedi",
-        "Sehun",
-        "NP Killua"
-    ],
-    "Fenerbah\u00e7e Esports": [
-        "Ruin",
-        "Kirei",
-        "Bolulu",
-        "Ellam",
-        "Only35"
-    ],
-    "DN SOOPers": [
-        "DuDu",
-        "Sharvel",
-        "Clozer",
-        "deokdam",
-        "Peter"
-    ],
-    "bbq Olivers": [
-        "Crazy",
-        "Trick",
-        "Tempt",
-        "Ghost",
-        "Ignar"
-    ],
-    "FC Schalke 04 Esports": [
-        "BrokenBlade",
-        "Kirei",
-        "nuc",
-        "Neon",
-        "LIMIT"
-    ],
-    "INTZ Red": [
-        "Jockster",
-        "Caos",
-        "Brucer",
-        "Sacy",
-        "Eryon"
+        "MrRallez",
+        "Klaj"
     ],
     "SN CyberCore Esports": [
         "Sparda",
@@ -1861,474 +2393,12 @@
         "Yashiro2",
         "kairi"
     ],
-    "FlyQuest": [
-        "Gakgos",
-        "Gryffinn",
-        "Quad",
-        "Massu",
-        "Cryogen"
-    ],
-    "Virtus.pro": [
-        "Doxy",
-        "Kreox",
-        "Paranoia",
-        "Blasting",
-        "SaNTaS"
-    ],
-    "OpTic Gaming": [
-        "Dhokla",
-        "Meteos",
-        "Crown",
-        "Arrow",
-        "Big"
-    ],
-    "Team Genesis": [
-        "Fitz",
-        "Shini",
-        "RIVA",
-        "Absolut",
-        "BocaJR"
-    ],
-    "9Gaming Esports": [
-        "Hasmed",
-        "SCP",
-        "GiaQui",
-        "Charlington",
-        "Zin"
-    ],
-    "INTZ.Genesis": [
-        "VVvert",
-        "Shini",
-        "Marfz",
-        "Absolut",
-        "RedBert"
-    ],
-    "Snake Esports": [
-        "Flandre",
-        "SofM",
-        "Fenfen",
-        "Asura",
-        "Maestro"
-    ],
-    "CNB e-Sports Club": [
-        "Duclou",
-        "Freire",
-        "Aslan",
-        "pbO",
-        "Hawk"
-    ],
-    "GiantX": [
-        "Oscarinin",
-        "ISMA",
-        "Jackies",
-        "Flakked",
-        "Jun"
-    ],
-    "Vikings Gaming": [
-        "Calm",
-        "Light",
-        "Pampy",
-        "Vit",
-        "CBL"
-    ],
-    "Phong V\u0169 Buffalo": [
-        "Zeros",
-        "Meliodas",
-        "Naul",
-        "Bigkoro",
-        "Palette"
-    ],
-    "Cyber Gaming": [
-        "Idyiom",
-        "Shiage",
-        "S\u00e2yn",
-        "Tarky",
-        "Cejlon"
-    ],
-    "Team Flash": [
-        "Pun",
-        "Draktharr",
-        "playcool",
-        "Puddin",
-        "Soraaa"
-    ],
-    "G-Rex": [
-        "PK",
-        "Gemini",
-        "Candy",
-        "Bruce",
-        "Yoon"
-    ],
-    "Team Secret Whales": [
-        "Pun",
-        "Hizto",
-        "Dire",
-        "Eddie",
-        "Bie"
-    ],
-    "ThunderBot SPARTA": [
-        "Steve",
-        "Shaunz",
-        "ShLaYa",
-        "Nono",
-        "Lounet"
-    ],
-    "KSV eSports": [
-        "CuVee",
-        "Ambition",
-        "Crown",
-        "Ruler",
-        "CoreJJ"
-    ],
-    "Bombers": [
-        "Mimic",
-        "BalKhan",
-        "Ryoma",
-        "FBI",
-        "Rogue"
-    ],
-    "Mysterious Monkeys": [
-        "Kikis",
-        "Amazing",
-        "CozQ",
-        "Yuuki60",
-        "Dreams"
-    ],
-    "Game Talents": [
-        "GimGoon",
-        "aqiu",
-        "Grail",
-        "West",
-        "Savoki"
-    ],
-    "Farenvehn": [
-        "Chordy",
-        "Follow",
-        "Enga",
-        "ianshaka",
-        "Shadow"
-    ],
-    "Cloud9 Eclipse": [
-        "Odoamne",
-        "Santorin",
-        "FEBIVEN",
-        "Hjarnan",
-        "Voidle"
-    ],
-    "Call Gaming": [
-        "Darkblight",
-        "Iucid",
-        "Environmental",
-        "Rakin",
-        "Stunt"
-    ],
-    "Noble Truth": [
-        "Tonington",
-        "Razelock",
-        "Leonard",
-        "Nocturnal",
-        "Ralara"
-    ],
-    "Invictus Gaming": [
-        "TheShy",
-        "Wei",
-        "Rookie",
-        "JiaQi",
-        "Meiko"
-    ],
-    "Team Afro": [
-        "2188",
-        "Epic",
-        "Rainbow",
-        "Art",
-        "Zest"
-    ],
-    "QTV Gaming": [
-        "Hiro02",
-        "Kaiz",
-        "Genza",
-        "Jisoo",
-        "Zodiac"
-    ],
-    "ESC Ever": [
-        "Crazy",
-        "Bless",
-        "Tempt",
-        "LokeN",
-        "Totoro"
-    ],
-    "CTBC Flying Oyster": [
-        "Rest",
-        "Shad0w",
-        "Pout",
-        "Doggo",
-        "Kino"
-    ],
-    "Anyone's Legend": [
-        "Breathe",
-        "Tarzan",
-        "Shanks",
-        "Hope",
-        "Kael"
-    ],
-    "Weibo Gaming": [
-        "Zika",
-        "Xiaohao",
-        "Xiaohu",
-        "Elk",
-        "Moham"
-    ],
-    "ahq Fighter": [
-        "Liang",
-        "Benny",
-        "Uniboy",
-        "Rock",
-        "Tuna"
-    ],
-    "EDward Gaming": [
-        "Zdz",
-        "Jiejie",
-        "BuLLDoG",
-        "Leave",
-        "Parukia"
-    ],
-    "e-Champ Gaming": [
-        "Matheushn",
-        "Freire",
-        "Krastyel",
-        "DudsTheBoy",
-        "k0ga"
-    ],
-    "T Show": [
-        "b4dd",
-        "Danagorn",
-        "Krastyel",
-        "Theusma",
-        "Ceos"
-    ],
-    "EVOS Esports": [
-        "Zeros",
-        "Sorn",
-        "Hiro02",
-        "Divkid",
-        "Bie"
-    ],
-    "Final Five": [
-        "Rhux",
-        "ShorterACE",
-        "Gate",
-        "Prototype",
-        "Rule18"
-    ],
-    "DetonatioN FocusMe": [
-        "Momo",
-        "Citrus",
-        "Fisher",
-        "Kakkun",
-        "Woody"
-    ],
-    "Dark Wolves": [
-        "Cube",
-        "Krvavy",
-        "Kyle",
-        "Chelly",
-        "Jelly"
-    ],
-    "Dragon Gate Team": [
-        "2188",
-        "JGY",
-        "MoonBlack",
-        "Soul",
-        "pasa"
-    ],
-    "Big Gods": [
-        "Ranger",
-        "Tierwulf",
-        "Rakin",
-        "Luskka",
-        "RedBert"
-    ],
-    "Prodigy Esports": [
-        "fNb",
-        "Yampi",
-        "dyNquedo",
-        "Garo",
-        "Wos"
-    ],
-    "Disguised": [
-        "Srtty",
-        "KryRa",
-        "Callme",
-        "sajed",
-        "Lyonz"
-    ],
-    "SK Gaming": [
-        "Wunder",
-        "Skeanz",
-        "SlowQ",
-        "Jopa",
-        "Mikyx"
-    ],
-    "Isurus Estral": [
-        "Summit",
-        "Josedeodo",
-        "Mireu",
-        "Snaker",
-        "Ackerman"
-    ],
-    "Golden Lions": [
-        "Brayaron",
-        "Ganks",
-        "Piqueos",
-        "Scenari0",
-        "Crecre"
-    ],
-    "V Gaming": [
-        "Sparda",
-        "VGM 5L",
-        "Victory",
-        "Jetsu",
-        "1Ground"
-    ],
-    "Different Dimension": [
-        "WouLou",
-        "Anonpsycko",
-        "Lolleros",
-        "Dom1nant",
-        "WildPanda"
-    ],
-    "Misfits Academy": [
-        "Jisu",
-        "Pridestalkr",
-        "CozQ",
-        "Yuuki60",
-        "Dreams"
-    ],
-    "TSM": [
-        "Hauntzer",
-        "Bugi",
-        "Insanity",
-        "WildTurtle",
-        "Chime"
-    ],
-    "Luxury Esports": [
-        "Coated",
-        "Killerqueen",
-        "Himmel",
-        "Vit",
-        "CBL"
-    ],
-    "Hyper Vortex Esports": [
-        "Sparda",
-        "Tomrio",
+    "Ng\u1ef1a H\u00ed Esports": [
+        "TiSaD",
+        "NtNt",
         "Vin",
-        "Aomine",
-        "Bie"
-    ],
-    "Golden Guardians": [
-        "Licorice",
-        "River",
-        "Gori",
-        "Stixxay",
-        "huhi"
-    ],
-    "G2 Esports": [
-        "BrokenBlade",
-        "SkewMond",
-        "Caps",
-        "Hans Sama",
-        "Labrov"
-    ],
-    "Hong Kong Esports": [
-        "MapleSnow",
-        "Gemini",
-        "KuKu",
-        "GodKwai",
-        "OzoraVeki"
-    ],
-    "Karmine Corp": [
-        "Canna",
-        "Yike",
-        "kyeahoo",
-        "Caliste",
-        "Busio"
-    ],
-    "Machi Crew": [
-        "HanShao",
-        "HanJi",
-        "LeeMid",
-        "HoneyRain",
-        "Melon"
-    ],
-    "Victory Five": [
-        "Rich",
-        "Karsa",
-        "Rookie",
-        "Photic",
-        "ppgod"
-    ],
-    "WingsOflibeRty": [
-        "indra",
-        "Hibon",
-        "CDD",
-        "DanDan",
-        "Cola"
-    ],
-    "Lyon Gaming": [
-        "Jirall",
-        "Oddie",
-        "Seiya",
-        "WhiteLotus",
-        "Genthix"
-    ],
-    "Rampage": [
-        "Evi",
-        "Tussle",
-        "Ramune",
-        "Moyashi",
-        "Dara"
-    ],
-    "Clutch Gaming": [
-        "Huni",
-        "Lira",
-        "Damonte",
-        "Cody Sun",
-        "Vulcan"
-    ],
-    "Saigon Buffalo": [
-        "Coated",
-        "Gury",
-        "Himmel",
-        "Shogun",
-        "Slay"
-    ],
-    "inf": [
-        "Buggax",
-        "Solid",
-        "cody",
-        "WhiteLotus",
-        "Ackerman"
-    ],
-    "Reason Gaming": [
-        "Kubon",
-        "Xayoo",
-        "Takefun",
-        "Celaver",
-        "Libik"
-    ],
-    "Incredible Miracle": [
-        "Expession",
-        "TusiN",
-        "Frozen",
-        "Sonstar",
-        "Ignar"
-    ],
-    "Taipei Berserkers": [
-        "Yue",
-        "Laba",
-        "Fish",
-        "Lilv",
-        "Koala"
+        "VietThanh",
+        "Blue"
     ],
     "Pentanet.GG": [
         "BioPanther",
@@ -2337,96 +2407,68 @@
         "Praedyth",
         "Decoy"
     ],
-    "Legacy Esports": [
-        "Topoon",
-        "Babip",
-        "Tally",
-        "Raes",
-        "Isles"
+    "9Gaming Esports": [
+        "Hasmed",
+        "SCP",
+        "GiaQui",
+        "Charlington",
+        "Zin"
     ],
-    "SK Telecom T1": [
-        "Khan",
-        "Clid",
-        "Faker",
-        "Teddy",
-        "Mata"
+    "Lowkey Esports.Vietnam": [
+        "Hani",
+        "DNK",
+        "Artifact",
+        "Celebrity",
+        "Yin"
     ],
-    "APOLLO GAMING": [
-        "Yuki",
-        "Tomrio",
-        "Vin",
-        "Kwhite",
-        "Seebulabu"
+    "Venus Gaming": [
+        "ZeuSs",
+        "DD1",
+        "PHT",
+        "Sehun",
+        "Suffer"
     ],
-    "Cube Adonis": [
-        "yT",
-        "Sorn",
-        "peka",
-        "Easylove",
-        "Kit"
+    "Brave e-Sports": [
+        "Thulz",
+        "4LaN",
+        "Evrot",
+        "Sarkis",
+        "Cabu"
     ],
-    "Dplus Kia": [
-        "Siwoo",
-        "Lucid",
-        "ShowMaker",
-        "Smash",
-        "Career"
+    "Team Impulse": [
+        "Feng",
+        "Procxin",
+        "Pirean",
+        "Mash",
+        "Gate"
     ],
-    "Shopify Rebellion": [
-        "Fudge",
-        "Contractz",
-        "Zinie",
-        "Bvoy",
-        "Zeyzal"
+    "Kaos Latin Gamers": [
+        "Nate",
+        "Tierwulf",
+        "Plugo",
+        "Fix",
+        "Slow"
     ],
-    "Copenhagen Wolves Academy": [
-        "Morsu",
-        "Kirei",
-        "CozQ",
-        "Vizility",
-        "Hybrid"
+    "Team LoLPro": [
+        "Flaresz",
+        "Thinkcard",
+        "Yusui",
+        "Apollo",
+        "Keith"
     ],
-    "Operation Kino e-Sports": [
-        "Aoshi",
-        "Yampi",
-        "dyNquedo",
-        "Garo",
-        "BocaJR"
+    "Assassin Sniper": [
+        "MapleSnow",
+        "M4",
+        "Achie",
+        "BeBe",
+        "Weiiii"
     ],
-    "Dominus Esports": [
-        "Chelizi",
-        "xiaopeng",
-        "Twila",
-        "wynn",
-        "Yui"
-    ],
-    "Burst The Sky Esports": [
-        "Ryuk",
-        "Draktharr",
-        "Gloryy",
-        "Aomine",
-        "Elio"
-    ],
-    "Team Fusion": [
-        "Chunkyfresh",
-        "NintendudeX",
-        "huhi",
-        "Nien",
-        "Trance"
-    ],
-    "Newbee": [
-        "Skye",
-        "Swift",
-        "Coco",
-        "Lwx",
-        "Crisp"
-    ],
-    "Kiwoom DRX": [
-        "Frog",
-        "Willer",
-        "Ucal",
-        "Aiming",
-        "Minous"
+    "Fluxo": [
+        "Kiari",
+        "Shini",
+        "Fuuu",
+        "Trigo",
+        "scamber"
     ],
     "MVK Esports": [
         "Kratos",
@@ -2435,137 +2477,95 @@
         "Harky",
         "SiuLoong"
     ],
-    "Jin Air Green Wings": [
-        "TaNa",
-        "Malrang",
-        "Yaharong",
-        "Route",
-        "Kellin"
+    "Invictus Gaming": [
+        "TheShy",
+        "Wei",
+        "Rookie",
+        "JiaQi",
+        "Meiko"
     ],
-    "17 Academy": [
-        "BoBo",
-        "Gengar",
-        "SIUSIU",
-        "pasa",
-        "Eason"
+    "DN SOOPers": [
+        "DuDu",
+        "Sharvel",
+        "Clozer",
+        "deokdam",
+        "Peter"
     ],
-    "INTZ": [
-        "Yupps",
-        "Yampi",
-        "Dioge",
-        "NinjaKiwi",
-        "Damage"
+    "HANJIN BRION": [
+        "Casting",
+        "GIDEON",
+        "Roamer",
+        "Teddy",
+        "Namgung"
     ],
-    "KT Rolster": [
-        "PerfecT",
+    "Inferno Esports": [
+        "1jw",
+        "BornThisWay",
+        "Celest",
+        "Austerity",
+        "Moopz"
+    ],
+    "Longzhu Gaming": [
+        "Khan",
         "Cuzz",
         "Bdd",
-        "Jiwoo",
-        "Effort"
+        "PraY",
+        "GorillA"
     ],
-    "n!faculty": [
-        "Xaxus",
-        "Obvious",
-        "SozPurefect",
-        "Sedrion",
-        "MounTain"
+    "Be\u015fikta\u015f Esports": [
+        "Thaldrin",
+        "Theokoles",
+        "Energy",
+        "Nardeus",
+        "Dumbledoge"
     ],
-    "AS Esports": [
-        "Rigel",
-        "j1n5",
-        "playcool",
-        "Ouzi",
-        "Zin"
+    "Weibo Gaming": [
+        "Zika",
+        "Xiaohao",
+        "Xiaohu",
+        "Elk",
+        "Moham"
     ],
-    "Kingzone DragonX": [
-        "Rascal",
-        "Cuzz",
-        "Naehyun",
-        "Deft",
-        "TusiN"
+    "Dignitas": [
+        "Denathor",
+        "Dardoch",
+        "Palafox",
+        "FBI",
+        "Ignar"
     ],
-    "e-mFire": [
-        "Roach",
-        "Crush",
-        "Edge",
-        "Ssol",
-        "GuGer"
+    "FlyQuest": [
+        "Gakgos",
+        "Gryffinn",
+        "Quad",
+        "Massu",
+        "Cryogen"
     ],
-    "SK Gaming Prime": [
-        "beansu",
-        "Kold",
-        "Godbro",
-        "Steeelback",
-        "BarneyD"
+    "Movistar KOI": [
+        "Myrwn",
+        "Elyoya",
+        "Jojopyun",
+        "Supa",
+        "Alvaro"
     ],
-    "SDM Tigres": [
-        "Jauny",
-        "Mataz",
-        "Skyy",
-        "VirusFx",
-        "Ichiwin"
+    "Conviction": [
+        "TF Blade",
+        "Perry",
+        "V1per",
+        "Cody Sun",
+        "Stunt"
     ],
-    "Santos Dexterity": [
-        "Pizzayolo",
-        "Zuao",
-        "prZo",
-        "Theusma",
-        "Anjinho"
+    "Original Gaming": [
+        "Hamin",
+        "Zoro",
+        "Clyde",
+        "Tomoe",
+        "Mingi"
     ],
-    "Royal Club": [
-        "Letme",
-        "inSec",
-        "Corn",
-        "Bvoy",
-        "Ley"
-    ],
-    "Ground Zero Gaming": [
-        "1Jiang",
-        "Husha",
-        "Uniboy",
-        "Betty",
-        "Kaiwing"
-    ],
-    "Griffin": [
-        "Untara",
-        "Tarzan",
-        "Ucal",
-        "Viper",
-        "sanghyeon"
-    ],
-    "Renegades": [
-        "SERAPH",
-        "Crumbz",
-        "Ninja",
-        "Freeze",
-        "Hakuho"
-    ],
-    "HST": [
-        "VietThanh",
-        "HST Wady",
-        "HST Terry",
-        "HST DinhViet",
-        "Blue"
-    ],
-    "Miners": [
-        "DoRun",
-        "Hugato",
-        "Anyyy",
-        "Celo",
-        "Sive"
-    ],
-    "compLexity Gaming": [
-        "Westrice",
-        "Kez",
-        "pr0lly",
-        "ROBERTxLEE",
-        "Bubbadub"
-    ],
-    "Deep Cross Gaming": [
-        "Flauren",
-        "Pop9",
-        "HongSuo",
-        "Feng",
-        "ShiauC"
+    "Different Dimension": [
+        "WouLou",
+        "Anonpsycko",
+        "Lolleros",
+        "Dom1nant",
+        "WildPanda"
     ]
 }

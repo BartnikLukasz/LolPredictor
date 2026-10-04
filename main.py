@@ -31,24 +31,24 @@ if __name__ == '__main__':
     #                                 "dataset/match/2026_match_data.csv"],
     #                                "dataset/pregame/pregame.csv")
     #
-    # enriched_df, team_leaderboard = compute_team_elo_ratings(
-    #     filepath="dataset/pregame/pregame.csv",
-    #     output_filepath="dataset/pregame/pregame_dataset_with_elo.csv",
-    #     first_pick_bonus=10.0,
-    #     season_soft_reset_factor=0.2
-    # )
-    #
-    # compute_player_and_mastery_stats(
-    #     filepath="dataset/pregame/pregame_dataset_with_elo.csv",
-    #     output_filepath="dataset/pregame/pregame_dataset_with_player_stats.csv",
-    #     prior_weight=1.0,
-    #     prior_prob=0.50
-    # )
-    #
-    # calculate_champion_and_draft_stats(
-    #     input_filepath="dataset/pregame/pregame_dataset_with_player_stats.csv",
-    #     output_filepath="dataset/pregame/pregame_dataset_final_features.csv"
-    # )
+    enriched_df, team_leaderboard = compute_team_elo_ratings(
+        filepath="dataset/pregame/pregame.csv",
+        output_filepath="dataset/pregame/pregame_dataset_with_elo.csv",
+        first_pick_bonus=10.0,
+        season_soft_reset_factor=0.2
+    )
+
+    compute_player_and_mastery_stats(
+        filepath="dataset/pregame/pregame_dataset_with_elo.csv",
+        output_filepath="dataset/pregame/pregame_dataset_with_player_stats.csv",
+        prior_weight=1.0,
+        prior_prob=0.50
+    )
+
+    calculate_champion_and_draft_stats(
+        input_filepath="dataset/pregame/pregame_dataset_with_player_stats.csv",
+        output_filepath="dataset/pregame/pregame_dataset_final_features.csv"
+    )
 
     dataset_path = "dataset/pregame/pregame_dataset_final_features.csv"
 
@@ -98,4 +98,4 @@ if __name__ == '__main__':
 
     print("[ARTIFACT] Saved team rosters to 'models/team_rosters.json'")
 
-    # print(team_leaderboard.head(10))
+    print(team_leaderboard.head(10))

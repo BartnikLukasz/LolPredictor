@@ -3,6 +3,7 @@ from collections import defaultdict, deque
 
 import pandas as pd
 import numpy as np
+import datetime
 
 from calculators import team_momentum_calculator
 from calculators.team_momentum_calculator import add_momentum_features_to_dataset
@@ -85,7 +86,7 @@ def compute_team_elo_ratings(
     else:
         df['year'] = df['date'].dt.year
 
-    latest_year = int(df['year'].max())
+    latest_year = datetime.date.today().year
 
     # 2. Pre-scan pass: Lock each team's domestic home region (ignoring international events)
     team_home_regions = {}
@@ -131,6 +132,8 @@ def compute_team_elo_ratings(
     # 4. Iterate chronologically match by match
     for idx, row in df.iterrows():
         game_year = int(row['year'])
+        if game_year > datetime.date.today().year:
+            game_year = datetime.date.today().year
 
         # Soft-reset team ratings at start of new calendar year towards team's fixed base Elo
         if current_year is not None and game_year != current_year and season_soft_reset_factor > 0:
