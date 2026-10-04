@@ -1,2 +1,5 @@
 dataset
 live-data
+calculators/credentials.json
+calculators/token.json
+.streamlit

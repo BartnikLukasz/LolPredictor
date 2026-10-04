@@ -1,9 +1,9 @@
 {
-    "C": 0.00024385825134007176,
-    "l1_ratio": 0.02924882094534106,
+    "C": 0.00018335340329913015,
+    "l1_ratio": 0.020456277774627604,
     "penalty": "elasticnet",
     "solver": "saga",
     "max_iter": 2000,
     "random_state": 42,
-    "best_logloss": 0.628578
+    "best_logloss": 0.636155
 }

@@ -92,6 +92,4 @@ def convert_live_json_to_model_csvs(output_dir: str = "live_csvs"):
 
 
 if __name__ == "__main__":
-    convert_live_json_to_model_csvs(
-        output_dir="live-data/"
-    )
+    convert_live_json_to_model_csvs(output_dir="live-data/")

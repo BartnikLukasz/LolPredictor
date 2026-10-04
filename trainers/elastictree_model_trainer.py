@@ -10,15 +10,22 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.impute import SimpleImputer
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
-from sklearn.metrics import accuracy_score, log_loss, roc_auc_score, classification_report
+from sklearn.metrics import (
+    accuracy_score,
+    log_loss,
+    roc_auc_score,
+    brier_score_loss
+)
 
 from trainers.trainer_helpers import extract_features, save_feature_importance
+from util import save_validation_predictions
 
 # --- PATH CONFIGURATION ---
 DATASET_PATH = "dataset/pregame/pregame_dataset_final_features.csv"
 PARAMS_PATH = "models/elastictree_best_params.json"
 MODEL_OUTPUT_PATH = "models/elastictree_model.pkl"
 TARGET_COL = "blue_win"
+
 
 def compress_tree_model(pipeline, decimals: int = 4):
     """
@@ -33,6 +40,7 @@ def compress_tree_model(pipeline, decimals: int = 4):
         np.round(tree.threshold, decimals=decimals, out=tree.threshold)
         np.round(tree.value, decimals=decimals, out=tree.value)
 
+
 def load_best_params(params_path: str) -> dict:
     """Loads ExtraTrees hyperparameters from JSON if present, otherwise returns defaults."""
     default_params = {
@@ -46,15 +54,15 @@ def load_best_params(params_path: str) -> dict:
     }
 
     if os.path.exists(params_path):
-        print(f"📥 Loading custom hyperparameters from '{params_path}'...")
+        print(f"[CONFIG] Loading custom hyperparameters from '{params_path}'...")
         try:
             with open(params_path, "r") as f:
                 user_params = json.load(f)
             default_params.update(user_params)
         except Exception as e:
-            print(f"⚠️ Error reading JSON parameter file ({e}). Falling back to defaults.")
+            print(f"[!] Error reading JSON parameter file ({e}). Falling back to defaults.")
     else:
-        print(f"ℹ️ Parameter file '{params_path}' not found. Using default hyperparameter values.")
+        print(f"[CONFIG] Parameter file '{params_path}' not found. Using default hyperparameter values.")
 
     return default_params
 
@@ -75,58 +83,8 @@ def select_feature_columns(df: pd.DataFrame):
     return feature_cols, num_cols, cat_cols
 
 
-def train_elastictree(
-        filepath: str = DATASET_PATH,
-        dynamic_test_window: int = 60,
-        full_train: bool = False,
-        params_path: str = PARAMS_PATH,
-        output_model_path: str = MODEL_OUTPUT_PATH,
-        importance_output_path: str = "metadata/elastictree_feature_importance.csv"
-):
-    # 1. Load Data & Sort Chronologically
-    if not os.path.exists(filepath):
-        raise FileNotFoundError(f"Dataset not found at path: {filepath}")
-
-    print(f"📊 Reading dataset from '{filepath}'...")
-    df = pd.read_csv(filepath, low_memory=False)
-
-    if TARGET_COL not in df.columns:
-        raise KeyError(f"Target column '{TARGET_COL}' not found in dataset.")
-
-    df['date'] = pd.to_datetime(df['date'])
-    df = df.sort_values('date').reset_index(drop=True)
-
-    # 2. Extract Feature Subsets (Raw un-encoded DataFrames)
-    feature_cols, num_cols, cat_cols = select_feature_columns(df)
-    X = df[feature_cols].copy()
-    y = df[TARGET_COL].values
-
-    # 3. Splitting Strategy
-    print("=" * 60)
-    print("              ELASTICTREE MODEL TRAINING                ")
-    print("=" * 60)
-    print(f"Dataset Loaded: {len(df)} matches | Raw Features: {len(feature_cols)}")
-
-    split_date = date.today() - timedelta(days=dynamic_test_window)
-
-    if full_train:
-        print("🌐 Mode: FULL DATASET TRAINING (Ignoring split date)")
-        X_train, y_train = X, y
-        X_val, y_val = None, None
-        print(f"Training Set Size: {len(X_train)} matches (100% of data)")
-    else:
-        print(f"📅 Mode: DATE-BASED SPLIT (Split Date: {split_date})")
-        split_dt = pd.to_datetime(split_date)
-        split_mask = df['date'] >= split_dt
-        split_idx = int(split_mask.idxmax())
-
-        X_train, y_train = X.iloc[:split_idx], y[:split_idx]
-        X_val, y_val = X.iloc[split_idx:], y[split_idx:]
-        print(f"Train Set: {len(X_train)} matches (< {split_date})")
-        print(f"Validation Set: {len(X_val)} matches (>= {split_date})")
-    print("=" * 60)
-
-    # 4. Construct Preprocessing & Model Pipeline
+def build_pipeline(num_cols: list, cat_cols: list, params: dict) -> Pipeline:
+    """Constructs the preprocessor and ExtraTrees classifier pipeline."""
     num_transformer = Pipeline([
         ('imputer', SimpleImputer(strategy='median'))
     ])
@@ -143,57 +101,134 @@ def train_elastictree(
         ]
     )
 
-    params = load_best_params(params_path)
-    params.pop('best_logloss', None)
     tree_model = ExtraTreesClassifier(**params)
 
-    # Wrap preprocessor and classifier in a single Pipeline
-    full_pipeline = Pipeline([
+    return Pipeline([
         ('preprocessor', preprocessor),
         ('model', tree_model)
     ])
 
-    print("\n🚀 Starting ElasticTree (Pipeline) Training...")
-    full_pipeline.fit(X_train, y_train)
 
-    # 5. Evaluate Metrics
-    if full_train or X_val is None:
-        eval_X, eval_y = X_train, y_train
-        eval_label = "TRAINING (FULL DATASET)"
-    else:
-        eval_X, eval_y = X_val, y_val
-        eval_label = "VALIDATION"
+def train_elastictree(
+        filepath: str = DATASET_PATH,
+        dynamic_test_window: int = 60,
+        only_full_train: bool = False,
+        params_path: str = PARAMS_PATH,
+        output_model_path: str = MODEL_OUTPUT_PATH,
+        importance_output_path: str = "metadata/elastictree_feature_importance.csv",
+        predictions_output_path: str = "metadata/predictions/elastictree_predictions.csv"
+):
+    """
+    Trains an ElasticTree (ExtraTrees) model using best parameters from tuner if available.
 
-    eval_preds_prob = full_pipeline.predict_proba(eval_X)[:, 1]
-    eval_preds_binary = (eval_preds_prob >= 0.5).astype(int)
+    By default (only_full_train=False):
+      Phase 1: Trains on historical split, evaluates on validation test window, prints performance, and saves validation predictions.
+      Phase 2: Trains on the 100% full dataset, optimizes precision for compression, and saves the final pipeline artifact.
+    """
+    # 1. Load Data & Sort Chronologically
+    if not os.path.exists(filepath):
+        raise FileNotFoundError(f"Dataset not found at path: {filepath}")
 
-    acc = accuracy_score(eval_y, eval_preds_binary)
-    auc = roc_auc_score(eval_y, eval_preds_prob)
-    loss = log_loss(eval_y, eval_preds_prob)
+    print(f"Reading dataset from '{filepath}'...")
+    df = pd.read_csv(filepath, low_memory=False)
 
-    print("\n" + "=" * 60)
-    print(f"🎯 PERFORMANCE METRICS ({eval_label})")
-    print("=" * 60)
-    print(f"Accuracy : {acc * 100:.2f}%")
-    print(f"ROC-AUC  : {auc:.4f}")
-    print(f"Log Loss : {loss:.4f}")
-    print("-" * 60)
-    print(classification_report(eval_y, eval_preds_binary, digits=4))
+    if TARGET_COL not in df.columns:
+        raise KeyError(f"Target column '{TARGET_COL}' not found in dataset.")
 
-    # OPTIMIZATION STEP: Reduce Float Precision prior to saving
-    print("🗜️ Optimizing tree precision for maximum compression...")
-    compress_tree_model(full_pipeline, decimals=4)
+    df['date'] = pd.to_datetime(df['date'])
+    df = df.sort_values('date').reset_index(drop=True)
 
-    # 6. Save Full Pipeline Artifact
-    os.makedirs(os.path.dirname(output_model_path), exist_ok=True)
+    # 2. Extract Feature Subsets
+    feature_cols, num_cols, cat_cols = select_feature_columns(df)
+    X = df[feature_cols].copy()
+    y = df[TARGET_COL].values
+
+    print(f"Loaded {len(df)} matches | Raw Features selected: {len(feature_cols)}")
+
+    # 3. Load Hyperparameters
+    params = load_best_params(params_path)
+    params.pop('best_logloss', None)
+
+    # 4. Check Test Split Availability
+    latest_dataset_date = df['date'].max()
+    split_date = date.today() - timedelta(days=dynamic_test_window)
+    split_dt = pd.to_datetime(split_date)
+
+    if split_dt >= latest_dataset_date:
+        print(f"\n[INFO] split_date '{split_date}' is on/after latest match ({latest_dataset_date.strftime('%Y-%m-%d')}). Skipping test validation phase.")
+        only_full_train = True
+
+    # -------------------------------------------------------------------------
+    # PHASE 1: Validation Run & Prediction Export (Skipped if only_full_train=True)
+    # -------------------------------------------------------------------------
+    if not only_full_train:
+        split_mask = df['date'] >= split_dt
+        split_idx = int(split_mask.idxmax())
+
+        X_train, y_train = X.iloc[:split_idx], y[:split_idx]
+        X_val, y_val = X.iloc[split_idx:], y[split_idx:]
+        test_df = df.iloc[split_idx:].copy()
+
+        train_dates = df['date'].iloc[:split_idx]
+        test_dates = df['date'].iloc[split_idx:]
+
+        print("\n" + "=" * 55)
+        print("   PHASE 1: ELASTICTREE VALIDATION & EVALUATION    ")
+        print("=" * 55)
+        print(f"Train Period: {train_dates.min().strftime('%Y-%m-%d')} to {train_dates.max().strftime('%Y-%m-%d')} ({len(X_train)} matches)")
+        print(f"Test Period:  {test_dates.min().strftime('%Y-%m-%d')} to {test_dates.max().strftime('%Y-%m-%d')} ({len(X_val)} matches)")
+        print("-" * 55)
+
+        val_pipeline = build_pipeline(num_cols, cat_cols, params)
+        val_pipeline.fit(X_train, y_train)
+
+        val_probs = val_pipeline.predict_proba(X_val)[:, 1]
+        val_preds = (val_probs >= 0.50).astype(int)
+
+        acc = accuracy_score(y_val, val_preds)
+        loss = log_loss(y_val, val_probs)
+        auc = roc_auc_score(y_val, val_probs)
+        brier = brier_score_loss(y_val, val_probs)
+
+        print("\n" + "=" * 45)
+        print("    ELASTICTREE PREDICTION EVALUATION MODEL     ")
+        print("=" * 45)
+        print(f"Accuracy:    {acc * 100:.2f}%")
+        print(f"Log-Loss:    {loss:.4f} (Baseline ~0.693)")
+        print(f"ROC-AUC:     {auc:.4f}")
+        print(f"Brier Score: {brier:.4f}")
+        print("=" * 45)
+
+        # Save test validation predictions CSV
+        save_validation_predictions(test_df, y_val, val_probs, predictions_output_path)
+
+    # -------------------------------------------------------------------------
+    # PHASE 2: Full Dataset Training & Model Export
+    # -------------------------------------------------------------------------
+    start_dt = df['date'].min().strftime('%Y-%m-%d')
+    end_dt = df['date'].max().strftime('%Y-%m-%d')
+
+    print("\n" + "=" * 55)
+    print("    PHASE 2: ELASTICTREE FULL DATASET TRAINING     ")
+    print(f"Training on all {len(df)} matches ({start_dt} to {end_dt})")
+    print("=" * 55)
+
+    final_pipeline = build_pipeline(num_cols, cat_cols, params)
+    final_pipeline.fit(X, y)
+
+    # Reduce Float Precision prior to saving for high compression
+    print("[OPTIMIZATION] Optimizing tree precision for maximum compression...")
+    compress_tree_model(final_pipeline, decimals=4)
+
+    # Save Pipeline Artifact
+    os.makedirs(os.path.dirname(output_model_path) or '.', exist_ok=True)
     artifact = {
-        "pipeline": full_pipeline,
-        "model": full_pipeline,  # Assigned to both keys for backward compatibility with app.py
-        "feature_cols": feature_cols,
-        "metrics": {"accuracy": acc, "roc_auc": auc, "log_loss": loss}
+        "pipeline": final_pipeline,
+        "model": final_pipeline,  # Assigned to both keys for backward compatibility
+        "feature_cols": feature_cols
     }
     joblib.dump(artifact, output_model_path, compress=3)
-    print(f"\n💾 Trained ElasticTree Pipeline saved to '{output_model_path}'!")
+    print(f"[✓] Trained ElasticTree Pipeline successfully saved to '{output_model_path}'")
 
-    # 8. Feature Importance Analysis & Export
-    save_feature_importance(full_pipeline, feature_cols, importance_output_path)
+    # Export Feature Importance
+    save_feature_importance(final_pipeline, feature_cols, importance_output_path)
