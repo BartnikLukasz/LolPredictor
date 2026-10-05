@@ -1,193 +1,86 @@
-import os
-import json
-from datetime import date, timedelta
-
-import pandas as pd
 import numpy as np
 import xgboost as xgb
-from sklearn.metrics import (
-    accuracy_score,
-    log_loss,
-    roc_auc_score,
-    brier_score_loss
-)
-from xgboost import XGBClassifier
 
-from trainers.trainer_helpers import extract_features, save_feature_importance
-from util import save_validation_predictions
+from trainers.engine import ModelSpec, train_model
+from trainers.trainer_helpers import DATASET_PATH, HOLDOUT_DAYS, RANDOM_SEED
+
+# --- PATH CONFIGURATION (unchanged; models/xgboost_model.json is what app.py loads) ---
+PARAMS_PATH = "models/best_params.json"
+MODEL_OUTPUT_PATH = "models/xgboost_model.json"
+
+MAX_TREES = 1500            # cap during tuning only; the real count comes from early stopping inside CV folds
+EARLY_STOPPING_ROUNDS = 50
+
+
+class XGBoostSpec(ModelSpec):
+    name = "xgboost"
+    label = "XGBoost"
+    cat_mode = "category"
+    iteration_key = "n_estimators"
+    params_path = PARAMS_PATH
+    model_path = MODEL_OUTPUT_PATH
+    importance_path = "metadata/xgboost_feature_importance.csv"
+    predictions_path = "metadata/predictions/xgboost_predictions.csv"
+
+    def defaults(self):
+        return {"n_estimators": 300, "learning_rate": 0.03, "max_depth": 3, "min_child_weight": 10,
+                "subsample": 0.8, "colsample_bytree": 0.7, "reg_lambda": 5.0, "reg_alpha": 0.5, "gamma": 0.0}
+
+    def suggest(self, trial):
+        return {
+            "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.1, log=True),
+            "max_depth": trial.suggest_int("max_depth", 2, 7),
+            "min_child_weight": trial.suggest_float("min_child_weight", 1.0, 40.0, log=True),
+            "subsample": trial.suggest_float("subsample", 0.5, 1.0),
+            "colsample_bytree": trial.suggest_float("colsample_bytree", 0.3, 1.0),
+            "reg_lambda": trial.suggest_float("reg_lambda", 0.5, 50.0, log=True),
+            "reg_alpha": trial.suggest_float("reg_alpha", 1e-3, 10.0, log=True),
+            "gamma": trial.suggest_float("gamma", 0.0, 2.0),
+        }
+
+    @staticmethod
+    def _model_params(params, cat_cols):
+        p = dict(params)
+        p.update(tree_method="hist", n_jobs=-1, random_state=RANDOM_SEED, eval_metric="logloss",
+                 enable_categorical=bool(cat_cols))
+        return p
+
+    def fit_eval(self, X_tr, y_tr, X_va, y_va, params, cat_cols):
+        p = self._model_params(params, cat_cols)
+        p.update(n_estimators=MAX_TREES, early_stopping_rounds=EARLY_STOPPING_ROUNDS)
+        model = xgb.XGBClassifier(**p)
+        model.fit(X_tr, y_tr, eval_set=[(X_va, y_va)], verbose=False)
+        best_n = int(model.best_iteration) + 1
+        proba = model.predict_proba(X_va, iteration_range=(0, best_n))[:, 1]
+        return proba, best_n
+
+    def fit(self, X, y, params, cat_cols):
+        model = xgb.XGBClassifier(**self._model_params(params, cat_cols))
+        model.fit(X, y, verbose=False)
+        return model
+
+    def save(self, model, path, feature_cols, cat_cols, X_check=None):
+        model.save_model(path)
+
+
+SPEC = XGBoostSpec()
 
 
 def train_lol_prediction_model(
-        filepath: str,
-        test_split_ratio: float = 0.20,
-        dynamic_test_window: int = 60,
+        filepath: str = DATASET_PATH,
+        test_split_ratio: float = 0.20,            # kept for signature compatibility; unused
+        dynamic_test_window: int = HOLDOUT_DAYS,
         only_full_train: bool = False,
-        params_filepath: str = "models/best_params.json",
-        output_model_path: str = "models/xgboost_model.json",
-        importance_output_path: str = "metadata/xgboost_feature_importance.csv",
-        predictions_output_path: str = "metadata/predictions/xgboost_predictions.csv"
-) -> XGBClassifier:
-    """
-    Trains and evaluates an XGBoost model on pre-game LoL match features.
-
-    By default (only_full_train=False):
-      Phase 1: Trains on train split, evaluates on test split, prints performance, and saves validation predictions.
-      Phase 2: Trains on the full dataset and saves the final model binary.
-    """
-    # 1. Load dataset & sort chronologically
-    df = pd.read_csv(filepath, low_memory=False)
-    df['date'] = pd.to_datetime(df['date'])
-    df = df.sort_values('date').reset_index(drop=True)
-
-    target_col = 'blue_win'
-    feature_cols = extract_features(df)
-
-    champ_features = [
-        'blue_top_champion', 'blue_jng_champion', 'blue_mid_champion', 'blue_bot_champion', 'blue_sup_champion',
-        'red_top_champion', 'red_jng_champion', 'red_mid_champion', 'red_bot_champion', 'red_sup_champion'
-    ]
-    champ_features = [c for c in champ_features if c in df.columns]
-
-    print(f"Loaded {len(df)} matches. Total features selected for training: {len(feature_cols)}")
-
-    # 2. Preprocess Categorical Champion Features
-    X = df[feature_cols].copy()
-    y = df[target_col].values
-
-    for col in champ_features:
-        X[col] = X[col].astype('category')
-
-    # 3. Load Hyperparameters
-    if os.path.exists(params_filepath):
-        print(f"[CONFIG] Found '{params_filepath}'. Loading optimized hyperparameters...")
-        with open(params_filepath, 'r') as f:
-            model_params = json.load(f)
-    else:
-        print(f"[CONFIG] '{params_filepath}' not found. Using default XGBoost hyperparameters...")
-        model_params = {
-            'n_estimators': 1000,
-            'learning_rate': 0.01,
-            'max_depth': 4,
-            'subsample': 0.8,
-            'colsample_bytree': 0.8,
-            'eval_metric': 'logloss',
-            'enable_categorical': True,
-            'random_state': 42
-        }
-
-    model_params.pop('best_logloss', None)
-
-    # 4. Check Test Split Availability
-    latest_dataset_date = df['date'].max()
-    split_date = date.today() - timedelta(days=dynamic_test_window)
-
-    if split_date:
-        split_dt = pd.to_datetime(split_date)
-        if split_dt >= latest_dataset_date:
-            print(
-                f"\n[INFO] split_date '{split_date}' is on/after latest match ({latest_dataset_date.strftime('%Y-%m-%d')}). Skipping test validation phase.")
-            only_full_train = True
-
-    # -------------------------------------------------------------------------
-    # PHASE 1: Validation Run & Prediction Export (Skipped if only_full_train=True)
-    # -------------------------------------------------------------------------
-    if not only_full_train:
-        if split_date:
-            split_mask = df['date'] >= split_dt
-            split_idx = int(split_mask.idxmax())
-        else:
-            split_idx = int(len(df) * (1 - test_split_ratio))
-
-        X_train, y_train = X.iloc[:split_idx], y[:split_idx]
-        X_test, y_test = X.iloc[split_idx:], y[split_idx:]
-        test_df = df.iloc[split_idx:].copy()
-
-        train_dates = df['date'].iloc[:split_idx]
-        test_dates = df['date'].iloc[split_idx:]
-
-        print("\n" + "=" * 55)
-        print("         PHASE 1: VALIDATION & EVALUATION          ")
-        print("=" * 55)
-        print(
-            f"Train Period: {train_dates.min().strftime('%Y-%m-%d')} to {train_dates.max().strftime('%Y-%m-%d')} ({len(X_train)} matches)")
-        print(
-            f"Test Period:  {test_dates.min().strftime('%Y-%m-%d')} to {test_dates.max().strftime('%Y-%m-%d')} ({len(X_test)} matches)")
-        print("-" * 55)
-
-        val_params = model_params.copy()
-        val_model = xgb.XGBClassifier(**val_params)
-        val_model.fit(
-            X_train, y_train,
-            eval_set=[(X_test, y_test)],
-            verbose=False
-        )
-
-        preds_proba = val_model.predict_proba(X_test)[:, 1]
-        preds_binary = (preds_proba >= 0.50).astype(int)
-
-        acc = accuracy_score(y_test, preds_binary)
-        loss = log_loss(y_test, preds_proba)
-        auc = roc_auc_score(y_test, preds_proba)
-        brier = brier_score_loss(y_test, preds_proba)
-
-        print("\n" + "=" * 45)
-        print("      MATCH PREDICTION EVALUATION MODEL     ")
-        print("=" * 45)
-        print(f"Accuracy:    {acc * 100:.2f}%")
-        print(f"Log-Loss:    {loss:.4f} (Baseline ~0.693)")
-        print(f"ROC-AUC:     {auc:.4f}")
-        print(f"Brier Score: {brier:.4f}")
-        print("=" * 45)
-
-        # Performance summary by league
-        test_df['pred_proba'] = preds_proba
-        test_df['pred_binary'] = preds_binary
-
-        league_stats = []
-        for league_name, group in test_df.groupby('league'):
-            y_sub = group[target_col].values
-            p_sub = group['pred_proba'].values
-            b_sub = group['pred_binary'].values
-
-            acc_sub = accuracy_score(y_sub, b_sub)
-            loss_sub = log_loss(y_sub, p_sub, labels=[0, 1])
-            auc_sub = round(roc_auc_score(y_sub, p_sub), 4) if len(np.unique(y_sub)) > 1 else "N/A"
-
-            league_stats.append({
-                'League': league_name,
-                'Matches': len(group),
-                'Accuracy (%)': round(acc_sub * 100, 2),
-                'Log-Loss': round(loss_sub, 4),
-                'ROC-AUC': auc_sub
-            })
-
-        league_summary = pd.DataFrame(league_stats).sort_values('Matches', ascending=False).reset_index(drop=True)
-        print("\n" + "=" * 55)
-        print("          PERFORMANCE ACCURACY BY LEAGUE           ")
-        print("=" * 55)
-        print(league_summary.to_string(index=False))
-        print("=" * 55)
-
-        # Save test validation predictions CSV
-        save_validation_predictions(test_df, y_test, preds_proba, predictions_output_path)
-
-    # -------------------------------------------------------------------------
-    # PHASE 2: Full Dataset Training & Model Export
-    # -------------------------------------------------------------------------
-    print("\n" + "=" * 55)
-    print("          PHASE 2: FULL DATASET TRAINING          ")
-    print(f"Training on all {len(X)} matches up to {latest_dataset_date.strftime('%Y-%m-%d')}")
-    print("=" * 55)
-
-    full_params = model_params.copy()
-    full_params.pop('early_stopping_rounds', None)
-
-    final_model = xgb.XGBClassifier(**full_params)
-    final_model.fit(X, y, verbose=False)
-
-    # Export Feature Importance & Final Model Binary
-    save_feature_importance(final_model, feature_cols, importance_output_path)
-    final_model.save_model(output_model_path)
-    print(f"[SUCCESS] Model binary successfully saved to '{output_model_path}'")
-
-    return final_model
+        params_filepath: str = PARAMS_PATH,
+        output_model_path: str = MODEL_OUTPUT_PATH,
+        importance_output_path: str = SPEC.importance_path,
+        predictions_output_path: str = SPEC.predictions_path,
+        **kwargs
+) -> xgb.XGBClassifier:
+    """Honest holdout evaluation, then a full-data refit saved for the live app. See engine.train_model."""
+    return train_model(
+        SPEC, filepath=filepath, dynamic_test_window=dynamic_test_window, only_full_train=only_full_train,
+        params_path=params_filepath, model_output_path=output_model_path,
+        importance_output_path=importance_output_path, predictions_output_path=predictions_output_path,
+        **kwargs
+    )["model"]
