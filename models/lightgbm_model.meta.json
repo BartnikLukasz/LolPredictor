@@ -1,6 +1,6 @@
 {
   "model": "lightgbm",
-  "created_at": "2026-10-06T07:17:00",
+  "created_at": "2026-10-06T09:28:28",
   "feature_profile": "live_supported",
   "use_raw_champions": false,
   "feature_cols": [
@@ -63,13 +63,13 @@
     "brier": 0.22467352939432883,
     "accuracy": 0.6383601756954612,
     "auc": 0.6673741178967475,
-    "ece": 0.032771255272296115,
+    "ece": 0.03277125527229611,
     "n": 683,
     "accuracy_ci95": 0.03603435369934996,
     "vs_elo": {
       "mean": -0.01574866231788241,
       "lo": -0.026341478584354528,
-      "hi": -0.005318813956681155
+      "hi": -0.005318813956681154
     },
     "vs_base_rate": {
       "mean": -0.04306008498274168,
@@ -78,11 +78,11 @@
     }
   },
   "versions": {
-    "python": "3.11.16",
-    "numpy": "2.4.6",
-    "pandas": "3.0.6",
-    "scikit-learn": "1.9.1",
-    "xgboost": "3.2.0",
+    "python": "3.12.0",
+    "numpy": "2.5.2",
+    "pandas": "3.0.5",
+    "scikit-learn": "1.9.0",
+    "xgboost": "3.4.1",
     "lightgbm": "4.7.0",
     "catboost": "1.2.10"
   }
