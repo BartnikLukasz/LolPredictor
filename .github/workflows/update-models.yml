@@ -1,0 +1,46 @@
+name: Update models
+
+on:
+  schedule:
+    - cron: "0 7 * * *"      # every day at 07:00 UTC (GitHub cron is always UTC and may start a few minutes late)
+  workflow_dispatch:         # adds a "Run workflow" button: GitHub website or GitHub mobile app
+
+permissions:
+  contents: write            # lets the job push the commit back to the repo
+
+concurrency:
+  group: update-models       # never run two updates at once
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240     # GitHub-hosted jobs are hard-capped at 6 hours
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip         # needs requirements.txt at the repo root
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          # training-only packages the web app may not list; harmless if already present
+          pip install google-api-python-client google-auth-oauthlib google-auth
+
+      - name: Restore Google Drive token
+        env:
+          GOOGLE_TOKEN_JSON: ${{ secrets.GOOGLE_TOKEN_JSON }}
+        run: printf '%s' "$GOOGLE_TOKEN_JSON" > token.json
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Run pipeline, commit and push
+        env:
+          REFRESH_DATA: "1"  # main.py should run the download/feature steps when this is set (see notes)
+        run: python daily_model_update.py
