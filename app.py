@@ -2,28 +2,26 @@ import copy
 import json
 import os
 from datetime import datetime
-import xgboost as xgb
+
 import joblib
 import pandas as pd
-import requests
-import streamlit as st
 import plotly.graph_objects as go
+import streamlit as st
+import xgboost as xgb
 
 from app_helpers import (
-    compute_model_accuracies,
-    match_team_name,
-    match_champion_name,
-    fetch_golgg_draft,
-    prob_to_american_odds,
-    get_historical_team_metrics,
+    apply_live_series_elo_adjustment,
     compute_db_model_weights,
+    compute_model_accuracies,
     create_weighted_ensemble_result,
+    fetch_golgg_draft,
+    get_historical_team_metrics,
+    match_champion_name,
+    match_team_name,
+    prob_to_american_odds,
     send_odds_to_endpoint,
-    apply_live_series_elo_adjustment
 )
 from live_feature_engine import LiveFeatureEngine
-from upstash_redis import Redis
-
 from util import generate_game_id
 
 st.set_page_config(page_title="LoL Match Predictor", layout="wide")
@@ -46,12 +44,98 @@ def check_is_admin() -> bool:
         admin_secret = ""
     if not admin_secret:
         return False
-    if st.query_params.get("admin") == admin_secret or st.session_state.get("is_admin", False):
-        return True
-    return False
+    return st.query_params.get("admin") == admin_secret or st.session_state.get("is_admin", False)
 
 
-# --- TEAM ROSTER CALLBACKS ---
+@st.cache_resource
+def get_redis_client():
+    """Initializes Upstash Redis safely with fallback handling."""
+    try:
+        url = st.secrets.get("UPSTASH_REDIS_REST_URL")
+        token = st.secrets.get("UPSTASH_REDIS_REST_TOKEN")
+        if url and token:
+            from upstash_redis import Redis
+            return Redis(url=url, token=token)
+    except Exception:
+        pass
+    return None
+
+
+redis = get_redis_client()
+
+
+def load_tracking_data() -> dict:
+    """Loads prediction tracking stats from Redis or local session state."""
+    if redis is not None:
+        try:
+            raw_data = redis.get(TRACKING_KEY)
+            if raw_data:
+                return json.loads(raw_data) if isinstance(raw_data, str) else raw_data
+        except Exception:
+            pass
+    return st.session_state.get("local_tracking_data", {"total_games": 0, "correct_predictions": 0, "logs": []})
+
+
+def save_tracking_data(data: dict):
+    """Saves tracking stats to Redis or local session state."""
+    if redis is not None:
+        try:
+            redis.set(TRACKING_KEY, json.dumps(data))
+            return
+        except Exception:
+            pass
+    st.session_state["local_tracking_data"] = data
+
+
+@st.cache_resource
+def load_predictor_assets():
+    dataset_path = "dataset/pregame/pregame_dataset_final_features.csv"
+    if not os.path.exists(dataset_path):
+        st.error(f"Dataset path '{dataset_path}' not found.")
+        st.stop()
+
+    base_engine = LiveFeatureEngine(dataset_path=dataset_path)
+    engines = {}
+
+    for model_name, model_path in MODEL_REGISTRY.items():
+        if os.path.exists(model_path):
+            eng = copy.deepcopy(base_engine)
+            if model_path.endswith(".json"):
+                model = xgb.XGBClassifier()
+                model.load_model(model_path)
+                eng.model = model
+            else:
+                artifact = joblib.load(model_path)
+                if isinstance(artifact, dict):
+                    eng.model = artifact.get("pipeline", artifact.get("model", artifact))
+                else:
+                    eng.model = artifact
+            engines[model_name] = eng
+        else:
+            engines[model_name] = base_engine
+
+    roster_path = "models/team_rosters.json"
+    if os.path.exists(roster_path):
+        with open(roster_path, "r") as f:
+            roster_data = json.load(f)
+    else:
+        roster_data = {"T1": ["Zeus", "Oner", "Faker", "Gumayusi", "Keria"]}
+
+    champ_cols = [c for c in base_engine.df_hist.columns if 'champion' in c]
+    champions_set = set()
+    for col in champ_cols:
+        champions_set.update(base_engine.df_hist[col].dropna().unique().tolist())
+
+    champions_list = sorted(list(champions_set)) if champions_set else ["Ahri", "Aatrox", "Azir"]
+    return engines, roster_data, champions_list, base_engine.df_hist
+
+
+# Load Predictor Assets
+engines, team_rosters, champion_list, df_hist = load_predictor_assets()
+is_admin = check_is_admin()
+
+
+# --- ROSTER CALLBACKS ---
 def update_blue_roster_callback():
     selected_team = st.session_state.get("blue_team_select")
     roster = team_rosters.get(selected_team, ["", "", "", "", ""])
@@ -80,69 +164,6 @@ def swap_sides_callback():
         if bp_key in st.session_state and rp_key in st.session_state:
             st.session_state[bp_key], st.session_state[rp_key] = st.session_state[rp_key], st.session_state[bp_key]
 
-
-@st.cache_resource
-def get_redis_client():
-    return Redis(
-        url=st.secrets["UPSTASH_REDIS_REST_URL"],
-        token=st.secrets["UPSTASH_REDIS_REST_TOKEN"]
-    )
-
-
-redis = get_redis_client()
-
-
-def load_tracking_data() -> dict:
-    raw_data = redis.get(TRACKING_KEY)
-    if not raw_data:
-        return {"total_games": 0, "correct_predictions": 0, "logs": []}
-    if isinstance(raw_data, str):
-        return json.loads(raw_data)
-    return raw_data
-
-
-def save_tracking_data(data: dict):
-    redis.set(TRACKING_KEY, json.dumps(data))
-
-
-@st.cache_resource
-def load_predictor_assets():
-    dataset_path = "dataset/pregame/pregame_dataset_final_features.csv"
-    base_engine = LiveFeatureEngine(dataset_path=dataset_path)
-    engines = {}
-
-    for model_name, model_path in MODEL_REGISTRY.items():
-        if os.path.exists(model_path):
-            eng = copy.deepcopy(base_engine)
-            if model_path.endswith(".json"):
-                model = xgb.XGBClassifier()
-                model.load_model(model_path)
-                eng.model = model
-            else:
-                artifact = joblib.load(model_path)
-                if isinstance(artifact, dict):
-                    eng.model = artifact.get("pipeline", artifact.get("model", artifact))
-                else:
-                    eng.model = artifact
-            engines[model_name] = eng
-        else:
-            engines[model_name] = base_engine
-
-    with open("models/team_rosters.json", "r") as f:
-        roster_data = json.load(f)
-
-    champ_cols = [c for c in base_engine.df_hist.columns if 'champion' in c]
-    champions_set = set()
-    for col in champ_cols:
-        champions_set.update(base_engine.df_hist[col].dropna().unique().tolist())
-
-    champions_list = sorted(list(champions_set)) if champions_set else ["Ahri", "Aatrox", "Azir"]
-    return engines, roster_data, champions_list, base_engine.df_hist
-
-
-# Load Predictor Assets
-engines, team_rosters, champion_list, df_hist = load_predictor_assets()
-is_admin = check_is_admin()
 
 # --- SIDEBAR ---
 st.sidebar.title("🎯 Live Accuracy Tracker")
@@ -258,7 +279,7 @@ with st.expander("🌐 Import Match Draft from gol.gg", expanded=True):
             else:
                 st.warning("Please enter a valid gol.gg match URL.")
 
-# --- INITIALIZE DEFAULT ROSTERS IN SESSION STATE IF UNSET ---
+# --- INITIALIZE DEFAULT ROSTERS IN SESSION STATE ---
 if "bp_0" not in st.session_state:
     initial_blue = st.session_state.get("blue_team_select", list(team_rosters.keys())[0] if team_rosters else "")
     blue_def = team_rosters.get(initial_blue, ["", "", "", "", ""])
@@ -309,7 +330,10 @@ with s3:
     blue_series_lead = st.number_input(f"{blue_team} Series Lead", -2, 2, 0)
 with s4:
     blue_prev_win_raw = st.selectbox(f"Did {blue_team} Win Previous Game?", options=["N/A (Game 1)", "Yes", "No"])
-    blue_prev_win = 1 if blue_prev_win_raw == "Yes" else 0
+    if blue_prev_win_raw == "N/A (Game 1)":
+        blue_prev_win = 0.5
+    else:
+        blue_prev_win = 1.0 if blue_prev_win_raw == "Yes" else 0.0
 
 st.markdown("---")
 
@@ -405,7 +429,7 @@ if st.button("Calculate Match Probabilities", type="primary", use_container_widt
     st.session_state["selected_actual_winner"] = blue_team
 
     st.session_state["active_prediction"] = {
-        "game_id": game_id,  # <-- ADDED HERE
+        "game_id": game_id,
         "blue_team": blue_team,
         "red_team": red_team,
         "model_results": all_model_results,
@@ -474,7 +498,7 @@ def render_model_dashboard(model_name: str, results: dict, active_pred: dict, h2
                     current_track_data["correct_predictions"] = current_track_data.get("correct_predictions", 0) + 1
 
                 current_track_data.setdefault("logs", []).append({
-                    "game_id": active_pred.get("game_id", ""),  # <-- ADDED HERE
+                    "game_id": active_pred.get("game_id", ""),
                     "datetime": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                     "blue_team": b_team,
                     "red_team": r_team,
@@ -531,7 +555,6 @@ def render_model_dashboard(model_name: str, results: dict, active_pred: dict, h2
         swings = results.get("draft_swings", {})
         role_data = results.get("role_breakdown", [])
 
-        # --- 8 CATEGORY SUMMARY METRICS GRID ---
         st.markdown("#### 📊 8-Category Feature Impact Swings")
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("1. Elo Rating", f"{swings.get('elo_swing', 0.0):+.2f}%")
@@ -545,7 +568,6 @@ def render_model_dashboard(model_name: str, results: dict, active_pred: dict, h2
         col7.metric("7. Draft Synergy", f"{swings.get('draft_champ_swing', 0.0):+.2f}%")
         col8.metric("8. Champion Picks", f"{swings.get('champ_swing', 0.0):+.2f}%")
 
-        # --- DYNAMIC 8-CATEGORY WATERFALL GRAPH ---
         st.markdown(f"#### 📈 Prediction Progression Waterfall ({b_team})")
 
         waterfall_stages = [

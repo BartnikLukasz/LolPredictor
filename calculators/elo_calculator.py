@@ -11,7 +11,7 @@ from calculators.team_momentum_calculator import add_momentum_features_to_datase
 
 # 1. International tournament codes to ignore when determining home region
 INTERNATIONAL_LEAGUES = {
-    "WLDS", "WORLDS", "MSI", "EWC", "FST", "RR", "RIFT RIVALS", "MSC"
+    "WLDS", "WORLDS", "MSI", "EWC", "FST", "RR", "RIFT RIVALS", "MSC", "DCGI"
 }
 
 # 2. Tier to Elo mapping table

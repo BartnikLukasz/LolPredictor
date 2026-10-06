@@ -23,7 +23,7 @@ def prepare_oracles_elixir_pregame(
     """
     if target_leagues is None:
         target_leagues = [
-            'LCK', 'LPL', 'LEC', 'LCS', 'LTA N', 'LTA North', 'LTA', 'EWC', "OGN",
+            'LCK', 'LPL', 'LEC', 'LCS', 'LTA N', 'LTA North', 'LTA', 'EWC', "OGN", "DCGI",
             'FST', 'MSI', 'WLDs', 'WORLDS', 'LCP', 'VCS', 'LTA S', 'EU LCS', 'NA LCS', 'CBLOL', 'LMS'
         ]
 

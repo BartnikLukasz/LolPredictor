@@ -1,216 +1,88 @@
-import os
-import json
-from datetime import date, timedelta
-
 import joblib
-import pandas as pd
-import numpy as np
-from sklearn.linear_model import LogisticRegression
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
-from sklearn.impute import SimpleImputer
+import sklearn
 from sklearn.compose import ColumnTransformer
+from sklearn.impute import SimpleImputer
+from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
-from sklearn.metrics import (
-    accuracy_score,
-    log_loss,
-    roc_auc_score,
-    brier_score_loss
-)
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
-from trainers.trainer_helpers import extract_features, save_feature_importance
-from util import save_validation_predictions
+from trainers.engine import ModelSpec, train_model
+from trainers.trainer_helpers import DATASET_PATH, HOLDOUT_DAYS, RANDOM_SEED
 
-# --- PATH CONFIGURATION ---
-DATASET_PATH = "dataset/pregame/pregame_dataset_final_features.csv"
+# --- PATH CONFIGURATION (unchanged; models/elasticnet_model.joblib is what app.py loads) ---
 PARAMS_PATH = "models/elasticnet_best_params.json"
 MODEL_OUTPUT_PATH = "models/elasticnet_model.joblib"
-TARGET_COL = "blue_win"
+
+# scikit-learn 1.8 deprecated `penalty` (an l1_ratio in (0, 1) now means elastic net); older versions need it.
+_SKLEARN_GE_18 = tuple(int(x) for x in sklearn.__version__.split(".")[:2]) >= (1, 8)
 
 
-def load_best_params(params_path: str) -> dict:
-    """Loads ElasticNet Logistic Regression hyperparameters from JSON if present, otherwise returns defaults."""
-    default_params = {
-        'penalty': 'elasticnet',
-        'solver': 'saga',
-        'C': 0.1,
-        'l1_ratio': 0.5,
-        'max_iter': 2000,
-        'random_state': 42,
-        'n_jobs': -1
-    }
+class ElasticNetSpec(ModelSpec):
+    name = "elasticnet"
+    label = "ElasticNet"
+    cat_mode = "str"
+    params_path = PARAMS_PATH
+    model_path = MODEL_OUTPUT_PATH
+    importance_path = "metadata/elasticnet_feature_importance.csv"
+    predictions_path = "metadata/predictions/elasticnet_predictions.csv"
 
-    if os.path.exists(params_path):
-        print(f"[CONFIG] Loading custom hyperparameters from '{params_path}'...")
-        try:
-            with open(params_path, 'r') as f:
-                user_params = json.load(f)
-            default_params.update(user_params)
-        except Exception as e:
-            print(f"[!] Error reading JSON parameter file ({e}). Falling back to defaults.")
-    else:
-        print(f"[CONFIG] Parameter file '{params_path}' not found. Using default hyperparameter values.")
+    def defaults(self):
+        # Same solver settings in tuning and training (the old tuner used max_iter=200, tol=1e-2).
+        return {"C": 0.05, "l1_ratio": 0.5, "max_iter": 5000, "tol": 1e-4, "random_state": RANDOM_SEED}
 
-    # Enforce required ElasticNet execution settings
-    default_params['penalty'] = 'elasticnet'
-    default_params['solver'] = 'saga'
-    default_params['n_jobs'] = -1
-    return default_params
+    def suggest(self, trial):
+        return {
+            "C": trial.suggest_float("C", 1e-4, 1.0, log=True),
+            "l1_ratio": trial.suggest_float("l1_ratio", 0.0, 1.0),
+        }
+
+    def _build(self, X, params, cat_cols):
+        num_cols = [c for c in X.columns if c not in cat_cols]
+        transformers = [("num", Pipeline([
+            ("imputer", SimpleImputer(strategy="median")),
+            ("scaler", StandardScaler()),
+        ]), num_cols)]
+        if cat_cols:
+            transformers.append(("cat", Pipeline([
+                ("imputer", SimpleImputer(strategy="constant", fill_value="Unknown")),
+                ("encoder", OneHotEncoder(handle_unknown="infrequent_if_exist", min_frequency=20,
+                                          sparse_output=True)),
+            ]), cat_cols))
+        pre = ColumnTransformer(transformers, verbose_feature_names_out=False)
+
+        kwargs = {"solver": "saga", "C": params["C"], "l1_ratio": params["l1_ratio"],
+                  "max_iter": params["max_iter"], "tol": params["tol"], "random_state": params["random_state"]}
+        if not _SKLEARN_GE_18:
+            kwargs["penalty"] = "elasticnet"
+        return Pipeline([("preprocessor", pre), ("classifier", LogisticRegression(**kwargs))])
+
+    def fit(self, X, y, params, cat_cols):
+        return self._build(X, params, cat_cols).fit(X, y)
+
+    def fit_eval(self, X_tr, y_tr, X_va, y_va, params, cat_cols):
+        return self.predict(self.fit(X_tr, y_tr, params, cat_cols), X_va), None
+
+    def save(self, model, path, feature_cols, cat_cols, X_check=None):
+        joblib.dump(model, path)          # app.py: a bare sklearn Pipeline is loaded as-is
 
 
-def select_feature_columns(df: pd.DataFrame):
-    """Extracts identical feature lists for numeric and categorical columns."""
-    feature_cols = extract_features(df)
-
-    champ_features = [
-        'blue_top_champion', 'blue_jng_champion', 'blue_mid_champion', 'blue_bot_champion', 'blue_sup_champion',
-        'red_top_champion', 'red_jng_champion', 'red_mid_champion', 'red_bot_champion', 'red_sup_champion'
-    ]
-    champ_features = [c for c in champ_features if c in df.columns]
-
-    cat_cols = champ_features
-    num_cols = [c for c in feature_cols if c not in cat_cols]
-
-    return feature_cols, num_cols, cat_cols
-
-
-def build_pipeline(num_cols: list, cat_cols: list, params: dict) -> Pipeline:
-    """Constructs the preprocessor and ElasticNet Logistic Regression pipeline."""
-    num_transformer = Pipeline([
-        ('imputer', SimpleImputer(strategy='median')),
-        ('scaler', StandardScaler())
-    ])
-
-    cat_transformer = Pipeline([
-        ('imputer', SimpleImputer(strategy='constant', fill_value='Unknown')),
-        ('encoder', OneHotEncoder(handle_unknown='ignore', sparse_output=False))
-    ])
-
-    preprocessor = ColumnTransformer(
-        transformers=[
-            ('num', num_transformer, num_cols),
-            ('cat', cat_transformer, cat_cols)
-        ]
-    )
-
-    classifier_params = params.copy()
-    classifier_params.pop('best_logloss', None)
-
-    return Pipeline([
-        ('preprocessor', preprocessor),
-        ('classifier', LogisticRegression(**classifier_params))
-    ])
+SPEC = ElasticNetSpec()
 
 
 def train_elasticnet_model(
         filepath: str = DATASET_PATH,
-        dynamic_test_window: int = 60,
+        dynamic_test_window: int = HOLDOUT_DAYS,
         only_full_train: bool = False,
         params_json_path: str = PARAMS_PATH,
         model_output_path: str = MODEL_OUTPUT_PATH,
-        importance_output_path: str = "metadata/elasticnet_feature_importance.csv",
-        predictions_output_path: str = "metadata/predictions/elasticnet_predictions.csv"
+        importance_output_path: str = SPEC.importance_path,
+        predictions_output_path: str = SPEC.predictions_path,
+        **kwargs
 ):
-    """
-    Trains an ElasticNet Logistic Regression model using a full scikit-learn Pipeline.
-
-    By default (only_full_train=False):
-      Phase 1: Trains on historical split, evaluates on validation test window, prints performance, and saves validation predictions.
-      Phase 2: Trains on the 100% full dataset and saves the final pipeline artifact.
-    """
-    # 1. Load Data & Sort Chronologically
-    if not os.path.exists(filepath):
-        raise FileNotFoundError(f"Dataset not found at path: {filepath}")
-
-    print(f"Reading dataset from '{filepath}'...")
-    df = pd.read_csv(filepath, low_memory=False)
-
-    if TARGET_COL not in df.columns:
-        raise KeyError(f"Target column '{TARGET_COL}' not found in dataset.")
-
-    df['date'] = pd.to_datetime(df['date'])
-    df = df.sort_values('date').reset_index(drop=True)
-
-    # 2. Extract Feature Subsets
-    feature_cols, num_cols, cat_cols = select_feature_columns(df)
-    X = df[feature_cols].copy()
-    y = df[TARGET_COL].values
-
-    print(f"Loaded {len(df)} matches | Raw Features selected: {len(feature_cols)}")
-
-    # 3. Load Hyperparameters
-    params = load_best_params(params_json_path)
-
-    # 4. Check Test Split Availability
-    latest_dataset_date = df['date'].max()
-    split_date = date.today() - timedelta(days=dynamic_test_window)
-    split_dt = pd.to_datetime(split_date)
-
-    if split_dt >= latest_dataset_date:
-        print(f"\n[INFO] split_date '{split_date}' is on/after latest match ({latest_dataset_date.strftime('%Y-%m-%d')}). Skipping test validation phase.")
-        only_full_train = True
-
-    # -------------------------------------------------------------------------
-    # PHASE 1: Validation Run & Prediction Export (Skipped if only_full_train=True)
-    # -------------------------------------------------------------------------
-    if not only_full_train:
-        split_mask = df['date'] >= split_dt
-        split_idx = int(split_mask.idxmax())
-
-        X_train, y_train = X.iloc[:split_idx], y[:split_idx]
-        X_val, y_val = X.iloc[split_idx:], y[split_idx:]
-        test_df = df.iloc[split_idx:].copy()
-
-        train_dates = df['date'].iloc[:split_idx]
-        test_dates = df['date'].iloc[split_idx:]
-
-        print("\n" + "=" * 55)
-        print("    PHASE 1: ELASTICNET VALIDATION & EVALUATION    ")
-        print("=" * 55)
-        print(f"Train Period: {train_dates.min().strftime('%Y-%m-%d')} to {train_dates.max().strftime('%Y-%m-%d')} ({len(X_train)} matches)")
-        print(f"Test Period:  {test_dates.min().strftime('%Y-%m-%d')} to {test_dates.max().strftime('%Y-%m-%d')} ({len(X_val)} matches)")
-        print("-" * 55)
-
-        val_pipeline = build_pipeline(num_cols, cat_cols, params)
-        val_pipeline.fit(X_train, y_train)
-
-        val_probs = val_pipeline.predict_proba(X_val)[:, 1]
-        val_preds = (val_probs >= 0.50).astype(int)
-
-        acc = accuracy_score(y_val, val_preds)
-        loss = log_loss(y_val, val_probs)
-        auc = roc_auc_score(y_val, val_probs)
-        brier = brier_score_loss(y_val, val_probs)
-
-        print("\n" + "=" * 45)
-        print("    ELASTICNET PREDICTION EVALUATION MODEL     ")
-        print("=" * 45)
-        print(f"Accuracy:    {acc * 100:.2f}%")
-        print(f"Log-Loss:    {loss:.4f} (Baseline ~0.693)")
-        print(f"ROC-AUC:     {auc:.4f}")
-        print(f"Brier Score: {brier:.4f}")
-        print("=" * 45)
-
-        # Save test validation predictions CSV
-        save_validation_predictions(test_df, y_val, val_probs, predictions_output_path)
-
-    # -------------------------------------------------------------------------
-    # PHASE 2: Full Dataset Training & Model Export
-    # -------------------------------------------------------------------------
-    start_dt = df['date'].min().strftime('%Y-%m-%d')
-    end_dt = df['date'].max().strftime('%Y-%m-%d')
-
-    print("\n" + "=" * 55)
-    print("    PHASE 2: ELASTICNET FULL DATASET TRAINING     ")
-    print(f"Training on all {len(df)} matches ({start_dt} to {end_dt})")
-    print("=" * 55)
-
-    final_pipeline = build_pipeline(num_cols, cat_cols, params)
-    final_pipeline.fit(X, y)
-
-    # Save Model Pipeline Artifact
-    os.makedirs(os.path.dirname(model_output_path) or '.', exist_ok=True)
-    joblib.dump(final_pipeline, model_output_path)
-    print(f"[✓] Trained ElasticNet Pipeline successfully saved to '{model_output_path}'")
-
-    # Export Feature Importance
-    save_feature_importance(final_pipeline, feature_cols, importance_output_path)
+    """Honest holdout evaluation, then a full-data refit saved for the live app. See engine.train_model."""
+    return train_model(
+        SPEC, filepath=filepath, dynamic_test_window=dynamic_test_window, only_full_train=only_full_train,
+        params_path=params_json_path, model_output_path=model_output_path,
+        importance_output_path=importance_output_path, predictions_output_path=predictions_output_path,
+        **kwargs
+    )["model"]

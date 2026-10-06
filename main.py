@@ -1,7 +1,3 @@
-import json
-
-import pandas as pd
-
 from calculators.champ_stats_calculator import calculate_champion_and_draft_stats
 from calculators.download_latest_data import download_latest_match_data
 from calculators.elo_calculator import compute_team_elo_ratings
@@ -12,25 +8,29 @@ from trainers.elasticnet_model_trainer import train_elasticnet_model
 from trainers.elastictree_model_trainer import train_elastictree
 from trainers.lightgbm_model_trainer import train_secondary_model
 from trainers.model_trainer import train_lol_prediction_model
+from trainers.rosters import save_team_rosters
+
+# Feature profile / raw-champion switches live in trainers/trainer_helpers.py
+# (FEATURE_PROFILE, USE_RAW_CHAMPIONS). Run hyperparameter_tuner.py with the same settings first.
 
 if __name__ == '__main__':
 
     # download_latest_match_data()
-    # prepare_oracles_elixir_pregame(["dataset/match/2014_match_data.csv",
-    #                                 "dataset/match/2015_match_data.csv",
-    #                                 "dataset/match/2016_match_data.csv",
-    #                                 "dataset/match/2017_match_data.csv",
-    #                                 "dataset/match/2018_match_data.csv",
-    #                                 "dataset/match/2019_match_data.csv",
-    #                                 "dataset/match/2020_match_data.csv",
-    #                                 "dataset/match/2021_match_data.csv",
-    #                                 "dataset/match/2022_match_data.csv",
-    #                                 "dataset/match/2023_match_data.csv",
-    #                                 "dataset/match/2024_match_data.csv",
-    #                                 "dataset/match/2025_match_data.csv",
-    #                                 "dataset/match/2026_match_data.csv"],
-    #                                "dataset/pregame/pregame.csv")
-    #
+    prepare_oracles_elixir_pregame(["dataset/match/2014_match_data.csv",
+                                    "dataset/match/2015_match_data.csv",
+                                    "dataset/match/2016_match_data.csv",
+                                    "dataset/match/2017_match_data.csv",
+                                    "dataset/match/2018_match_data.csv",
+                                    "dataset/match/2019_match_data.csv",
+                                    "dataset/match/2020_match_data.csv",
+                                    "dataset/match/2021_match_data.csv",
+                                    "dataset/match/2022_match_data.csv",
+                                    "dataset/match/2023_match_data.csv",
+                                    "dataset/match/2024_match_data.csv",
+                                    "dataset/match/2025_match_data.csv",
+                                    "dataset/match/2026_match_data.csv"],
+                                   "dataset/pregame/pregame.csv")
+
     enriched_df, team_leaderboard = compute_team_elo_ratings(
         filepath="dataset/pregame/pregame.csv",
         output_filepath="dataset/pregame/pregame_dataset_with_elo.csv",
@@ -52,50 +52,13 @@ if __name__ == '__main__':
 
     dataset_path = "dataset/pregame/pregame_dataset_final_features.csv"
 
+    # Each call: honest holdout evaluation (printed + saved to metadata/predictions/), then a full-data
+    # refit saved to models/. Artifact paths and formats are unchanged, so app.py loads them as before.
     train_lol_prediction_model(filepath=dataset_path)
-
     train_secondary_model(dataset_path=dataset_path)
-
     train_catboost(filepath=dataset_path)
-
     train_elastictree(filepath=dataset_path)
-
     train_elasticnet_model(filepath=dataset_path)
 
-    # 3. Extract active rosters dynamically from the dataset and save to JSON
-    df = pd.read_csv(dataset_path, low_memory=False)
-
-    roster_dict = {}
-
-    # Get unique teams across blue and red side columns
-    teams = set(df['blue_team'].dropna().unique()).union(set(df['red_team'].dropna().unique()))
-
-    for team in teams:
-        # Grab the most recent match for this team
-        latest_match = df[(df['blue_team'] == team) | (df['red_team'] == team)].iloc[-1]
-
-        if latest_match['blue_team'] == team:
-            roster = [
-                latest_match.get('blue_top_player', ''),
-                latest_match.get('blue_jng_player', ''),
-                latest_match.get('blue_mid_player', ''),
-                latest_match.get('blue_bot_player', ''),
-                latest_match.get('blue_sup_player', '')
-            ]
-        else:
-            roster = [
-                latest_match.get('red_top_player', ''),
-                latest_match.get('red_jng_player', ''),
-                latest_match.get('red_mid_player', ''),
-                latest_match.get('red_bot_player', ''),
-                latest_match.get('red_sup_player', '')
-            ]
-
-        roster_dict[team] = roster
-
-    with open("models/team_rosters.json", "w") as f:
-        json.dump(roster_dict, f, indent=4)
-
-    print("[ARTIFACT] Saved team rosters to 'models/team_rosters.json'")
-
-    print(team_leaderboard.head(10))
+    # Team rosters for the app's dropdowns (max_inactive_days=365 would hide defunct teams).
+    save_team_rosters(dataset_path, "models/team_rosters.json", max_inactive_days=None)

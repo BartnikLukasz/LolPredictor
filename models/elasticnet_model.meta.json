@@ -1,0 +1,85 @@
+{
+  "model": "elasticnet",
+  "created_at": "2026-10-06T08:01:08",
+  "feature_profile": "live_supported",
+  "use_raw_champions": false,
+  "feature_cols": [
+    "elo_diff",
+    "blue_elo_pre",
+    "red_elo_pre",
+    "blue_elo_win_prob",
+    "blue_firstpick",
+    "blue_elo_delta_10",
+    "red_elo_delta_10",
+    "elo_delta_diff_10",
+    "blue_overperform_10",
+    "red_overperform_10",
+    "overperformance_diff_10",
+    "game_number",
+    "blue_series_lead",
+    "blue_prev_win",
+    "blue_top_player_games_pre",
+    "blue_jng_player_games_pre",
+    "blue_mid_player_games_pre",
+    "blue_bot_player_games_pre",
+    "blue_sup_player_games_pre",
+    "red_top_player_games_pre",
+    "red_jng_player_games_pre",
+    "red_mid_player_games_pre",
+    "red_bot_player_games_pre",
+    "red_sup_player_games_pre",
+    "blue_top_player_winrate_pre",
+    "blue_jng_player_winrate_pre",
+    "blue_mid_player_winrate_pre",
+    "blue_bot_player_winrate_pre",
+    "blue_sup_player_winrate_pre",
+    "red_top_player_winrate_pre",
+    "red_jng_player_winrate_pre",
+    "red_mid_player_winrate_pre",
+    "red_bot_player_winrate_pre",
+    "red_sup_player_winrate_pre"
+  ],
+  "cat_cols": [],
+  "categories": {},
+  "training_rows": 30153,
+  "date_range": [
+    "2014-01-14",
+    "2026-10-05"
+  ],
+  "holdout_days": 60,
+  "params": {
+    "C": 0.000539599294570068,
+    "l1_ratio": 0.022951709409867984,
+    "max_iter": 5000,
+    "tol": 0.0001,
+    "random_state": 42
+  },
+  "holdout_metrics": {
+    "logloss": 0.6383707994117165,
+    "brier": 0.22430479253318186,
+    "accuracy": 0.6295754026354319,
+    "auc": 0.6654728427159051,
+    "ece": 0.03704832319218168,
+    "n": 683,
+    "accuracy_ci95": 0.03621758634777568,
+    "vs_elo": {
+      "mean": -0.01761595494942174,
+      "lo": -0.02980839795436754,
+      "hi": -0.005697657625345407
+    },
+    "vs_base_rate": {
+      "mean": -0.044927377614281006,
+      "lo": -0.06742286056669629,
+      "hi": -0.021710702083187094
+    }
+  },
+  "versions": {
+    "python": "3.12.0",
+    "numpy": "2.5.2",
+    "pandas": "3.0.5",
+    "scikit-learn": "1.9.0",
+    "xgboost": "3.4.1",
+    "lightgbm": "4.7.0",
+    "catboost": "1.2.10"
+  }
+}

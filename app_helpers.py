@@ -1,19 +1,20 @@
+import copy
 import re
 from difflib import SequenceMatcher
+from typing import Dict, List, Optional, Tuple
 
-from bs4 import BeautifulSoup
-import requests
-import pandas as pd
-import copy
 import numpy as np
+import pandas as pd
+import requests
 import streamlit as st
+from bs4 import BeautifulSoup
 
 ODDS_ENDPOINT_URL = "http://127.0.0.1:5000/odds"
+
 
 def fetch_golgg_draft(url: str) -> dict:
     """Scrapes match draft, teams, and player details directly from a gol.gg game URL."""
     logs = []
-
     headers = {
         'User-Agent': (
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
@@ -33,8 +34,8 @@ def fetch_golgg_draft(url: str) -> dict:
     soup = BeautifulSoup(response.text, 'html.parser')
 
     # 1. Extract Team Names
-    blue_team_elem = soup.select_one('.blue-line-header a')
-    red_team_elem = soup.select_one('.red-line-header a')
+    blue_team_elem = soup.select_one('.blue-line-header a, .blue-line-header')
+    red_team_elem = soup.select_one('.red-line-header a, .red-line-header')
 
     blue_team = blue_team_elem.get_text(strip=True) if blue_team_elem else ""
     red_team = red_team_elem.get_text(strip=True) if red_team_elem else ""
@@ -42,14 +43,13 @@ def fetch_golgg_draft(url: str) -> dict:
     logs.append(f"Teams Extracted -> Blue: '{blue_team}', Red: '{red_team}'")
 
     # 2. Extract First Pick Side
-    first_pick = "Blue"  # Default fallback
+    first_pick = "Blue"
     first_pick_img = (
-            soup.find('img', src=re.compile(r'first\.png', re.IGNORECASE)) or
-            soup.find('img', alt=re.compile(r'first pick', re.IGNORECASE))
+        soup.find('img', src=re.compile(r'first\.png', re.IGNORECASE)) or
+        soup.find('img', alt=re.compile(r'first pick', re.IGNORECASE))
     )
 
     if first_pick_img:
-        # Check parent container tree for side keywords
         curr = first_pick_img.parent
         found_side = None
         while curr and curr.name != '[document]':
@@ -65,7 +65,6 @@ def fetch_golgg_draft(url: str) -> dict:
         if found_side:
             first_pick = found_side
         else:
-            # Fallback: check DOM position relative to Red Header tag
             raw_html = str(soup)
             img_pos = raw_html.find('first.png')
             red_hdr_pos = raw_html.find('red-line-header')
@@ -82,14 +81,11 @@ def fetch_golgg_draft(url: str) -> dict:
     logs.append(f"Player Info Tables Found: {len(tables)}")
 
     for idx, tbl in enumerate(tables):
-        # Determine team side by header class or table index position (0=Blue, 1=Red)
         is_blue = bool(tbl.select_one('.blue-line-header')) or (idx == 0)
         is_red = bool(tbl.select_one('.red-line-header')) or (idx == 1 and not is_blue)
 
-        # Target champion links directly inside the table cells
         champ_links = tbl.select('a[href*="/champion/"]')
         for champ_link in champ_links:
-            # Extract Champion Name
             champ_img = champ_link.find('img')
             champ_name = ""
             if champ_img and champ_img.get('alt'):
@@ -97,7 +93,6 @@ def fetch_golgg_draft(url: str) -> dict:
             elif champ_link.get('title'):
                 champ_name = champ_link['title'].replace(' stats', '').strip()
 
-            # Extract Player Name from the same cell
             parent_td = champ_link.find_parent('td')
             player_link = parent_td.select_one('a.link-blanc') if parent_td else None
             player_name = player_link.get_text(strip=True) if player_link else ""
@@ -115,7 +110,6 @@ def fetch_golgg_draft(url: str) -> dict:
     logs.append(f"Blue Side -> Champs: {blue_champs} | Players: {blue_players}")
     logs.append(f"Red Side  -> Champs: {red_champs} | Players: {red_players}")
 
-    # Validation Guard
     if len(blue_champs) < 5 or len(red_champs) < 5:
         raise ValueError(
             f"Draft extraction incomplete (Found Blue: {len(blue_champs)}, Red: {len(red_champs)}).\n"
@@ -135,14 +129,17 @@ def fetch_golgg_draft(url: str) -> dict:
 
 
 def match_team_name(
-        scraped_name: str,
-        valid_teams: list[str],
-        fetched_players: list[str] = None,
-        team_rosters: dict = None,
-        df_hist: pd.DataFrame = None
+    scraped_name: str,
+    valid_teams: List[str],
+    fetched_players: Optional[List[str]] = None,
+    team_rosters: Optional[dict] = None,
+    df_hist: Optional[pd.DataFrame] = None
 ) -> str:
-    if not scraped_name or not valid_teams:
-        return valid_teams[0] if valid_teams else ""
+    """Matches scraped team name to known historical team names using exact, roster, and recency fuzzy logic."""
+    if not valid_teams:
+        return ""
+    if not scraped_name:
+        return valid_teams[0]
 
     scraped_clean = scraped_name.strip().lower()
 
@@ -151,7 +148,7 @@ def match_team_name(
         if scraped_clean == team.strip().lower():
             return team
 
-    # 2. Player Roster Overlap (Best for rebrands like SKT -> T1)
+    # 2. Roster overlap match
     if fetched_players and team_rosters:
         scraped_players_set = {p.strip().lower() for p in fetched_players if p and p.strip()}
         if scraped_players_set:
@@ -165,33 +162,37 @@ def match_team_name(
                     max_overlap = overlap
                     best_roster_match = team_name
 
-            # If 2 or more roster players match, prioritize this team entity
             if best_roster_match and max_overlap >= 2:
                 return best_roster_match
 
-    # 3. Recency-weighted fuzzy matching via df_hist
+    # 3. Fuzzy similarity weighted by recency
     candidate_scores = []
+    date_col = 'date' if df_hist is not None and 'date' in df_hist.columns else (
+        'date_utc' if df_hist is not None and 'date_utc' in df_hist.columns else None
+    )
+
     for team in valid_teams:
         sim_score = SequenceMatcher(None, scraped_clean, team.lower()).ratio()
-
-        # Determine latest match date in df_hist if column exists
         latest_date = pd.Timestamp.min
-        if df_hist is not None and ('date' in df_hist.columns or 'date_utc' in df_hist.columns):
-            date_col = 'date' if 'date' in df_hist.columns else 'date_utc'
-            team_matches = df_hist[(df_hist['team_blue'] == team) | (df_hist['team_red'] == team)]
+
+        if df_hist is not None and date_col:
+            team_matches = df_hist[(df_hist.get('blue_team') == team) | (df_hist.get('red_team') == team)]
             if not team_matches.empty:
                 latest_date = pd.to_datetime(team_matches[date_col]).max()
 
         candidate_scores.append((team, sim_score, latest_date))
 
-    # Sort primarily by similarity score, secondarily by most recent match date
     candidate_scores.sort(key=lambda x: (x[1], x[2]), reverse=True)
     return candidate_scores[0][0]
 
 
-def match_champion_name(scraped_name: str, valid_champions: list) -> str:
-    if not scraped_name or not valid_champions:
-        return valid_champions[0] if valid_champions else ""
+def match_champion_name(scraped_name: str, valid_champions: List[str]) -> str:
+    """Fuzzy-matches scraped champion name against valid dataset champion names."""
+    if not valid_champions:
+        return ""
+    if not scraped_name:
+        return valid_champions[0]
+
     scraped_clean = re.sub(r'[^a-zA-Z0-9]', '', scraped_name).lower()
     for champ in valid_champions:
         champ_clean = re.sub(r'[^a-zA-Z0-9]', '', champ).lower()
@@ -199,7 +200,9 @@ def match_champion_name(scraped_name: str, valid_champions: list) -> str:
             return champ
     return valid_champions[0]
 
+
 def compute_model_accuracies(tracking_data: dict, min_confidence_pct: float = 50.0) -> pd.DataFrame:
+    """Computes historical prediction accuracy metrics across models."""
     model_stats = {}
     threshold = min_confidence_pct / 100.0
 
@@ -233,11 +236,19 @@ def compute_model_accuracies(tracking_data: dict, min_confidence_pct: float = 50
         df_acc = df_acc.sort_values(by="Accuracy (%)", ascending=False).reset_index(drop=True)
     return df_acc
 
-def get_historical_team_metrics(df_hist, blue_team, red_team):
+
+def get_historical_team_metrics(df_hist: pd.DataFrame, blue_team: str, red_team: str) -> dict:
+    """Calculates historical head-to-head records and recent form for two teams."""
+    if df_hist is None or df_hist.empty:
+        return {
+            'total_h2h': 0, 'blue_h2h_wins': 0, 'red_h2h_wins': 0,
+            'blue_h2h_wr': 50.0, 'blue_recent_wr': 50.0, 'red_recent_wr': 50.0
+        }
+
     h2h_matches = df_hist[
         ((df_hist['blue_team'] == blue_team) & (df_hist['red_team'] == red_team)) |
         ((df_hist['blue_team'] == red_team) & (df_hist['red_team'] == blue_team))
-    ].sort_values('date', ascending=False)
+    ].sort_values('date', ascending=False) if 'date' in df_hist.columns else pd.DataFrame()
 
     total_h2h = len(h2h_matches)
     blue_h2h_wins = 0
@@ -246,8 +257,12 @@ def get_historical_team_metrics(df_hist, blue_team, red_team):
             if (row['blue_team'] == blue_team and row['blue_win'] == 1) or (row['red_team'] == blue_team and row['blue_win'] == 0):
                 blue_h2h_wins += 1
 
-    blue_matches = df_hist[(df_hist['blue_team'] == blue_team) | (df_hist['red_team'] == blue_team)].sort_values('date', ascending=False).head(10)
-    red_matches = df_hist[(df_hist['blue_team'] == red_team) | (df_hist['red_team'] == red_team)].sort_values('date', ascending=False).head(10)
+    blue_matches = df_hist[(df_hist['blue_team'] == blue_team) | (df_hist['red_team'] == blue_team)]
+    red_matches = df_hist[(df_hist['blue_team'] == red_team) | (df_hist['red_team'] == red_team)]
+
+    if 'date' in df_hist.columns:
+        blue_matches = blue_matches.sort_values('date', ascending=False).head(10)
+        red_matches = red_matches.sort_values('date', ascending=False).head(10)
 
     blue_recent_wins = sum((row['blue_win'] == 1 if row['blue_team'] == blue_team else row['blue_win'] == 0) for _, row in blue_matches.iterrows())
     red_recent_wins = sum((row['blue_win'] == 1 if row['red_team'] == red_team else row['blue_win'] == 0) for _, row in red_matches.iterrows())
@@ -263,23 +278,14 @@ def get_historical_team_metrics(df_hist, blue_team, red_team):
 
 
 def prob_to_american_odds(prob: float) -> str:
+    """Converts a win probability (0-1) to standard American Odds formatting."""
     if prob <= 0 or prob >= 1:
         return "N/A"
     return f"{int(round(-100 * prob / (1 - prob)))}" if prob >= 0.5 else f"+{int(round(100 * (1 - prob) / prob))}"
 
 
-def create_ensemble_result(model_results_dict: dict) -> dict:
-    single_models = [res for key, res in model_results_dict.items() if key != "Even Split"]
-    avg_blue_prob = sum(res['blue_win_probability'] for res in single_models) / len(single_models)
-    ensemble_res = copy.deepcopy(single_models[0])
-    ensemble_res['blue_win_probability'] = round(avg_blue_prob, 4)
-    ensemble_res['red_win_probability'] = round(1.0 - avg_blue_prob, 4)
-    ensemble_res['blue_win_percentage'] = round(avg_blue_prob * 100, 1)
-    ensemble_res['red_win_percentage'] = round((1.0 - avg_blue_prob) * 100, 1)
-    return ensemble_res
-
-def compute_db_model_weights(tracking_data: dict, model_names: list) -> tuple[dict, dict]:
-    """Calculates model weights dynamically on page load based on historical recorded accuracy in Redis DB."""
+def compute_db_model_weights(tracking_data: dict, model_names: List[str]) -> Tuple[dict, dict]:
+    """Calculates Softmax model weights based on historical recorded accuracy in tracking database."""
     stats = {m: {"total": 0, "correct": 0} for m in model_names}
     logs = tracking_data.get("logs", [])
 
@@ -296,16 +302,16 @@ def compute_db_model_weights(tracking_data: dict, model_names: list) -> tuple[di
         tot = stats[m]["total"]
         accuracies[m] = (stats[m]["correct"] / tot) if tot > 0 else 0.50
 
-    T = 0.1
-    exp_acc = {m: np.exp(acc / T) for m, acc in accuracies.items()}
+    temperature = 0.1
+    exp_acc = {m: np.exp(acc / temperature) for m, acc in accuracies.items()}
     tot_exp = sum(exp_acc.values())
-    weights = {m: exp_val / tot_exp for m, exp_val in exp_acc.items()}
+    weights = {m: (exp_val / tot_exp) if tot_exp > 0 else (1.0 / len(model_names)) for m, exp_val in exp_acc.items()}
 
     return weights, accuracies
 
 
 def create_weighted_ensemble_result(all_model_results: dict, model_weights: dict) -> dict:
-    """Combines predictions using normalized accuracy weights from DB across all 8 feature categories."""
+    """Combines model predictions using normalized accuracy weights across all feature categories."""
     base_results = {k: v for k, v in all_model_results.items() if k in model_weights}
     if not base_results:
         return next(iter(all_model_results.values()))
@@ -329,7 +335,6 @@ def create_weighted_ensemble_result(all_model_results: dict, model_weights: dict
             2
         )
 
-    # Reconstruct sequential 8-stage progression data
     category_labels = [
         ('elo_swing', '1. Elo Rating'),
         ('momentum_swing', '2. Team Momentum'),
@@ -376,18 +381,15 @@ def create_weighted_ensemble_result(all_model_results: dict, model_weights: dict
 
 
 def get_latest_team_elo(df_hist: pd.DataFrame, team_name: str, default_rating: float = 1500.0) -> float:
-    """Robustly finds the most recent Elo rating for a team from df_hist."""
+    """Finds the most recent historical Elo rating for a given team."""
     if df_hist is None or df_hist.empty or not team_name:
         return default_rating
 
     target = str(team_name).strip().lower()
-
-    # Search across all potential team identity columns (names and IDs)
     team_cols = [c for c in ['blue_team', 'red_team', 'blue_teamid', 'red_teamid'] if c in df_hist.columns]
     if not team_cols:
         return default_rating
 
-    # Case-insensitive & whitespace-stripped lookup
     mask = pd.Series(False, index=df_hist.index)
     for col in team_cols:
         mask |= (df_hist[col].astype(str).str.strip().str.lower() == target)
@@ -396,7 +398,6 @@ def get_latest_team_elo(df_hist: pd.DataFrame, team_name: str, default_rating: f
     if team_matches.empty:
         return default_rating
 
-    # Extract rating from the most recent chronological match
     last_row = team_matches.iloc[-1]
 
     for b_col in ['blue_team', 'blue_teamid']:
@@ -413,60 +414,54 @@ def get_latest_team_elo(df_hist: pd.DataFrame, team_name: str, default_rating: f
 
 
 def apply_live_series_elo_adjustment(
-        df_hist: pd.DataFrame,
-        blue_team: str,
-        red_team: str,
-        blue_series_wins: int,
-        red_series_wins: int,
-        blue_has_first_pick: bool = True,
-        k_series: float = 80.0,
-        first_pick_bonus: float = 10.0,  # Harmonized with LiveFeatureEngine (10.0)
-        init_rating: float = 1500.0
+    df_hist: pd.DataFrame,
+    blue_team: str,
+    red_team: str,
+    blue_series_wins: int,
+    red_series_wins: int,
+    blue_has_first_pick: bool = True,
+    k_series: float = 80.0,
+    first_pick_bonus: float = 10.0,
+    init_rating: float = 1500.0
 ) -> dict:
-    """
-    Retrieves latest macro Elo ratings for both teams from df_hist and simulates
-    intra-series Elo drift on the fly based on current series score.
-    """
-    # 1. Fetch base macro Elos robustly from df_hist
+    """Retrieves macro Elos and simulates intra-series rating drift based on current series score."""
     r_blue = get_latest_team_elo(df_hist, blue_team, default_rating=init_rating)
     r_red = get_latest_team_elo(df_hist, red_team, default_rating=init_rating)
 
-    # 2. Simulate prior games played in this series
     total_prior_games = blue_series_wins + red_series_wins
-
     if total_prior_games > 0:
         outcomes = [1] * blue_series_wins + [0] * red_series_wins
-
         for score_blue in outcomes:
             exp_blue = 1.0 / (1.0 + 10.0 ** ((r_red - r_blue) / 400.0))
-
-            # Micro update for completed game
             r_blue += k_series * (score_blue - exp_blue)
             r_red += k_series * ((1.0 - score_blue) - (1.0 - exp_blue))
 
-    # 3. Compute current game features using adjusted dynamic Elos
     effective_bonus = first_pick_bonus if blue_has_first_pick else -first_pick_bonus
     r_blue_effective = r_blue + effective_bonus
-
     exp_blue_next = 1.0 / (1.0 + 10.0 ** ((r_red - r_blue_effective) / 400.0))
 
     return {
-        # Model features
         "blue_elo_pre": r_blue,
         "red_elo_pre": r_red,
         "elo_diff": r_blue_effective - r_red,
         "blue_elo_win_prob": exp_blue_next,
-        # UI visualization aliases
         "blue_elo": round(r_blue, 1),
         "red_elo": round(r_red, 1),
         "elo_implied_blue_winrate": round(exp_blue_next * 100, 1)
     }
 
 
-def send_odds_to_endpoint(blue_team: str, red_team: str, p_blue: float, p_red: float):
+def send_odds_to_endpoint(blue_team: str, red_team: str, p_blue: float, p_red: float) -> None:
+    """Dispatches real-time fair decimal odds and probabilities to monitoring endpoint."""
     payload = {
-        "odds": {blue_team: round(1.0 / p_blue, 2) if p_blue > 0 else 0, red_team: round(1.0 / p_red, 2) if p_red > 0 else 0},
-        "model_probs": {blue_team: round(p_blue, 4), red_team: round(p_red, 4)}
+        "odds": {
+            blue_team: round(1.0 / p_blue, 2) if p_blue > 0 else 0,
+            red_team: round(1.0 / p_red, 2) if p_red > 0 else 0
+        },
+        "model_probs": {
+            blue_team: round(p_blue, 4),
+            red_team: round(p_red, 4)
+        }
     }
     try:
         requests.post(ODDS_ENDPOINT_URL, json=payload, timeout=2)
