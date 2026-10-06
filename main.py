@@ -14,43 +14,42 @@ from trainers.rosters import save_team_rosters
 # (FEATURE_PROFILE, USE_RAW_CHAMPIONS). Run hyperparameter_tuner.py with the same settings first.
 
 if __name__ == '__main__':
+    dataset_path = "dataset/pregame/pregame_dataset_final_features.csv.gz"
 
-    # download_latest_match_data()
-    prepare_oracles_elixir_pregame(["dataset/match/2014_match_data.csv",
-                                    "dataset/match/2015_match_data.csv",
-                                    "dataset/match/2016_match_data.csv",
-                                    "dataset/match/2017_match_data.csv",
-                                    "dataset/match/2018_match_data.csv",
-                                    "dataset/match/2019_match_data.csv",
-                                    "dataset/match/2020_match_data.csv",
-                                    "dataset/match/2021_match_data.csv",
-                                    "dataset/match/2022_match_data.csv",
-                                    "dataset/match/2023_match_data.csv",
-                                    "dataset/match/2024_match_data.csv",
-                                    "dataset/match/2025_match_data.csv",
-                                    "dataset/match/2026_match_data.csv"],
-                                   "dataset/pregame/pregame.csv")
+    download_latest_match_data()
+    prepare_oracles_elixir_pregame(["dataset/match/2014_match_data.csv.gz",
+                                    "dataset/match/2015_match_data.csv.gz",
+                                    "dataset/match/2016_match_data.csv.gz",
+                                    "dataset/match/2017_match_data.csv.gz",
+                                    "dataset/match/2018_match_data.csv.gz",
+                                    "dataset/match/2019_match_data.csv.gz",
+                                    "dataset/match/2020_match_data.csv.gz",
+                                    "dataset/match/2021_match_data.csv.gz",
+                                    "dataset/match/2022_match_data.csv.gz",
+                                    "dataset/match/2023_match_data.csv.gz",
+                                    "dataset/match/2024_match_data.csv.gz",
+                                    "dataset/match/2025_match_data.csv.gz",
+                                    "dataset/match/2026_match_data.csv.gz"],
+                                   dataset_path)
 
     enriched_df, team_leaderboard = compute_team_elo_ratings(
-        filepath="dataset/pregame/pregame.csv",
-        output_filepath="dataset/pregame/pregame_dataset_with_elo.csv",
+        filepath=dataset_path,
+        output_filepath=dataset_path,
         first_pick_bonus=10.0,
         season_soft_reset_factor=0.2
     )
 
     compute_player_and_mastery_stats(
-        filepath="dataset/pregame/pregame_dataset_with_elo.csv",
-        output_filepath="dataset/pregame/pregame_dataset_with_player_stats.csv",
+        filepath=dataset_path,
+        output_filepath=dataset_path,
         prior_weight=1.0,
         prior_prob=0.50
     )
 
     calculate_champion_and_draft_stats(
-        input_filepath="dataset/pregame/pregame_dataset_with_player_stats.csv",
-        output_filepath="dataset/pregame/pregame_dataset_final_features.csv"
+        input_filepath=dataset_path,
+        output_filepath=dataset_path
     )
-
-    dataset_path = "dataset/pregame/pregame_dataset_final_features.csv"
 
     # Each call: honest holdout evaluation (printed + saved to metadata/predictions/), then a full-data
     # refit saved to models/. Artifact paths and formats are unchanged, so app.py loads them as before.

@@ -89,7 +89,7 @@ def save_tracking_data(data: dict):
 
 @st.cache_resource
 def load_predictor_assets():
-    dataset_path = "dataset/pregame/pregame_dataset_final_features.csv"
+    dataset_path = "dataset/pregame/pregame_dataset_final_features.csv.gz"
     if not os.path.exists(dataset_path):
         st.error(f"Dataset path '{dataset_path}' not found.")
         st.stop()

@@ -1,6 +1,6 @@
 {
   "model": "xgboost",
-  "created_at": "2026-10-06T08:00:59",
+  "created_at": "2026-10-06T09:03:41",
   "feature_profile": "live_supported",
   "use_raw_champions": false,
   "feature_cols": [

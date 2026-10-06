@@ -1,7 +1,11 @@
+import gzip
 import io
 import os
+import shutil
 from datetime import date, datetime
+from pathlib import Path
 
+from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -10,12 +14,29 @@ from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaIoBaseDownload
 
 FOLDER_ID = "1gLSw0RLjBbtaNy0dgnGQDAZOHIgCe-HH"
-TARGET_PATH = "../dataset/match/2026_match_data.csv"
+
+# This file lives in <project root>/calculators/, so paths no longer depend on the working directory.
+HERE = Path(__file__).resolve().parent
+PROJECT_ROOT = HERE.parent
+MATCH_DIR = PROJECT_ROOT / "dataset" / "match"
 
 # Full "drive" scope is needed so we can copy a file we don't own (quota fallback)
 SCOPES = ["https://www.googleapis.com/auth/drive"]
-CREDENTIALS_FILE = "credentials.json"  # OAuth client (Desktop app) from Google Cloud
-TOKEN_FILE = "token.json"              # created automatically on first run
+CREDENTIALS_FILE = "credentials.json"  # OAuth client (Desktop app) from Google Cloud; only needed to sign in
+TOKEN_FILE = "token.json"              # created automatically on first sign-in
+
+
+def _find_file(name: str) -> Path:
+    """Looks in the working directory, next to this script, then in the project root."""
+    for base in (Path.cwd(), HERE, PROJECT_ROOT):
+        candidate = base / name
+        if candidate.exists():
+            return candidate
+    return Path.cwd() / name  # where a new file will be created
+
+
+def _default_target(year: int) -> str:
+    return str(MATCH_DIR / f"{year}_match_data.csv.gz")
 
 
 def is_updated_today(path: str) -> bool:
@@ -25,25 +46,65 @@ def is_updated_today(path: str) -> bool:
 
 
 def is_valid_csv(filepath: str) -> bool:
+    """True for a plausible CSV. For '.gz' paths the file must also be genuinely gzip-compressed."""
     if not os.path.exists(filepath) or os.path.getsize(filepath) < 500:
         return False
-    with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
-        head = f.read(500).lower()
+    try:
+        if str(filepath).lower().endswith(".gz"):
+            with open(filepath, "rb") as fb:
+                if fb.read(2) != b"\x1f\x8b":      # gzip magic bytes; a renamed plain CSV fails here
+                    return False
+            f = gzip.open(filepath, "rt", encoding="utf-8", errors="ignore")
+        else:
+            f = open(filepath, "r", encoding="utf-8", errors="ignore")
+        with f:
+            head = f.read(500).lower()
+    except (OSError, EOFError):
+        return False
     return "<!doctype html" not in head and "<html" not in head and "quota exceeded" not in head
 
 
+def _gzip_file(src: str, dst: str):
+    """Compresses src into dst (gzip)."""
+    with open(src, "rb") as fin, gzip.open(dst, "wb", compresslevel=6) as fout:
+        shutil.copyfileobj(fin, fout, length=1024 * 1024)
+
+
+def _interactive_login() -> Credentials:
+    if os.environ.get("GITHUB_ACTIONS") or os.environ.get("CI"):
+        raise RuntimeError(
+            "No usable Google token on this runner (token.json missing, invalid or expired). "
+            "Sign in locally to create a fresh token.json and update the GOOGLE_TOKEN_JSON secret."
+        )
+    creds_path = _find_file(CREDENTIALS_FILE)
+    if not creds_path.exists():
+        raise FileNotFoundError(
+            f"'{CREDENTIALS_FILE}' not found (looked in {Path.cwd()}, {HERE} and {PROJECT_ROOT}).\n"
+            f"It is needed only to sign in when there is no valid {TOKEN_FILE}. To create it: Google Cloud Console "
+            f"-> Google Auth Platform -> Clients -> Create client -> Application type 'Desktop app' -> "
+            f"download the JSON and save it as {CREDENTIALS_FILE}."
+        )
+    flow = InstalledAppFlow.from_client_secrets_file(str(creds_path), SCOPES)
+    return flow.run_local_server(port=0)  # opens browser once
+
+
 def get_service():
+    token_path = _find_file(TOKEN_FILE)
     creds = None
-    if os.path.exists(TOKEN_FILE):
-        creds = Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)
+    if token_path.exists():
+        creds = Credentials.from_authorized_user_file(str(token_path), SCOPES)
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
+            try:
+                creds.refresh(Request())
+            except RefreshError as e:
+                raise RuntimeError(
+                    f"Google rejected the saved token ({e}). It was revoked or expired (apps left in 'Testing' "
+                    f"expire after 7 days). Delete {token_path}, sign in again locally and update the secret."
+                ) from e
         else:
-            flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_FILE, SCOPES)
-            creds = flow.run_local_server(port=0)  # opens browser once
-        with open(TOKEN_FILE, "w") as f:
-            f.write(creds.to_json())
+            creds = _interactive_login()
+        token_path.write_text(creds.to_json())
     return build("drive", "v3", credentials=creds, cache_discovery=False)
 
 
@@ -92,17 +153,35 @@ def is_quota_error(err: HttpError) -> bool:
     )
 
 
-def download_latest_match_data(target_path: str = TARGET_PATH):
-    if is_updated_today(target_path) and is_valid_csv(target_path):
-        print(f"[+] '{target_path}' already updated today. Skipping.")
+def download_latest_match_data(target_path: str = None):
+    """
+    Downloads the newest '<year>*.csv' from the Drive folder.
+    By default it is saved as <project root>/dataset/match/<year>_match_data.csv.gz (compressed after download), where <year> is the year of
+    the file that was found (so a new year can never overwrite the previous year's data).
+    """
+    this_year = datetime.now().year
+    skip_path = target_path or _default_target(this_year)
+    if is_updated_today(skip_path) and is_valid_csv(skip_path):
+        print(f"[+] '{skip_path}' already updated today. Skipping.")
         return
 
-    os.makedirs(os.path.dirname(os.path.abspath(target_path)), exist_ok=True)
-    tmp_path = target_path + ".part"
-    year_prefix = str(datetime.now().year)
-
     service = get_service()
-    target = find_latest_file(service, FOLDER_ID, year_prefix)
+
+    target, found_year = None, None
+    for year in (this_year, this_year - 1):  # early in January the new year's file may not exist yet
+        try:
+            target = find_latest_file(service, FOLDER_ID, str(year))
+            found_year = year
+            break
+        except FileNotFoundError:
+            continue
+    if target is None:
+        raise FileNotFoundError(f"No .csv starting with '{this_year}' or '{this_year - 1}' in the Drive folder.")
+
+    target_path = target_path or _default_target(found_year)
+    os.makedirs(os.path.dirname(os.path.abspath(target_path)), exist_ok=True)
+    tmp_path = target_path + ".raw.part"   # plain CSV exactly as downloaded from Drive
+    gz_tmp_path = target_path + ".part"    # compressed result, moved into place atomically
     print(f"[*] Found: {target['name']} (modified {target['modifiedTime']})")
 
     copy_id = None
@@ -124,11 +203,16 @@ def download_latest_match_data(target_path: str = TARGET_PATH):
 
         if not is_valid_csv(tmp_path):
             raise RuntimeError("Downloaded file is not a valid CSV.")
-        os.replace(tmp_path, target_path)  # atomic: never leaves a half-written target
+        if target_path.lower().endswith(".gz"):
+            _gzip_file(tmp_path, gz_tmp_path)
+            os.replace(gz_tmp_path, target_path)   # atomic: never leaves a half-written target
+        else:
+            os.replace(tmp_path, target_path)
         print(f"[✓] Saved to '{target_path}'")
     finally:
-        if os.path.exists(tmp_path):
-            os.remove(tmp_path)
+        for leftover in (tmp_path, gz_tmp_path):
+            if os.path.exists(leftover):
+                os.remove(leftover)
         if copy_id:
             try:
                 service.files().delete(fileId=copy_id, supportsAllDrives=True).execute()
