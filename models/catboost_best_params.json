@@ -1,0 +1,26 @@
+{
+    "iterations": 202,
+    "learning_rate": 0.08036348707773451,
+    "depth": 5,
+    "l2_leaf_reg": 36.011307102561744,
+    "random_strength": 0.3157028047792086,
+    "bagging_temperature": 1.1192041245187263,
+    "best_logloss": 0.629131,
+    "_meta": {
+        "cv_logloss": 0.629131,
+        "cv_fold_losses": [
+            0.642027,
+            0.646463,
+            0.610145,
+            0.617888
+        ],
+        "n_folds": 4,
+        "fold_size": 666,
+        "n_trials": 200,
+        "feature_profile": "live_supported",
+        "use_raw_champions": false,
+        "tuned_at": "2026-10-05T19:37:24",
+        "data_through": "2026-10-03",
+        "holdout_days": 60
+    }
+}

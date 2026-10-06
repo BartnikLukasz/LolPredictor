@@ -1,0 +1,29 @@
+{
+    "n_estimators": 134,
+    "learning_rate": 0.09991708525008357,
+    "max_depth": 2,
+    "min_child_weight": 1.8034828606531452,
+    "subsample": 0.7083903219204086,
+    "colsample_bytree": 0.980569977926557,
+    "reg_lambda": 5.225977810133174,
+    "reg_alpha": 0.045527839578126374,
+    "gamma": 0.33145684730929686,
+    "best_logloss": 0.630515,
+    "_meta": {
+        "cv_logloss": 0.630515,
+        "cv_fold_losses": [
+            0.644668,
+            0.649433,
+            0.610603,
+            0.617354
+        ],
+        "n_folds": 4,
+        "fold_size": 666,
+        "n_trials": 100,
+        "feature_profile": "live_supported",
+        "use_raw_champions": false,
+        "tuned_at": "2026-10-05T08:24:59",
+        "data_through": "2026-10-03",
+        "holdout_days": 60
+    }
+}

@@ -53,8 +53,11 @@ def optimize_elasticnet_hyperparameters(filepath=DATASET_PATH, dynamic_test_wind
 if __name__ == "__main__":
     # feature_profile / use_raw_champions default to the values in trainers/trainer_helpers.py.
     # IMPORTANT: tune and train with the same profile (params files record which one they were tuned for).
-    optimize_xgboost_hyperparameters(n_trials=100)
-    optimize_lightgbm_hyperparameters(n_trials=100)
-    optimize_catboost_hyperparameters(n_trials=100)
-    optimize_elastictree_hyperparameters(n_trials=100)
-    optimize_elasticnet_hyperparameters(n_trials=100)
+    i = 0
+    while i < 5:
+        optimize_xgboost_hyperparameters(n_trials=200)
+        optimize_lightgbm_hyperparameters(n_trials=200)
+        optimize_catboost_hyperparameters(n_trials=200)
+        optimize_elastictree_hyperparameters(n_trials=200)
+        optimize_elasticnet_hyperparameters(n_trials=200)
+        i+=1
