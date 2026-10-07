@@ -2456,13 +2456,6 @@
         "Tactical",
         "Vulcan"
     ],
-    "LGD Gaming": [
-        "Burdol",
-        "Heng",
-        "Tangyuan",
-        "Shaoye",
-        "Crisp"
-    ],
     "BNK FEARX": [
         "Clear",
         "Raptor",
@@ -2477,26 +2470,12 @@
         "Jiwoo",
         "Effort"
     ],
-    "RED Canids": [
-        "zynts",
-        "Aegis",
-        "Fuuu",
-        "Morttheus",
-        "Manel"
-    ],
     "Team WE": [
         "Cube",
         "Monki",
         "Karis",
         "About",
         "Erha"
-    ],
-    "HANJIN BRION": [
-        "Casting",
-        "GIDEON",
-        "Roamer",
-        "Teddy",
-        "Namgung"
     ],
     "Team Liquid": [
         "Morgan",
@@ -2512,13 +2491,6 @@
         "Berserker",
         "Isles"
     ],
-    "Team Vitality": [
-        "Naak Nako",
-        "Lyncas",
-        "FIESTA",
-        "Carzzy",
-        "Fleshy"
-    ],
     "GAM Esports": [
         "Kiaya",
         "tiphat",
@@ -2532,20 +2504,6 @@
         "Quad",
         "Massu",
         "Cryogen"
-    ],
-    "Natus Vincere": [
-        "Maynter",
-        "Rhilech",
-        "Poby",
-        "SamD",
-        "Parus"
-    ],
-    "JD Gaming": [
-        "Xiaoxu",
-        "xiaofang",
-        "Angel",
-        "GALA",
-        "Vampire"
     ],
     "Shopify Rebellion": [
         "Fudge",
@@ -2567,5 +2525,61 @@
         "Grevthar",
         "Kojima",
         "Guigs"
+    ],
+    "Maryville University": [
+        "Crimson",
+        "Yuuji",
+        "AoJune",
+        "ScaryJerry",
+        "Obstinatus"
+    ],
+    "Zeu5 Esports": [
+        "Keii",
+        "Blind Walker",
+        "Zelt",
+        "Raysito",
+        "Kita"
+    ],
+    "HANJIN BRION": [
+        "Casting",
+        "GIDEON",
+        "Roamer",
+        "Teddy",
+        "Namgung"
+    ],
+    "Natus Vincere": [
+        "Maynter",
+        "Rhilech",
+        "Poby",
+        "SamD",
+        "Parus"
+    ],
+    "Team Vitality": [
+        "Naak Nako",
+        "Lyncas",
+        "FIESTA",
+        "Carzzy",
+        "Fleshy"
+    ],
+    "RED Canids": [
+        "zynts",
+        "Aegis",
+        "Fuuu",
+        "Morttheus",
+        "Manel"
+    ],
+    "JD Gaming": [
+        "Xiaoxu",
+        "xiaofang",
+        "Angel",
+        "GALA",
+        "Vampire"
+    ],
+    "LGD Gaming": [
+        "Burdol",
+        "Heng",
+        "Tangyuan",
+        "Shaoye",
+        "Crisp"
     ]
 }
