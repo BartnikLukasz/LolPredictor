@@ -1,6 +1,6 @@
 {
   "model": "lightgbm",
-  "created_at": "2026-10-08T06:36:09",
+  "created_at": "2026-10-08T06:42:16",
   "feature_profile": "live_supported",
   "use_raw_champions": false,
   "feature_cols": [
