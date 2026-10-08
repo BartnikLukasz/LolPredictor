@@ -4,7 +4,7 @@ import sys
 from datetime import datetime
 
 # Configure the paths you want to track and stage in Git
-PATHS_TO_STAGE = ["models/", "dataset/pregame/pregame_dataset_final_features.csv.gz"]
+PATHS_TO_STAGE = ["models/", "dataset/pregame/pregame_dataset_final_features.csv"]
 
 PUSH_ATTEMPTS = 3
 
@@ -52,19 +52,29 @@ def run_pipeline_and_push():
     print(f"[*] Committing changes: '{commit_msg}'")
     run_cmd(["git", "commit", "-m", commit_msg])
 
-    # 5. Push, rebasing first in case the remote moved (e.g. you pushed code from your PC meanwhile)
+    # 5. Push. The pipeline takes a while, so the remote branch may have moved since this job checked it out
+    #    (for example you pushed code or locally trained models in the meantime). Our commit only touches the
+    #    generated files, so we replay it on top of the latest remote and, if the same generated file changed on
+    #    both sides, keep OUR freshly generated version. In a rebase, "theirs" means the commit being replayed.
     print("[*] Pushing to Git remote...")
+    branch = run_cmd(["git", "rev-parse", "--abbrev-ref", "HEAD"], check=False).stdout.strip()
+    if not branch or branch == "HEAD":
+        print("[!] Detached HEAD: there is no branch to push to.")
+        sys.exit(1)
+
     for attempt in range(1, PUSH_ATTEMPTS + 1):
-        pull = run_cmd(["git", "pull", "--rebase"], check=False)
-        if pull.returncode != 0:
+        if run_cmd(["git", "fetch", "origin", branch], check=False).returncode != 0:
+            print(f"[!] 'git fetch origin {branch}' failed (network, permissions or missing branch?).")
+            sys.exit(1)
+        rebase = run_cmd(["git", "rebase", "-X", "theirs", f"origin/{branch}"], check=False)
+        if rebase.returncode != 0:
             git_dir = run_cmd(["git", "rev-parse", "--git-dir"], check=False).stdout.strip() or ".git"
             if any(os.path.isdir(os.path.join(git_dir, d)) for d in ("rebase-merge", "rebase-apply")):
                 run_cmd(["git", "rebase", "--abort"], check=False)
-                print("[!] Rebase conflict with the remote branch. Resolve manually.")
-            else:
-                print("[!] 'git pull --rebase' failed (network or permissions problem?).")
+            print("[!] Could not replay the model update on top of the remote branch "
+                  "(e.g. someone deleted a tracked model file). Resolve manually.")
             sys.exit(1)
-        push = run_cmd(["git", "push"], check=False)
+        push = run_cmd(["git", "push", "origin", f"HEAD:{branch}"], check=False)
         if push.returncode == 0:
             print("[✓] Successfully pushed updated models to remote repository!")
             return
