@@ -4,7 +4,7 @@ import sys
 from datetime import datetime
 
 # Configure the paths you want to track and stage in Git
-PATHS_TO_STAGE = ["models/", "dataset/pregame/pregame_dataset_final_features.csv"]
+PATHS_TO_STAGE = ["models/", "dataset/pregame/pregame_dataset_final_features.csv.gz", "dataset/match/2026_match_data.csv.gz"]
 
 PUSH_ATTEMPTS = 3
 
