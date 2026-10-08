@@ -2428,13 +2428,6 @@
         "Duduhh",
         "Ackerman"
     ],
-    "Estral Esports": [
-        "Bwipo",
-        "Oddie",
-        "Envy",
-        "Brance",
-        "Telas"
-    ],
     "FURIA": [
         "Guigo",
         "Tatu",
@@ -2491,40 +2484,12 @@
         "Berserker",
         "Isles"
     ],
-    "GAM Esports": [
-        "Kiaya",
-        "tiphat",
-        "Gloryy",
-        "Artemis",
-        "Taki"
-    ],
-    "FlyQuest": [
-        "Gakgos",
-        "Gryffinn",
-        "Quad",
-        "Massu",
-        "Cryogen"
-    ],
-    "Shopify Rebellion": [
-        "Fudge",
-        "Contractz",
-        "Zinie",
-        "Bvoy",
-        "Zeyzal"
-    ],
     "9z Globant": [
         "Nate",
         "Warsor",
         "Aloned",
         "FIX",
         "Ux"
-    ],
-    "KaBuM! Ilha das Lendas": [
-        "Yupps",
-        "SCARY",
-        "Grevthar",
-        "Kojima",
-        "Guigs"
     ],
     "Maryville University": [
         "Crimson",
@@ -2581,5 +2546,54 @@
         "Tangyuan",
         "Shaoye",
         "Crisp"
+    ],
+    "Cupid Esports": [
+        "Horder",
+        "Music",
+        "Ablazeolive",
+        "Mobility",
+        "Breezy"
+    ],
+    "Fuego": [
+        "Jauny",
+        "Grell",
+        "Skyy",
+        "Snaker",
+        "Ichiwin"
+    ],
+    "KaBuM! Ilha das Lendas": [
+        "Yupps",
+        "SCARY",
+        "Grevthar",
+        "Kojima",
+        "Guigs"
+    ],
+    "Estral Esports": [
+        "Bwipo",
+        "Oddie",
+        "Envy",
+        "Brance",
+        "Telas"
+    ],
+    "GAM Esports": [
+        "Kiaya",
+        "tiphat",
+        "Gloryy",
+        "Artemis",
+        "Taki"
+    ],
+    "FlyQuest": [
+        "Gakgos",
+        "Gryffinn",
+        "Quad",
+        "Massu",
+        "Cryogen"
+    ],
+    "Shopify Rebellion": [
+        "Fudge",
+        "Contractz",
+        "Zinie",
+        "Bvoy",
+        "Zeyzal"
     ]
 }
