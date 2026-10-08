@@ -29,8 +29,7 @@ class LiveFeatureEngine:
             self.model.load_model(model_path)
         else:
             artifact = joblib.load(model_path)
-            self.model = artifact.get("pipeline", artifact.get("model", artifact)) if isinstance(artifact,
-                                                                                                 dict) else artifact
+            self.model = artifact.get("pipeline", artifact.get("model", artifact)) if isinstance(artifact, dict) else artifact
 
         # 2. Load Historical Data
         print("Loading reference lookup data from historical dataset...")
@@ -52,15 +51,12 @@ class LiveFeatureEngine:
 
     def _extract_model_feature_names(self) -> List[str]:
         """Extracts ordered list of feature names expected by model (supports XGBoost, LightGBM, and CatBoost)."""
-        # CatBoost native feature names
         if hasattr(self.model, "feature_names_") and self.model.feature_names_ is not None:
             return list(self.model.feature_names_)
 
-        # Scikit-learn API / XGBoost feature_names_in_
         if hasattr(self.model, "feature_names_in_") and self.model.feature_names_in_ is not None:
             return list(self.model.feature_names_in_)
 
-        # XGBoost Booster object feature names
         if hasattr(self.model, "booster_") and hasattr(self.model.booster_, "feature_name"):
             fn = self.model.booster_.feature_name()
             if fn and len(fn) > 0 and not fn[0].startswith("Column_"):
@@ -76,14 +72,49 @@ class LiveFeatureEngine:
 
         return []
 
+    def extract_feature_importances(self, feature_names: List[str]) -> np.ndarray:
+        """Extracts raw feature importances across tree models, linear models, and scikit-learn pipelines."""
+        importances = None
+        model = self.model
+
+        if hasattr(model, "named_steps"):
+            estimator = list(model.named_steps.values())[-1]
+        elif hasattr(model, "steps"):
+            estimator = model.steps[-1][1]
+        else:
+            estimator = model
+
+        if hasattr(estimator, "feature_importances_") and estimator.feature_importances_ is not None:
+            importances = np.array(estimator.feature_importances_, dtype=float)
+        elif hasattr(estimator, "coef_") and estimator.coef_ is not None:
+            importances = np.abs(np.array(estimator.coef_, dtype=float)).flatten()
+        elif hasattr(estimator, "get_booster"):
+            try:
+                booster = estimator.get_booster()
+                score_dict = booster.get_score(importance_type="gain")
+                if score_dict:
+                    importances = np.array([float(score_dict.get(f, 0.0)) for f in feature_names])
+            except Exception:
+                pass
+
+        if importances is None or len(importances) == 0:
+            importances = np.zeros(len(feature_names))
+
+        if len(importances) != len(feature_names):
+            if len(importances) > len(feature_names):
+                importances = importances[:len(feature_names)]
+            else:
+                importances = np.pad(importances, (0, len(feature_names) - len(importances)))
+
+        return importances
+
     def _build_elo_lookup(self) -> None:
-        """Builds dictionary of latest team Elo ratings, preferring post-game ratings to include latest outcomes."""
+        """Builds dictionary of latest team Elo ratings."""
         self.latest_elo = {}
         for _, row in self.df_hist.iterrows():
             b_team = row.get('blue_team')
             r_team = row.get('red_team')
 
-            # Use post-game Elo if available so the latest game outcome is reflected
             b_elo = row.get('blue_elo_post', row.get('blue_elo_pre'))
             r_elo = row.get('red_elo_post', row.get('red_elo_pre'))
 
@@ -119,7 +150,7 @@ class LiveFeatureEngine:
                 }
 
     def _build_player_and_champ_lookups(self) -> None:
-        """Builds player mastery (Player x Champion), global champion, and player baseline lookups."""
+        """Builds player mastery, global champion, and player baseline lookups."""
         player_champ_lookup = {}
         global_champ_lookup = {}
         player_stats = {}
@@ -166,32 +197,26 @@ class LiveFeatureEngine:
         """Tiered lookup strategy: Exact Player x Champ -> Global Champ Fallback -> Baseline Default."""
         key = (str(player_name), str(champ_name))
 
-        # 1. Exact Player x Champion Mastery Match
         if key in self.player_champ_lookup:
             stats = self.player_champ_lookup[key]
             return float(stats["games_pre"]), float(stats["winrate_pre"])
 
-        # 2. Global Champion Fallback
         if str(champ_name) in self.global_champ_lookup:
             stats = self.global_champ_lookup[str(champ_name)]
             return 0.0, float(stats["winrate_pre"])
 
-        # 3. Neutral Baseline Default
         return 0.0, 0.50
 
     def get_player_stat(self, player_name: str) -> dict:
-        """Retrieves general player win rate and game count."""
         return self.player_stats.get(str(player_name), {'games': 0.0, 'winrate': 0.50})
 
     def get_champ_stat(self, champ_name: str) -> dict:
-        """Retrieves general champion win rate and game count."""
         return self.champ_stats.get(str(champ_name), {'games': 0.0, 'winrate': 0.50})
 
     def build_feature_vector(self, draft_payload: dict) -> pd.DataFrame:
         """Constructs a single-row DataFrame aligned with historical model schema."""
         row = {}
 
-        # 1. Elo Features
         blue_team = draft_payload.get('blue_team', '')
         red_team = draft_payload.get('red_team', '')
         blue_fp = draft_payload.get('blue_firstpick', 1)
@@ -205,7 +230,6 @@ class LiveFeatureEngine:
         else:
             b_elo = self.latest_elo.get(blue_team, 1500.0)
             r_elo = self.latest_elo.get(red_team, 1500.0)
-            # Pure Elo difference (blue_firstpick is evaluated separately by trees)
             elo_diff = b_elo - r_elo
             blue_win_prob = 1.0 / (1.0 + 10.0 ** (-elo_diff / 400.0))
 
@@ -215,7 +239,6 @@ class LiveFeatureEngine:
         row['blue_elo_win_prob'] = blue_win_prob
         row['blue_firstpick'] = blue_fp
 
-        # 2. Team Momentum Features
         b_mom_data = self.latest_momentum.get(blue_team, {})
         r_mom_data = self.latest_momentum.get(red_team, {})
 
@@ -242,7 +265,6 @@ class LiveFeatureEngine:
         row['red_overperform_10'] = r_overperform_10
         row['overperformance_diff_10'] = b_overperform_10 - r_overperform_10
 
-        # 3. Series Context Features
         row['game_number'] = draft_payload.get('game_number', 1)
         row['blue_series_lead'] = draft_payload.get('blue_series_lead', 0)
 
@@ -261,7 +283,6 @@ class LiveFeatureEngine:
 
         row['blue_prev_win'] = blue_prev_win
 
-        # 4. Champion Picks & Players
         blue_champs = draft_payload.get('blue_champs', ['', '', '', '', ''])
         red_champs = draft_payload.get('red_champs', ['', '', '', '', ''])
         blue_players = draft_payload.get('blue_players', ['', '', '', '', ''])
@@ -296,7 +317,6 @@ class LiveFeatureEngine:
 
         live_df = pd.DataFrame([row])
 
-        # 5. Neutralize missing features matching training defaults
         for col in self.expected_features:
             if col not in live_df.columns:
                 if any(term in col for term in ['winrate', 'wr', 'synergy', 'counter', 'p2p', 'cohesion']):
@@ -309,7 +329,7 @@ class LiveFeatureEngine:
         return live_df[[c for c in self.expected_features if c in live_df.columns]].copy()
 
     def _categorize_features(self, columns: list) -> dict:
-        """Groups DataFrame columns into the 8 prediction feature categories."""
+        """Groups DataFrame columns into prediction feature categories."""
         categories = {
             'elo': [], 'momentum': [], 'series': [], 'player': [],
             'h2h': [], 'synergy': [], 'draft_champ': [], 'champ': []
@@ -399,8 +419,7 @@ class LiveFeatureEngine:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
 
         target_n_features = getattr(self.model, "n_features_in_", None)
-        if target_n_features is None and hasattr(self.model, "booster_") and hasattr(self.model.booster_,
-                                                                                     "num_feature"):
+        if target_n_features is None and hasattr(self.model, "booster_") and hasattr(self.model.booster_, "num_feature"):
             target_n_features = self.model.booster_.num_feature()
 
         if target_n_features and df.shape[1] != target_n_features:
@@ -426,7 +445,7 @@ class LiveFeatureEngine:
             return float(self.model.predict(dmatrix)[0])
 
     def predict_match(self, draft_payload: dict) -> dict:
-        """Calculates win probabilities and 8-category progression breakdown for a draft."""
+        """Calculates win probabilities, feature importances, and feature values for a prediction."""
         feature_df = self.build_feature_vector(draft_payload)
         aligned_df = self._align_dtypes_and_shape(feature_df)
 
@@ -483,6 +502,49 @@ class LiveFeatureEngine:
             "Impact Delta": prog_deltas
         })
 
+        # Build feature importance & prediction values table
+        feature_names = list(aligned_df.columns)
+        raw_importances = self.extract_feature_importances(feature_names)
+        total_imp = np.sum(raw_importances)
+        imp_pcts = (raw_importances / total_imp * 100.0) if total_imp > 0 else np.zeros(len(feature_names))
+
+        cat_display_names = {
+            'elo': 'Elo Rating',
+            'momentum': 'Team Momentum',
+            'series': 'Series Context',
+            'player': 'Player Mastery',
+            'h2h': 'Head-to-Head',
+            'synergy': 'Roster Synergy',
+            'draft_champ': 'Draft Synergy',
+            'champ': 'Champion Picks'
+        }
+
+        col_to_cat = {}
+        for c_key, cols in cat_map.items():
+            for c in cols:
+                col_to_cat[c] = cat_display_names.get(c_key, 'General')
+
+        feature_rows = []
+        row_vals = aligned_df.iloc[0]
+
+        for name, imp_raw, imp_pct in zip(feature_names, raw_importances, imp_pcts):
+            val = row_vals[name]
+            if isinstance(val, (float, np.floating)):
+                val_str = f"{val:.4f}".rstrip('0').rstrip('.') if not np.isnan(val) else "N/A"
+            else:
+                val_str = str(val)
+
+            feature_rows.append({
+                "Feature": name,
+                "Category": col_to_cat.get(name, 'General'),
+                "Importance (%)": round(float(imp_pct), 2),
+                "Raw Importance": round(float(imp_raw), 4),
+                "Value for Prediction": val_str
+            })
+
+        features_df = pd.DataFrame(feature_rows)
+        features_df = features_df.sort_values(by="Importance (%)", ascending=False).reset_index(drop=True)
+
         role_breakdown = []
         blue_players = draft_payload.get('blue_players', [])
         red_players = draft_payload.get('red_players', [])
@@ -498,7 +560,6 @@ class LiveFeatureEngine:
             bp_s = self.get_player_stat(bp)
             rp_s = self.get_player_stat(rp)
 
-            # Retrieve Player x Champ specific win rates for breakdown view
             _, bc_wr = self._get_player_champ_stats(bp, bc)
             _, rc_wr = self._get_player_champ_stats(rp, rc)
 
@@ -516,51 +577,52 @@ class LiveFeatureEngine:
                 'red_c_wr': rc_wr,
             })
 
-            avg_blue_p_wr = np.mean([r['blue_p_wr'] for r in role_breakdown])
-            avg_red_p_wr = np.mean([r['red_p_wr'] for r in role_breakdown])
-            avg_blue_c_wr = np.mean([r['blue_c_wr'] for r in role_breakdown])
-            avg_red_c_wr = np.mean([r['red_c_wr'] for r in role_breakdown])
+        avg_blue_p_wr = np.mean([r['blue_p_wr'] for r in role_breakdown])
+        avg_red_p_wr = np.mean([r['red_p_wr'] for r in role_breakdown])
+        avg_blue_c_wr = np.mean([r['blue_c_wr'] for r in role_breakdown])
+        avg_red_c_wr = np.mean([r['red_c_wr'] for r in role_breakdown])
 
-            b_elo = self.latest_elo.get(blue_team, 1500.0)
-            r_elo = self.latest_elo.get(red_team, 1500.0)
+        b_elo = self.latest_elo.get(blue_team, 1500.0)
+        r_elo = self.latest_elo.get(red_team, 1500.0)
 
-            return {
-                'blue_win_probability': proba_blue,
-                'red_win_probability': proba_red,
-                'blue_win_percentage': final_pct,
-                'red_win_percentage': round(proba_red * 100, 2),
-                'progression_data': progression_data,
-                'draft_swings': {
-                    'elo_swing': stage_results['elo']['swing'],
-                    'momentum_swing': stage_results['momentum']['swing'],
-                    'series_swing': stage_results['series']['swing'],
-                    'player_swing': stage_results['player']['swing'],
-                    'h2h_swing': stage_results['h2h']['swing'],
-                    'synergy_swing': stage_results['synergy']['swing'],
-                    'draft_champ_swing': stage_results['draft_champ']['swing'],
-                    'champ_swing': stage_results['champ']['swing'],
-                    'total_swing': round(final_pct - base_pct, 2)
-                },
-                'series_metrics': {
-                    'game_number': draft_payload.get('game_number', 1),
-                    'blue_series_lead': draft_payload.get('blue_series_lead', 0),
-                    'blue_prev_win': draft_payload.get('blue_prev_win', 'N/A (Game 1)')
-                },
-                'elo_metrics': {
-                    'blue_elo': round(b_elo, 1),
-                    'red_elo': round(r_elo, 1),
-                    'elo_diff': round(b_elo - r_elo, 1),
-                    'elo_implied_blue_winrate': stage_results['elo']['pct']
-                },
-                'player_metrics': {
-                    'avg_blue_p_wr': round(avg_blue_p_wr * 100, 2),
-                    'avg_red_p_wr': round(avg_red_p_wr * 100, 2),
-                    'p_wr_diff': round((avg_blue_p_wr - avg_red_p_wr) * 100, 2)
-                },
-                'draft_metrics': {
-                    'avg_blue_c_wr': round(avg_blue_c_wr * 100, 2),
-                    'avg_red_c_wr': round(avg_red_c_wr * 100, 2),
-                    'c_wr_diff': round((avg_blue_c_wr - avg_red_c_wr) * 100, 2)
-                },
-                'role_breakdown': role_breakdown
-            }
+        return {
+            'blue_win_probability': proba_blue,
+            'red_win_probability': proba_red,
+            'blue_win_percentage': final_pct,
+            'red_win_percentage': round(proba_red * 100, 2),
+            'progression_data': progression_data,
+            'features_df': features_df,
+            'draft_swings': {
+                'elo_swing': stage_results['elo']['swing'],
+                'momentum_swing': stage_results['momentum']['swing'],
+                'series_swing': stage_results['series']['swing'],
+                'player_swing': stage_results['player']['swing'],
+                'h2h_swing': stage_results['h2h']['swing'],
+                'synergy_swing': stage_results['synergy']['swing'],
+                'draft_champ_swing': stage_results['draft_champ']['swing'],
+                'champ_swing': stage_results['champ']['swing'],
+                'total_swing': round(final_pct - base_pct, 2)
+            },
+            'series_metrics': {
+                'game_number': draft_payload.get('game_number', 1),
+                'blue_series_lead': draft_payload.get('blue_series_lead', 0),
+                'blue_prev_win': draft_payload.get('blue_prev_win', 'N/A (Game 1)')
+            },
+            'elo_metrics': {
+                'blue_elo': round(b_elo, 1),
+                'red_elo': round(r_elo, 1),
+                'elo_diff': round(b_elo - r_elo, 1),
+                'elo_implied_blue_winrate': stage_results['elo']['pct']
+            },
+            'player_metrics': {
+                'avg_blue_p_wr': round(avg_blue_p_wr * 100, 2),
+                'avg_red_p_wr': round(avg_red_p_wr * 100, 2),
+                'p_wr_diff': round((avg_blue_p_wr - avg_red_p_wr) * 100, 2)
+            },
+            'draft_metrics': {
+                'avg_blue_c_wr': round(avg_blue_c_wr * 100, 2),
+                'avg_red_c_wr': round(avg_red_c_wr * 100, 2),
+                'c_wr_diff': round((avg_blue_c_wr - avg_red_c_wr) * 100, 2)
+            },
+            'role_breakdown': role_breakdown
+        }

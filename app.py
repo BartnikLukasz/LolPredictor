@@ -5,7 +5,6 @@ from datetime import datetime
 
 import joblib
 import pandas as pd
-import plotly.graph_objects as go
 import streamlit as st
 import xgboost as xgb
 
@@ -509,134 +508,95 @@ def render_model_dashboard(model_name: str, results: dict, active_pred: dict, h2
                 del st.session_state["active_prediction"]
                 st.rerun()
 
-    st.markdown(f"### 📊 Feature & Match Analysis ({model_name})")
-
-    analysis_options = [
-        "⚡ Elo & Series Context",
-        "👤 Player Mastery",
-        "⚔️ Draft Impact",
-        "🛡️ Team H2H",
-        "🎲 Value Odds"
-    ]
-    if "active_analysis_tab" not in st.session_state:
-        st.session_state["active_analysis_tab"] = analysis_options[0]
-
-    selected_analysis_tab = st.radio(
-        "Analysis View Navigation",
-        options=analysis_options,
-        horizontal=True,
-        key="active_analysis_tab",
-        label_visibility="collapsed"
+    # --- REPLACED FEATURE IMPORTANCE & PREDICTION VALUES SECTION ---
+    st.markdown("---")
+    st.markdown(f"### 🔍 Model Feature Importance & Prediction Values ({model_name})")
+    st.caption(
+        "Below is the complete list of input features for the selected model, "
+        "their relative importance to the model's prediction, and their exact computed values for this match."
     )
 
-    if selected_analysis_tab == "⚡ Elo & Series Context":
-        e1, e2, e3 = st.columns(3)
-        elo_base = results.get('elo_metrics', {}).get('elo_implied_blue_winrate', 50.0)
-        e1.metric(f"{b_team} Elo", f"{results['elo_metrics']['blue_elo']}")
-        e2.metric(f"{r_team} Elo", f"{results['elo_metrics']['red_elo']}")
-        e3.metric("Elo Implied Winrate", f"{elo_base}%")
+    features_df = results.get("features_df")
 
-    elif selected_analysis_tab == "👤 Player Mastery":
-        player_rows = []
-        for r in results.get('role_breakdown', []):
-            b_p_wr = r.get('blue_p_wr', 0.5) * 100
-            r_p_wr = r.get('red_p_wr', 0.5) * 100
-            player_rows.append({
-                "Role": r['role'],
-                f"{b_team} Player": r['blue_player'],
-                "Blue WR": f"{b_p_wr:.1f}%",
-                f"{r_team} Player": r['red_player'],
-                "Red WR": f"{r_p_wr:.1f}%",
-                "Mastery Swing": f"{(b_p_wr - r_p_wr):+.1f}%"
-            })
-        st.dataframe(pd.DataFrame(player_rows), use_container_width=True, hide_index=True)
+    if features_df is not None and not features_df.empty:
+        # Filtering & Sorting Controls
+        ctrl_col1, ctrl_col2, ctrl_col3 = st.columns([2, 2, 1])
 
-    elif selected_analysis_tab == "⚔️ Draft Impact":
-        swings = results.get("draft_swings", {})
-        role_data = results.get("role_breakdown", [])
+        with ctrl_col1:
+            search_query = st.text_input(
+                "🔎 Search Features",
+                placeholder="e.g., elo, winrate, streak, champ...",
+                key=f"search_feat_{model_name}"
+            )
 
-        st.markdown("#### 📊 8-Category Feature Impact Swings")
-        col1, col2, col3, col4 = st.columns(4)
-        col1.metric("1. Elo Rating", f"{swings.get('elo_swing', 0.0):+.2f}%")
-        col2.metric("2. Team Momentum", f"{swings.get('momentum_swing', 0.0):+.2f}%")
-        col3.metric("3. Series Context", f"{swings.get('series_swing', 0.0):+.2f}%")
-        col4.metric("4. Player Mastery", f"{swings.get('player_swing', 0.0):+.2f}%")
+        with ctrl_col2:
+            categories = ["All"] + sorted(list(features_df["Category"].unique()))
+            selected_cat = st.selectbox(
+                "📁 Filter by Category",
+                options=categories,
+                key=f"cat_feat_{model_name}"
+            )
 
-        col5, col6, col7, col8 = st.columns(4)
-        col5.metric("5. Head-to-Head", f"{swings.get('h2h_swing', 0.0):+.2f}%")
-        col6.metric("6. Roster Synergy", f"{swings.get('synergy_swing', 0.0):+.2f}%")
-        col7.metric("7. Draft Synergy", f"{swings.get('draft_champ_swing', 0.0):+.2f}%")
-        col8.metric("8. Champion Picks", f"{swings.get('champ_swing', 0.0):+.2f}%")
+        with ctrl_col3:
+            sort_order = st.selectbox(
+                "⬆️ Sort Importance",
+                options=["Highest First", "Lowest First"],
+                key=f"sort_feat_{model_name}"
+            )
 
-        st.markdown(f"#### 📈 Prediction Progression Waterfall ({b_team})")
+        # Apply filtering
+        display_df = features_df.copy()
 
-        waterfall_stages = [
-            ("0. Baseline (50%)", "absolute", 50.0, "50.0%"),
-            ("1. Elo Rating", "relative", swings.get("elo_swing", 0.0), f"{swings.get('elo_swing', 0.0):+.2f}%"),
-            ("2. Team Momentum", "relative", swings.get("momentum_swing", 0.0), f"{swings.get('momentum_swing', 0.0):+.2f}%"),
-            ("3. Series Context", "relative", swings.get("series_swing", 0.0), f"{swings.get('series_swing', 0.0):+.2f}%"),
-            ("4. Player Mastery", "relative", swings.get("player_swing", 0.0), f"{swings.get('player_swing', 0.0):+.2f}%"),
-            ("5. Head-to-Head", "relative", swings.get("h2h_swing", 0.0), f"{swings.get('h2h_swing', 0.0):+.2f}%"),
-            ("6. Roster Synergy", "relative", swings.get("synergy_swing", 0.0), f"{swings.get('synergy_swing', 0.0):+.2f}%"),
-            ("7. Draft Synergy & Counters", "relative", swings.get("draft_champ_swing", 0.0), f"{swings.get('draft_champ_swing', 0.0):+.2f}%"),
-            ("8. Champion Picks", "relative", swings.get("champ_swing", 0.0), f"{swings.get('champ_swing', 0.0):+.2f}%"),
-            ("Final Prediction", "total", 0, f"{results.get('blue_win_percentage', 50.0):.1f}%")
-        ]
+        if selected_cat != "All":
+            display_df = display_df[display_df["Category"] == selected_cat]
 
-        x_labels = [item[0] for item in waterfall_stages]
-        measures = [item[1] for item in waterfall_stages]
-        y_values = [item[2] for item in waterfall_stages]
-        text_labels = [item[3] for item in waterfall_stages]
+        if search_query.strip():
+            query = search_query.strip().lower()
+            display_df = display_df[
+                display_df["Feature"].str.lower().str.contains(query) |
+                display_df["Category"].str.lower().str.contains(query) |
+                display_df["Value for Prediction"].astype(str).str.lower().str.contains(query)
+            ]
 
-        fig = go.Figure(go.Waterfall(
-            name="Winrate Swing",
-            orientation="v",
-            measure=measures,
-            x=x_labels,
-            textposition="outside",
-            text=text_labels,
-            y=y_values,
-            connector={"line": {"color": "#888", "width": 1.5}},
-            increasing={"marker": {"color": "#2ecc71"}},
-            decreasing={"marker": {"color": "#e74c3c"}},
-            totals={"marker": {"color": "#3498db"}}
-        ))
+        ascending_sort = (sort_order == "Lowest First")
+        display_df = display_df.sort_values(by="Importance (%)", ascending=ascending_sort).reset_index(drop=True)
 
-        max_y = max(100.0, float(results.get('blue_win_percentage', 50.0)) + 10.0)
-        fig.update_layout(
-            yaxis_title=f"{b_team} Win Probability (%)",
-            yaxis=dict(range=[0, max_y]),
-            showlegend=False,
-            height=420,
-            margin=dict(l=20, r=20, t=30, b=20),
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)"
+        # Highlight Top Decision Drivers
+        top_3 = features_df.head(3)
+        st.markdown("##### 💡 Top Decision Drivers for this Model")
+        top_cols = st.columns(min(3, len(top_3)))
+        for idx, (_, row) in enumerate(top_3.iterrows()):
+            if idx < len(top_cols):
+                top_cols[idx].metric(
+                    label=f"#{idx+1}: {row['Feature']}",
+                    value=f"Value: {row['Value for Prediction']}",
+                    delta=f"{row['Importance (%)']}% Importance"
+                )
+
+        st.markdown("##### 📋 Complete Feature Vector & Importance Table")
+
+        st.dataframe(
+            display_df[["Feature", "Category", "Importance (%)", "Value for Prediction"]],
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Feature": st.column_config.TextColumn("Feature Name", help="Input feature name used by the model"),
+                "Category": st.column_config.TextColumn("Category", help="Feature category group"),
+                "Importance (%)": st.column_config.NumberColumn(
+                    "Importance (%)",
+                    format="%.2f%%",
+                    help="Global relative importance weight of this feature in the trained model"
+                ),
+                "Value for Prediction": st.column_config.TextColumn(
+                    "Value for Prediction",
+                    help="Exact input value generated for this specific match prediction"
+                )
+            }
         )
+        st.caption(f"Showing {len(display_df)} of {len(features_df)} total features for model **{model_name}**.")
 
-        st.plotly_chart(fig, use_container_width=True)
-
-        st.markdown("#### 🎯 Role-by-Role Draft Swing Breakdown")
-        champ_rows = []
-        for r in role_data:
-            b_c_wr = r.get('blue_c_wr', 0.5) * 100
-            r_c_wr = r.get('red_c_wr', 0.5) * 100
-            champ_rows.append({
-                "Role": r['role'],
-                f"{b_team} Pick": r['blue_champ'],
-                "Blue Champ WR": f"{b_c_wr:.1f}%",
-                f"{r_team} Pick": r['red_champ'],
-                "Red Champ WR": f"{r_c_wr:.1f}%",
-                "Role Impact Swing": f"{(b_c_wr - r_c_wr):+.1f}%"
-            })
-        st.dataframe(pd.DataFrame(champ_rows), use_container_width=True, hide_index=True)
-
-    elif selected_analysis_tab == "🛡️ Team H2H":
-        st.info(f"Historical Matchups: {h2h_data['total_h2h']} | {b_team} H2H Winrate: {h2h_data['blue_h2h_wr']}%")
-
-    elif selected_analysis_tab == "🎲 Value Odds":
-        p_b, p_r = results['blue_win_probability'], results['red_win_probability']
-        st.write(f"**{b_team} Fair Decimal:** {round(1.0/p_b, 2) if p_b > 0 else 0} ({prob_to_american_odds(p_b)})")
-        st.write(f"**{r_team} Fair Decimal:** {round(1.0/p_r, 2) if p_r > 0 else 0} ({prob_to_american_odds(p_r)})")
+    else:
+        st.info("Feature importance data is not available for this model.")
 
 
 if "active_prediction" in st.session_state:

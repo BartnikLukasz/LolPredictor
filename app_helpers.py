@@ -33,7 +33,6 @@ def fetch_golgg_draft(url: str) -> dict:
 
     soup = BeautifulSoup(response.text, 'html.parser')
 
-    # 1. Extract Team Names
     blue_team_elem = soup.select_one('.blue-line-header a, .blue-line-header')
     red_team_elem = soup.select_one('.red-line-header a, .red-line-header')
 
@@ -42,7 +41,6 @@ def fetch_golgg_draft(url: str) -> dict:
 
     logs.append(f"Teams Extracted -> Blue: '{blue_team}', Red: '{red_team}'")
 
-    # 2. Extract First Pick Side
     first_pick = "Blue"
     first_pick_img = (
         soup.find('img', src=re.compile(r'first\.png', re.IGNORECASE)) or
@@ -73,7 +71,6 @@ def fetch_golgg_draft(url: str) -> dict:
 
     logs.append(f"First Pick: {first_pick}")
 
-    # 3. Extract Player Names & Champion Picks
     blue_champs, red_champs = [], []
     blue_players, red_players = [], []
 
@@ -143,12 +140,10 @@ def match_team_name(
 
     scraped_clean = scraped_name.strip().lower()
 
-    # 1. Exact or case-insensitive match
     for team in valid_teams:
         if scraped_clean == team.strip().lower():
             return team
 
-    # 2. Roster overlap match
     if fetched_players and team_rosters:
         scraped_players_set = {p.strip().lower() for p in fetched_players if p and p.strip()}
         if scraped_players_set:
@@ -165,7 +160,6 @@ def match_team_name(
             if best_roster_match and max_overlap >= 2:
                 return best_roster_match
 
-    # 3. Fuzzy similarity weighted by recency
     candidate_scores = []
     date_col = 'date' if df_hist is not None and 'date' in df_hist.columns else (
         'date_utc' if df_hist is not None and 'date_utc' in df_hist.columns else None
@@ -377,6 +371,29 @@ def create_weighted_ensemble_result(all_model_results: dict, model_weights: dict
     first_res['draft_swings'] = w_swings
     first_res['draft_swings']['total_swing'] = round(final_pct - 50.0, 2)
     first_res['weights_used'] = norm_weights
+
+    # Combine weighted ensemble features_df
+    first_f_df = base_results[next(iter(base_results))].get('features_df')
+    if first_f_df is not None and not first_f_df.empty:
+        ensemble_f_df = first_f_df.copy()
+        ensemble_f_df['Importance (%)'] = 0.0
+        ensemble_f_df['Raw Importance'] = 0.0
+
+        for m_name, m_res in base_results.items():
+            w = norm_weights.get(m_name, 0.0)
+            m_f_df = m_res.get('features_df')
+            if m_f_df is not None and not m_f_df.empty:
+                imp_map = dict(zip(m_f_df['Feature'], m_f_df['Importance (%)']))
+                raw_map = dict(zip(m_f_df['Feature'], m_f_df.get('Raw Importance', m_f_df['Importance (%)'])))
+
+                ensemble_f_df['Importance (%)'] += ensemble_f_df['Feature'].map(imp_map).fillna(0.0) * w
+                ensemble_f_df['Raw Importance'] += ensemble_f_df['Feature'].map(raw_map).fillna(0.0) * w
+
+        ensemble_f_df['Importance (%)'] = ensemble_f_df['Importance (%)'].round(2)
+        ensemble_f_df['Raw Importance'] = ensemble_f_df['Raw Importance'].round(4)
+        ensemble_f_df = ensemble_f_df.sort_values(by="Importance (%)", ascending=False).reset_index(drop=True)
+        first_res['features_df'] = ensemble_f_df
+
     return first_res
 
 
