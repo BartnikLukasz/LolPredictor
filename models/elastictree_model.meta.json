@@ -1,6 +1,6 @@
 {
   "model": "elastictree",
-  "created_at": "2026-10-09T14:08:05",
+  "created_at": "2026-10-10T13:17:36",
   "feature_profile": "live_supported",
   "use_raw_champions": false,
   "feature_cols": [
@@ -66,9 +66,9 @@
     "n": 671,
     "accuracy_ci95": 0.03636614888383648,
     "vs_elo": {
-      "mean": -0.01318573370356914,
+      "mean": -0.013185733703569135,
       "lo": -0.02236155016610469,
-      "hi": -0.003634619390773053
+      "hi": -0.003634619390773058
     },
     "vs_base_rate": {
       "mean": -0.042049771806336296,
