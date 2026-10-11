@@ -1,6 +1,6 @@
 {
   "model": "elasticnet",
-  "created_at": "2026-10-10T13:17:37",
+  "created_at": "2026-10-11T13:46:41",
   "feature_profile": "live_supported",
   "use_raw_champions": false,
   "feature_cols": [
