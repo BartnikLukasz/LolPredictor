@@ -18,7 +18,7 @@ from sklearn.metrics import accuracy_score, brier_score_loss, log_loss, roc_auc_
 # 1. CONFIGURATION
 # =============================================================================
 TARGET_COL = "blue_win"
-DATASET_PATH = "dataset/pregame/pregame_dataset_final_features.csv"
+DATASET_PATH = "dataset/pregame/pregame_dataset_final_features.csv.gz"
 
 HOLDOUT_DAYS = 60          # final untouched test window, anchored to the dataset's latest match date
 CV_FOLDS = 4               # walk-forward folds used for tuning (all strictly BEFORE the holdout)
@@ -30,7 +30,7 @@ RANDOM_SEED = 42
 #                   prediction time (see PROFILES below). Holdout numbers then predict live behaviour.
 # "full":           everything the offline pipeline builds. Holdout numbers will be optimistic about
 #                   the live app, because the live engine zero-fills the extra columns.
-FEATURE_PROFILE = "live_supported"
+FEATURE_PROFILE = "full"
 
 # Raw champion identity as categorical input. Off by default: ~170 levels on a few tens of thousands
 # of games mostly adds noise next to the engineered champion win rates, and categorical alignment is

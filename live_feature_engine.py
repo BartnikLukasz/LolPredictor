@@ -48,6 +48,98 @@ class LiveFeatureEngine:
         self._build_elo_lookup()
         self._build_momentum_lookup()
         self._build_player_and_champ_lookups()
+        self._build_full_historical_lookups()
+
+    def _build_full_historical_lookups(self) -> None:
+        """Replays historical dataset chronologically to build complete H2H, draft, synergy, and player lookup state."""
+        self.team_h2h_history = {}
+        self.lane_matchup_history = {}
+        self.player_h2h_history = {}
+        self.patch_champ_stats = {}
+        self.champ_synergy_stats = {}
+
+        def extract_scalar(val):
+            if isinstance(val, (pd.Series, np.ndarray, list)):
+                if len(val) > 0:
+                    val = val.iloc[0] if hasattr(val, 'iloc') else val[0]
+                else:
+                    return None
+            if pd.isna(val) or val is None or str(val).lower() == 'nan':
+                return None
+            return str(val).strip()
+
+        for _, row in self.df_hist.iterrows():
+            blue_win = int(row.get('blue_win', 0))
+            blue_team = extract_scalar(row.get('blue_teamid'))
+            red_team = extract_scalar(row.get('red_teamid'))
+            patch = str(row.get('patch', 'unknown'))
+
+            blue_champs = {r: extract_scalar(row.get(f'blue_{r}_champion')) for r in ROLES}
+            red_champs = {r: extract_scalar(row.get(f'red_{r}_champion')) for r in ROLES}
+            blue_players = {r: extract_scalar(row.get(f'blue_{r}_playerid')) for r in ROLES}
+            red_players = {r: extract_scalar(row.get(f'red_{r}_playerid')) for r in ROLES}
+
+            if blue_team and red_team:
+                t1, t2 = sorted([blue_team, red_team])
+                if (t1, t2) not in self.team_h2h_history:
+                    self.team_h2h_history[(t1, t2)] = {'games': 0, 'team1_wins': 0}
+                self.team_h2h_history[(t1, t2)]['games'] += 1
+                if (blue_win == 1 and blue_team == t1) or (blue_win == 0 and red_team == t1):
+                    self.team_h2h_history[(t1, t2)]['team1_wins'] += 1
+
+            for r in ROLES:
+                b_pid = blue_players[r]
+                r_pid = red_players[r]
+                b_champ = blue_champs[r]
+                r_champ = red_champs[r]
+
+                if b_champ and r_champ:
+                    c1, c2 = sorted([b_champ, r_champ])
+                    key = (r, c1, c2)
+                    if key not in self.lane_matchup_history:
+                        self.lane_matchup_history[key] = {'games': 0, 'champ1_wins': 0, 'wins_A': 0}
+                    self.lane_matchup_history[key]['games'] += 1
+                    if (blue_win == 1 and b_champ == c1) or (blue_win == 0 and r_champ == c1):
+                        self.lane_matchup_history[key]['champ1_wins'] += 1
+                    if blue_win == 1:
+                        self.lane_matchup_history[key]['wins_A'] += 1
+
+                if b_pid and r_pid:
+                    p1, p2 = sorted([b_pid, r_pid])
+                    key = (r, p1, p2)
+                    if key not in self.player_h2h_history:
+                        self.player_h2h_history[key] = {'games': 0, 'pid1_wins': 0}
+                    self.player_h2h_history[key]['games'] += 1
+                    if (blue_win == 1 and b_pid == p1) or (blue_win == 0 and r_pid == p1):
+                        self.player_h2h_history[key]['pid1_wins'] += 1
+
+            for r in ROLES:
+                for c_side, c_val, c_win in [('b', blue_champs[r], blue_win), ('r', red_champs[r], 1 - blue_win)]:
+                    if c_val:
+                        pkey = (patch, c_val)
+                        if pkey not in self.patch_champ_stats:
+                            self.patch_champ_stats[pkey] = {'games': 0, 'wins': 0}
+                        self.patch_champ_stats[pkey]['games'] += 1
+                        self.patch_champ_stats[pkey]['wins'] += c_win
+
+            blue_all_c = [blue_champs[r] for r in ROLES if blue_champs[r]]
+            red_all_c = [red_champs[r] for r in ROLES if red_champs[r]]
+
+            for i in range(len(blue_all_c)):
+                for j in range(i + 1, len(blue_all_c)):
+                    bp = tuple(sorted([blue_all_c[i], blue_all_c[j]]))
+                    if bp not in self.champ_synergy_stats:
+                        self.champ_synergy_stats[bp] = {'games': 0, 'wins': 0}
+                    self.champ_synergy_stats[bp]['games'] += 1
+                    self.champ_synergy_stats[bp]['wins'] += blue_win
+
+            for i in range(len(red_all_c)):
+                for j in range(i + 1, len(red_all_c)):
+                    rp = tuple(sorted([red_all_c[i], red_all_c[j]]))
+                    if rp not in self.champ_synergy_stats:
+                        self.champ_synergy_stats[rp] = {'games': 0, 'wins': 0}
+                    self.champ_synergy_stats[rp]['games'] += 1
+                    self.champ_synergy_stats[rp]['wins'] += (1 - blue_win)
 
     def _extract_model_feature_names(self) -> List[str]:
         """Extracts ordered list of feature names expected by model (supports XGBoost, LightGBM, and CatBoost)."""
@@ -314,6 +406,101 @@ class LiveFeatureEngine:
             row[f'red_{role}_player_winrate_pre'] = rp_stat['winrate']
             row[f'red_{role}_champ_games_pre'] = r_c_games
             row[f'red_{role}_champ_winrate_pre'] = r_c_wr
+
+        # Team H2H
+        b_team_id = str(blue_team)
+        r_team_id = str(red_team)
+        if b_team_id and r_team_id:
+            t1, t2 = sorted([b_team_id, r_team_id])
+            t_stats = getattr(self, 'team_h2h_history', {}).get((t1, t2), {'games': 0, 'team1_wins': 0})
+            t_games = t_stats['games']
+            t_blue_wins = t_stats['team1_wins'] if b_team_id == t1 else (t_games - t_stats['team1_wins'])
+            row['h2h_team_games_pre'] = t_games
+            row['blue_h2h_team_winrate_pre'] = round((t_blue_wins + 2.0 * 0.5) / (t_games + 2.0), 4)
+        else:
+            row['h2h_team_games_pre'] = 0
+            row['blue_h2h_team_winrate_pre'] = 0.50
+
+        # Draft & Lane Matchup features
+        patch = str(draft_payload.get('patch', '14.1'))
+        blue_patch_wrs, red_patch_wrs = [], []
+        lane_counter_diffs = []
+
+        for idx, role in enumerate(ROLES):
+            b_p = blue_players[idx] if idx < len(blue_players) else ''
+            r_p = red_players[idx] if idx < len(red_players) else ''
+            b_c = blue_champs[idx] if idx < len(blue_champs) else ''
+            r_c = red_champs[idx] if idx < len(red_champs) else ''
+
+            if b_c and r_c:
+                c1, c2 = sorted([b_c, r_c])
+                c_stats = getattr(self, 'lane_matchup_history', {}).get((role, c1, c2), {'games': 0, 'champ1_wins': 0})
+                c_games = c_stats['games']
+                c_blue_wins = c_stats['champ1_wins'] if b_c == c1 else (c_games - c_stats['champ1_wins'])
+                row[f'blue_{role}_lane_matchup_games_pre'] = c_games
+                row[f'blue_{role}_lane_matchup_winrate_pre'] = round((c_blue_wins + 2.0 * 0.5) / (c_games + 2.0), 4)
+            else:
+                row[f'blue_{role}_lane_matchup_games_pre'] = 0
+                row[f'blue_{role}_lane_matchup_winrate_pre'] = 0.50
+
+            if b_p and r_p:
+                p1, p2 = sorted([b_p, r_p])
+                p_stats = getattr(self, 'player_h2h_history', {}).get((role, p1, p2), {'games': 0, 'pid1_wins': 0})
+                p_games = p_stats['games']
+                p_blue_wins = p_stats['pid1_wins'] if b_p == p1 else (p_games - p_stats['pid1_wins'])
+                row[f'blue_{role}_p2p_games_pre'] = p_games
+                row[f'blue_{role}_p2p_winrate_pre'] = round((p_blue_wins + 2.0 * 0.5) / (p_games + 2.0), 4)
+            else:
+                row[f'blue_{role}_p2p_games_pre'] = 0
+                row[f'blue_{role}_p2p_winrate_pre'] = 0.50
+
+            b_stat = getattr(self, 'patch_champ_stats', {}).get((patch, b_c), {'games': 0, 'wins': 0})
+            r_stat = getattr(self, 'patch_champ_stats', {}).get((patch, r_c), {'games': 0, 'wins': 0})
+            b_wr = (b_stat['wins'] + 5.0 * 0.5) / (b_stat['games'] + 5.0)
+            r_wr = (r_stat['wins'] + 5.0 * 0.5) / (r_stat['games'] + 5.0)
+            row[f'blue_{role}_patch_wr_pre'] = round(b_wr, 4)
+            row[f'red_{role}_patch_wr_pre'] = round(r_wr, 4)
+            blue_patch_wrs.append(b_wr)
+            red_patch_wrs.append(r_wr)
+
+            h2h_c = getattr(self, 'lane_matchup_history', {}).get((role, b_c, r_c), {'games': 0, 'wins_A': 0})
+            c_wr_cnt = (h2h_c.get('wins_A', 0) + 5.0 * 0.5) / (h2h_c['games'] + 5.0)
+            row[f'{role}_lane_counter_wr_pre'] = round(c_wr_cnt, 4)
+            lane_counter_diffs.append(c_wr_cnt - 0.50)
+
+        row['blue_team_patch_wr_avg_pre'] = round(float(np.mean(blue_patch_wrs)), 4) if blue_patch_wrs else 0.50
+        row['red_team_patch_wr_avg_pre'] = round(float(np.mean(red_patch_wrs)), 4) if red_patch_wrs else 0.50
+        row['patch_winrate_diff'] = round(row['blue_team_patch_wr_avg_pre'] - row['red_team_patch_wr_avg_pre'], 4)
+        row['lane_counter_diff_sum'] = round(float(np.sum(lane_counter_diffs)), 4) if lane_counter_diffs else 0.0
+
+        _SYNERGY_PAIRS = [("mid", "jng"), ("bot", "sup"), ("jng", "sup")]
+        role_map = {r: idx for idx, r in enumerate(ROLES)}
+
+        for a, b in _SYNERGY_PAIRS:
+            ai, bi = role_map[a], role_map[b]
+            b_pair = tuple(sorted([blue_champs[ai], blue_champs[bi]]))
+            r_pair = tuple(sorted([red_champs[ai], red_champs[bi]]))
+            b_syn = getattr(self, 'champ_synergy_stats', {}).get(b_pair, {'games': 0, 'wins': 0})
+            r_syn = getattr(self, 'champ_synergy_stats', {}).get(r_pair, {'games': 0, 'wins': 0})
+            b_syn_wr = (b_syn['wins'] + 5.0 * 0.5) / (b_syn['games'] + 5.0)
+            r_syn_wr = (r_syn['wins'] + 5.0 * 0.5) / (r_syn['games'] + 5.0)
+            row[f'blue_{a}_{b}_synergy_wr_pre'] = round(b_syn_wr, 4)
+            row[f'red_{a}_{b}_synergy_wr_pre'] = round(r_syn_wr, 4)
+            row[f'{a}_{b}_synergy_diff'] = round(b_syn_wr - r_syn_wr, 4)
+
+        blue_pair_wrs, red_pair_wrs = [], []
+        for i in range(5):
+            for j in range(i + 1, 5):
+                bp = tuple(sorted([blue_champs[i], blue_champs[j]]))
+                rp = tuple(sorted([red_champs[i], red_champs[j]]))
+                bst = getattr(self, 'champ_synergy_stats', {}).get(bp, {'games': 0, 'wins': 0})
+                rst = getattr(self, 'champ_synergy_stats', {}).get(rp, {'games': 0, 'wins': 0})
+                blue_pair_wrs.append((bst['wins'] + 5.0 * 0.5) / (bst['games'] + 5.0))
+                red_pair_wrs.append((rst['wins'] + 5.0 * 0.5) / (rst['games'] + 5.0))
+
+        row['blue_comp_cohesion_score'] = round(float(np.mean(blue_pair_wrs)), 4) if blue_pair_wrs else 0.50
+        row['red_comp_cohesion_score'] = round(float(np.mean(red_pair_wrs)), 4) if red_pair_wrs else 0.50
+        row['comp_cohesion_diff'] = round(row['blue_comp_cohesion_score'] - row['red_comp_cohesion_score'], 4)
 
         live_df = pd.DataFrame([row])
 
