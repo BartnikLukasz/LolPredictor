@@ -1,6 +1,6 @@
 {
   "model": "catboost",
-  "created_at": "2026-10-11T13:46:30",
+  "created_at": "2026-10-12T16:28:28",
   "feature_profile": "live_supported",
   "use_raw_champions": false,
   "feature_cols": [
