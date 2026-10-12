@@ -2274,13 +2274,6 @@
         "Photic",
         "fengyue"
     ],
-    "Disguised": [
-        "Srtty",
-        "KryRa",
-        "Callme",
-        "sajed",
-        "Lyonz"
-    ],
     "GiantX": [
         "Oscarinin",
         "ISMA",
@@ -2386,13 +2379,6 @@
         "Hena",
         "Ceos"
     ],
-    "Saigon Warriors": [
-        "Nern",
-        "j1n5",
-        "AisyL",
-        "Aomine",
-        "Elio"
-    ],
     "9Gaming Esports": [
         "Hasmed",
         "SCP",
@@ -2407,33 +2393,12 @@
         "Yashiro2",
         "kairi"
     ],
-    "MVK Esports Academy": [
-        "Steller",
-        "Umi",
-        "Seany",
-        "Nuna",
-        "Callian"
-    ],
     "Golden Lions": [
         "Brayaron",
         "Ganks",
         "Piqueos",
         "Scenari0",
         "Crecre"
-    ],
-    "L\u00d8S": [
-        "Zest",
-        "Curse",
-        "Feisty",
-        "Duduhh",
-        "Ackerman"
-    ],
-    "FURIA": [
-        "Guigo",
-        "Tatu",
-        "Tutsz",
-        "Ayu",
-        "JoJo"
     ],
     "LOUD": [
         "xyno",
@@ -2491,13 +2456,6 @@
         "FIX",
         "Ux"
     ],
-    "Maryville University": [
-        "Crimson",
-        "Yuuji",
-        "AoJune",
-        "ScaryJerry",
-        "Obstinatus"
-    ],
     "Zeu5 Esports": [
         "Keii",
         "Blind Walker",
@@ -2512,13 +2470,6 @@
         "Teddy",
         "Namgung"
     ],
-    "Natus Vincere": [
-        "Maynter",
-        "Rhilech",
-        "Poby",
-        "SamD",
-        "Parus"
-    ],
     "Team Vitality": [
         "Naak Nako",
         "Lyncas",
@@ -2526,40 +2477,12 @@
         "Carzzy",
         "Fleshy"
     ],
-    "RED Canids": [
-        "zynts",
-        "Aegis",
-        "Fuuu",
-        "Morttheus",
-        "Manel"
-    ],
-    "JD Gaming": [
-        "Xiaoxu",
-        "xiaofang",
-        "Angel",
-        "GALA",
-        "Vampire"
-    ],
     "LGD Gaming": [
         "Burdol",
         "Heng",
         "Tangyuan",
         "Shaoye",
         "Crisp"
-    ],
-    "Cupid Esports": [
-        "Horder",
-        "Music",
-        "Ablazeolive",
-        "Mobility",
-        "Breezy"
-    ],
-    "Fuego": [
-        "Jauny",
-        "Grell",
-        "Skyy",
-        "Snaker",
-        "Ichiwin"
     ],
     "KaBuM! Ilha das Lendas": [
         "Yupps",
@@ -2582,6 +2505,13 @@
         "Artemis",
         "Taki"
     ],
+    "Shopify Rebellion": [
+        "Fudge",
+        "Contractz",
+        "Zinie",
+        "Bvoy",
+        "Zeyzal"
+    ],
     "FlyQuest": [
         "Gakgos",
         "Gryffinn",
@@ -2589,11 +2519,81 @@
         "Massu",
         "Cryogen"
     ],
-    "Shopify Rebellion": [
-        "Fudge",
-        "Contractz",
-        "Zinie",
-        "Bvoy",
-        "Zeyzal"
+    "RED Canids": [
+        "zynts",
+        "Aegis",
+        "Fuuu",
+        "Morttheus",
+        "Manel"
+    ],
+    "JD Gaming": [
+        "Xiaoxu",
+        "xiaofang",
+        "Angel",
+        "GALA",
+        "Vampire"
+    ],
+    "Natus Vincere": [
+        "Maynter",
+        "Rhilech",
+        "Poby",
+        "SamD",
+        "Parus"
+    ],
+    "Maryville University": [
+        "Crimson",
+        "Yuuji",
+        "AoJune",
+        "ScaryJerry",
+        "Obstinatus"
+    ],
+    "Fuego": [
+        "Jauny",
+        "Grell",
+        "Skyy",
+        "Snaker",
+        "Ichiwin"
+    ],
+    "FURIA": [
+        "Guigo",
+        "Tatu",
+        "Tutsz",
+        "Ayu",
+        "JoJo"
+    ],
+    "L\u00d8S": [
+        "Zest",
+        "Curse",
+        "Feisty",
+        "Duduhh",
+        "Ackerman"
+    ],
+    "Cupid Esports": [
+        "Horder",
+        "Music",
+        "Ablazeolive",
+        "Mobility",
+        "Breezy"
+    ],
+    "Disguised": [
+        "Srtty",
+        "KryRa",
+        "Callme",
+        "sajed",
+        "Lyonz"
+    ],
+    "Saigon Warriors": [
+        "Nern",
+        "j1n5",
+        "AisyL",
+        "Aomine",
+        "Elio"
+    ],
+    "MVK Esports Academy": [
+        "Steller",
+        "Umi",
+        "Seany",
+        "Nuna",
+        "Callian"
     ]
 }
