@@ -2484,13 +2484,6 @@
         "Shaoye",
         "Crisp"
     ],
-    "KaBuM! Ilha das Lendas": [
-        "Yupps",
-        "SCARY",
-        "Grevthar",
-        "Kojima",
-        "Guigs"
-    ],
     "Estral Esports": [
         "Bwipo",
         "Oddie",
@@ -2540,13 +2533,6 @@
         "SamD",
         "Parus"
     ],
-    "Maryville University": [
-        "Crimson",
-        "Yuuji",
-        "AoJune",
-        "ScaryJerry",
-        "Obstinatus"
-    ],
     "Fuego": [
         "Jauny",
         "Grell",
@@ -2561,26 +2547,12 @@
         "Ayu",
         "JoJo"
     ],
-    "L\u00d8S": [
-        "Zest",
-        "Curse",
-        "Feisty",
-        "Duduhh",
-        "Ackerman"
-    ],
     "Cupid Esports": [
         "Horder",
         "Music",
         "Ablazeolive",
         "Mobility",
         "Breezy"
-    ],
-    "Disguised": [
-        "Srtty",
-        "KryRa",
-        "Callme",
-        "sajed",
-        "Lyonz"
     ],
     "Saigon Warriors": [
         "Nern",
@@ -2595,5 +2567,33 @@
         "Seany",
         "Nuna",
         "Callian"
+    ],
+    "L\u00d8S": [
+        "Zest",
+        "Curse",
+        "Feisty",
+        "Duduhh",
+        "Ackerman"
+    ],
+    "KaBuM! Ilha das Lendas": [
+        "Yupps",
+        "SCARY",
+        "Grevthar",
+        "Kojima",
+        "Guigs"
+    ],
+    "Disguised": [
+        "Srtty",
+        "KryRa",
+        "Callme",
+        "sajed",
+        "Lyonz"
+    ],
+    "Maryville University": [
+        "Crimson",
+        "Yuuji",
+        "AoJune",
+        "ScaryJerry",
+        "Obstinatus"
     ]
 }
