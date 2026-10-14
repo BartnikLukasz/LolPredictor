@@ -70,14 +70,14 @@ class LiveFeatureEngine:
 
         for _, row in self.df_hist.iterrows():
             blue_win = int(row.get('blue_win', 0))
-            blue_team = extract_scalar(row.get('blue_teamid'))
-            red_team = extract_scalar(row.get('red_teamid'))
+            blue_team = extract_scalar(row.get('blue_team'))
+            red_team = extract_scalar(row.get('red_team'))
             patch = str(row.get('patch', 'unknown'))
 
             blue_champs = {r: extract_scalar(row.get(f'blue_{r}_champion')) for r in ROLES}
             red_champs = {r: extract_scalar(row.get(f'red_{r}_champion')) for r in ROLES}
-            blue_players = {r: extract_scalar(row.get(f'blue_{r}_playerid')) for r in ROLES}
-            red_players = {r: extract_scalar(row.get(f'red_{r}_playerid')) for r in ROLES}
+            blue_players = {r: extract_scalar(row.get(f'blue_{r}_player')) for r in ROLES}
+            red_players = {r: extract_scalar(row.get(f'red_{r}_player')) for r in ROLES}
 
             if blue_team and red_team:
                 t1, t2 = sorted([blue_team, red_team])
