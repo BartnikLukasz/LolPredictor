@@ -437,7 +437,7 @@ def apply_live_series_elo_adjustment(
     blue_series_wins: int,
     red_series_wins: int,
     blue_has_first_pick: bool = True,
-    k_series: float = 80.0,
+    k_series: float = 32.0,
     first_pick_bonus: float = 10.0,
     init_rating: float = 1500.0
 ) -> dict:

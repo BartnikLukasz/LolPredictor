@@ -393,7 +393,7 @@ if st.button("Calculate Match Probabilities", type="primary", use_container_widt
         blue_series_wins=blue_series_wins,
         red_series_wins=red_series_wins,
         blue_has_first_pick=(first_pick_side == "Blue"),
-        k_series=60.0
+        k_series=32.0
     )
 
     draft_payload = {
