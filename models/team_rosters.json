@@ -2190,13 +2190,6 @@
         "Ahn",
         "Feather"
     ],
-    "MVK Esports": [
-        "Kratos",
-        "Gury",
-        "Chika",
-        "Harky",
-        "SiuLoong"
-    ],
     "SK Gaming": [
         "Wunder",
         "Skeanz",
@@ -2337,13 +2330,6 @@
         "JiaQi",
         "Meiko"
     ],
-    "Karmine Corp": [
-        "Canna",
-        "Yike",
-        "kyeahoo",
-        "Caliste",
-        "Busio"
-    ],
     "Vivo Keyd Stars": [
         "zekas",
         "Disamis",
@@ -2407,34 +2393,6 @@
         "Rabelo",
         "uZent"
     ],
-    "Cloud9": [
-        "Thanatos",
-        "Blaber",
-        "Loki",
-        "Tactical",
-        "Vulcan"
-    ],
-    "BNK FEARX": [
-        "Clear",
-        "Raptor",
-        "VicLa",
-        "Taeyoon",
-        "Kellin"
-    ],
-    "KT Rolster": [
-        "PerfecT",
-        "Cuzz",
-        "Bdd",
-        "Jiwoo",
-        "Effort"
-    ],
-    "Team WE": [
-        "Cube",
-        "Monki",
-        "Karis",
-        "About",
-        "Erha"
-    ],
     "Team Liquid": [
         "Morgan",
         "Josedeodo",
@@ -2463,27 +2421,6 @@
         "Raysito",
         "Kita"
     ],
-    "HANJIN BRION": [
-        "Casting",
-        "GIDEON",
-        "Roamer",
-        "Teddy",
-        "Namgung"
-    ],
-    "Team Vitality": [
-        "Naak Nako",
-        "Lyncas",
-        "FIESTA",
-        "Carzzy",
-        "Fleshy"
-    ],
-    "LGD Gaming": [
-        "Burdol",
-        "Heng",
-        "Tangyuan",
-        "Shaoye",
-        "Crisp"
-    ],
     "Estral Esports": [
         "Bwipo",
         "Oddie",
@@ -2505,26 +2442,12 @@
         "Bvoy",
         "Zeyzal"
     ],
-    "FlyQuest": [
-        "Gakgos",
-        "Gryffinn",
-        "Quad",
-        "Massu",
-        "Cryogen"
-    ],
     "RED Canids": [
         "zynts",
         "Aegis",
         "Fuuu",
         "Morttheus",
         "Manel"
-    ],
-    "JD Gaming": [
-        "Xiaoxu",
-        "xiaofang",
-        "Angel",
-        "GALA",
-        "Vampire"
     ],
     "Natus Vincere": [
         "Maynter",
@@ -2539,13 +2462,6 @@
         "Skyy",
         "Snaker",
         "Ichiwin"
-    ],
-    "FURIA": [
-        "Guigo",
-        "Tatu",
-        "Tutsz",
-        "Ayu",
-        "JoJo"
     ],
     "Cupid Esports": [
         "Horder",
@@ -2567,6 +2483,20 @@
         "Seany",
         "Nuna",
         "Callian"
+    ],
+    "Team Vitality": [
+        "Naak Nako",
+        "Lyncas",
+        "FIESTA",
+        "Carzzy",
+        "Fleshy"
+    ],
+    "JD Gaming": [
+        "Xiaoxu",
+        "xiaofang",
+        "Angel",
+        "GALA",
+        "Vampire"
     ],
     "L\u00d8S": [
         "Zest",
@@ -2595,5 +2525,75 @@
         "AoJune",
         "ScaryJerry",
         "Obstinatus"
+    ],
+    "FlyQuest": [
+        "Gakgos",
+        "Gryffinn",
+        "Quad",
+        "Massu",
+        "Cryogen"
+    ],
+    "LGD Gaming": [
+        "Burdol",
+        "Heng",
+        "Tangyuan",
+        "Shaoye",
+        "Crisp"
+    ],
+    "BNK FEARX": [
+        "Clear",
+        "Raptor",
+        "VicLa",
+        "Taeyoon",
+        "Kellin"
+    ],
+    "KT Rolster": [
+        "PerfecT",
+        "Cuzz",
+        "Bdd",
+        "Jiwoo",
+        "Effort"
+    ],
+    "HANJIN BRION": [
+        "Casting",
+        "GIDEON",
+        "Roamer",
+        "Teddy",
+        "Namgung"
+    ],
+    "Team WE": [
+        "Cube",
+        "Monki",
+        "Karis",
+        "About",
+        "Erha"
+    ],
+    "MVK Esports": [
+        "Kratos",
+        "SanSan",
+        "Chika",
+        "Harky",
+        "SiuLoong"
+    ],
+    "Karmine Corp": [
+        "Canna",
+        "Yike",
+        "kyeahoo",
+        "Caliste",
+        "Busio"
+    ],
+    "FURIA": [
+        "Guigo",
+        "Tatu",
+        "Tutsz",
+        "Ayu",
+        "JoJo"
+    ],
+    "Cloud9": [
+        "Thanatos",
+        "Blaber",
+        "Loki",
+        "Tactical",
+        "Vulcan"
     ]
 }
