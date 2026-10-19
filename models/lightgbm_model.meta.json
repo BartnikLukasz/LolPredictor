@@ -1,6 +1,6 @@
 {
   "model": "lightgbm",
-  "created_at": "2026-10-18T11:57:34",
+  "created_at": "2026-10-19T14:20:05",
   "feature_profile": "full",
   "use_raw_champions": false,
   "feature_cols": [
@@ -140,7 +140,7 @@
     "n": 571,
     "accuracy_ci95": 0.03966735327691259,
     "vs_elo": {
-      "mean": -0.019888926346840037,
+      "mean": -0.01988892634684004,
       "lo": -0.034713548805073456,
       "hi": -0.0055895757643792295
     },

@@ -1,6 +1,6 @@
 {
   "model": "xgboost",
-  "created_at": "2026-10-18T11:57:32",
+  "created_at": "2026-10-19T14:20:03",
   "feature_profile": "full",
   "use_raw_champions": false,
   "feature_cols": [
@@ -140,7 +140,7 @@
     "n": 571,
     "accuracy_ci95": 0.039849007443127,
     "vs_elo": {
-      "mean": -0.01943349695974295,
+      "mean": -0.019433496959742953,
       "lo": -0.03478500465972956,
       "hi": -0.004140868113386035
     },
