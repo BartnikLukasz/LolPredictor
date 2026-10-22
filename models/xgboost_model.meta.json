@@ -1,6 +1,6 @@
 {
   "model": "xgboost",
-  "created_at": "2026-10-21T12:43:13",
+  "created_at": "2026-10-22T12:46:22",
   "feature_profile": "full",
   "use_raw_champions": false,
   "feature_cols": [
@@ -140,9 +140,9 @@
     "n": 571,
     "accuracy_ci95": 0.039849007443127,
     "vs_elo": {
-      "mean": -0.01943349695974295,
-      "lo": -0.03478500465972956,
-      "hi": -0.004140868113386035
+      "mean": -0.019433496959742946,
+      "lo": -0.03478500465972954,
+      "hi": -0.004140868113386037
     },
     "vs_base_rate": {
       "mean": -0.03901513146208489,
@@ -153,7 +153,7 @@
   "versions": {
     "python": "3.11.17",
     "numpy": "2.4.6",
-    "pandas": "3.0.6",
+    "pandas": "3.1.0",
     "scikit-learn": "1.9.1",
     "xgboost": "3.2.0",
     "lightgbm": "4.7.0",
