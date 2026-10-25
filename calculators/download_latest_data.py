@@ -40,9 +40,10 @@ def _default_target(year: int) -> str:
 
 
 def is_updated_today(path: str) -> bool:
-    if not os.path.exists(path):
-        return False
-    return datetime.fromtimestamp(os.path.getmtime(path)).date() == date.today()
+    # if not os.path.exists(path):
+    #     return False
+    # return datetime.fromtimestamp(os.path.getmtime(path)).date() == date.today()
+    return False
 
 
 def is_valid_csv(filepath: str) -> bool:
