@@ -2484,62 +2484,6 @@
         "Harky",
         "SiuLoong"
     ],
-    "Anyone's Legend": [
-        "Breathe",
-        "Tarzan",
-        "Shanks",
-        "Hope",
-        "Kael"
-    ],
-    "CTBC Flying Oyster": [
-        "Rest",
-        "Shad0w",
-        "Pout",
-        "Doggo",
-        "Kino"
-    ],
-    "L\u00d8S": [
-        "Zest",
-        "Curse",
-        "Feisty",
-        "Duduhh",
-        "Ackerman"
-    ],
-    "Karmine Corp": [
-        "Canna",
-        "Yike",
-        "kyeahoo",
-        "Caliste",
-        "Busio"
-    ],
-    "Team Secret Whales": [
-        "Pun",
-        "Hizto",
-        "Dire",
-        "Eddie",
-        "Bie"
-    ],
-    "T1": [
-        "Doran",
-        "Oner",
-        "Faker",
-        "Peyz",
-        "Keria"
-    ],
-    "Team Liquid": [
-        "Morgan",
-        "Josedeodo",
-        "Quid",
-        "Yeon",
-        "CoreJJ"
-    ],
-    "Bilibili Gaming": [
-        "Bin",
-        "Xun",
-        "Knight",
-        "Viper",
-        "ON"
-    ],
     "Invictus Gaming": [
         "TheShy",
         "Wei",
@@ -2595,5 +2539,61 @@
         "Saint",
         "Berserker",
         "Isles"
+    ],
+    "T1": [
+        "Doran",
+        "Oner",
+        "Faker",
+        "Peyz",
+        "Keria"
+    ],
+    "CTBC Flying Oyster": [
+        "Rest",
+        "Shad0w",
+        "Pout",
+        "Doggo",
+        "Kino"
+    ],
+    "Bilibili Gaming": [
+        "Bin",
+        "Xun",
+        "Knight",
+        "Viper",
+        "ON"
+    ],
+    "Karmine Corp": [
+        "Canna",
+        "Yike",
+        "kyeahoo",
+        "Caliste",
+        "Busio"
+    ],
+    "Team Secret Whales": [
+        "Pun",
+        "Hizto",
+        "Dire",
+        "Eddie",
+        "Bie"
+    ],
+    "L\u00d8S": [
+        "Zest",
+        "Curse",
+        "Feisty",
+        "Duduhh",
+        "Ackerman"
+    ],
+    "Team Liquid": [
+        "Morgan",
+        "Josedeodo",
+        "Quid",
+        "Yeon",
+        "CoreJJ"
+    ],
+    "Anyone's Legend": [
+        "Breathe",
+        "Tarzan",
+        "Shanks",
+        "Hope",
+        "Kael"
     ]
 }
