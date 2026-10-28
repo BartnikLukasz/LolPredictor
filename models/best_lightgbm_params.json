@@ -1,29 +1,29 @@
 {
-    "n_estimators": 190,
-    "learning_rate": 0.07029178444491134,
-    "num_leaves": 18,
-    "max_depth": 3,
-    "min_child_samples": 17,
-    "subsample": 0.7048178523487157,
-    "colsample_bytree": 0.3000839232527186,
-    "reg_alpha": 0.03179541653394024,
-    "reg_lambda": 0.43908870142713163,
-    "best_logloss": 0.626771,
+    "n_estimators": 70,
+    "learning_rate": 0.09484535050578738,
+    "num_leaves": 37,
+    "max_depth": 8,
+    "min_child_samples": 129,
+    "subsample": 0.5001870885877414,
+    "colsample_bytree": 0.33174728172305773,
+    "reg_alpha": 2.846134553024062,
+    "reg_lambda": 17.21918847732166,
+    "best_logloss": 0.615718,
     "_meta": {
-        "cv_logloss": 0.626771,
+        "cv_logloss": 0.615718,
         "cv_fold_losses": [
-            0.643405,
-            0.643506,
-            0.606678,
-            0.613494
+            0.620251,
+            0.609537,
+            0.602724,
+            0.63036
         ],
         "n_folds": 4,
-        "fold_size": 663,
+        "fold_size": 490,
         "n_trials": 200,
         "feature_profile": "full",
         "use_raw_champions": false,
-        "tuned_at": "2026-10-12T18:55:44",
-        "data_through": "2026-10-05",
+        "tuned_at": "2026-10-28T14:03:09",
+        "data_through": "2026-10-26",
         "holdout_days": 60
     }
 }

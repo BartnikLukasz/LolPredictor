@@ -1,26 +1,26 @@
 {
-    "iterations": 316,
-    "learning_rate": 0.06169562361628089,
-    "depth": 4,
-    "l2_leaf_reg": 31.784856450209045,
-    "random_strength": 5.758812764015649,
-    "bagging_temperature": 0.5337386374130623,
-    "best_logloss": 0.625364,
+    "iterations": 127,
+    "learning_rate": 0.10925012700423806,
+    "depth": 5,
+    "l2_leaf_reg": 1.2434642820489588,
+    "random_strength": 0.10025779135599437,
+    "bagging_temperature": 1.4226570960246518,
+    "best_logloss": 0.616375,
     "_meta": {
-        "cv_logloss": 0.625364,
+        "cv_logloss": 0.616375,
         "cv_fold_losses": [
-            0.641979,
-            0.643881,
-            0.604559,
-            0.611038
+            0.616642,
+            0.606482,
+            0.607901,
+            0.634477
         ],
         "n_folds": 4,
-        "fold_size": 663,
+        "fold_size": 490,
         "n_trials": 200,
         "feature_profile": "full",
         "use_raw_champions": false,
-        "tuned_at": "2026-10-12T19:25:52",
-        "data_through": "2026-10-05",
+        "tuned_at": "2026-10-28T14:22:45",
+        "data_through": "2026-10-26",
         "holdout_days": 60
     }
 }

@@ -54,7 +54,7 @@ if __name__ == "__main__":
     # feature_profile / use_raw_champions default to the values in trainers/trainer_helpers.py.
     # IMPORTANT: tune and train with the same profile (params files record which one they were tuned for).
     i = 0
-    while i < 2:
+    while i < 1:
         optimize_xgboost_hyperparameters(n_trials=200)
         optimize_lightgbm_hyperparameters(n_trials=200)
         optimize_catboost_hyperparameters(n_trials=200)
