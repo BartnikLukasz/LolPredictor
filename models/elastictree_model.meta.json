@@ -1,6 +1,6 @@
 {
   "model": "elastictree",
-  "created_at": "2026-10-28T13:50:51",
+  "created_at": "2026-10-29T13:57:45",
   "feature_profile": "full",
   "use_raw_champions": false,
   "feature_cols": [
@@ -114,39 +114,39 @@
   ],
   "cat_cols": [],
   "categories": {},
-  "training_rows": 30295,
+  "training_rows": 30300,
   "date_range": [
     "2014-01-14",
-    "2026-10-26"
+    "2026-10-28"
   ],
   "holdout_days": 60,
   "params": {
     "n_estimators": 500,
-    "criterion": "entropy",
-    "max_depth": 18,
-    "min_samples_leaf": 8,
-    "min_samples_split": 10,
-    "max_features": 0.26395052500878113,
+    "criterion": "gini",
+    "max_depth": 24,
+    "min_samples_leaf": 15,
+    "min_samples_split": 11,
+    "max_features": 0.30498284481496607,
     "random_state": 42,
     "n_jobs": -1
   },
   "holdout_metrics": {
-    "logloss": 0.648809918650248,
-    "brier": 0.2288394005347393,
-    "accuracy": 0.6163265306122448,
-    "auc": 0.6629704695063734,
-    "ece": 0.04172480362109126,
-    "n": 490,
-    "accuracy_ci95": 0.04305705754091462,
+    "logloss": 0.6515905617383015,
+    "brier": 0.23017014393009616,
+    "accuracy": 0.6021052631578947,
+    "auc": 0.6590148765036657,
+    "ece": 0.04928700701938366,
+    "n": 475,
+    "accuracy_ci95": 0.04401792595913939,
     "vs_elo": {
-      "mean": -0.016914779255417817,
-      "lo": -0.029671518177994897,
-      "hi": -0.004649616487755512
+      "mean": -0.01647601384115762,
+      "lo": -0.02825169589493841,
+      "hi": -0.00495214178448364
     },
     "vs_base_rate": {
-      "mean": -0.04163604527186538,
-      "lo": -0.06572962673122762,
-      "hi": -0.019266282031873316
+      "mean": -0.03976580399006019,
+      "lo": -0.06276889837309275,
+      "hi": -0.015560350533143894
     }
   },
   "versions": {

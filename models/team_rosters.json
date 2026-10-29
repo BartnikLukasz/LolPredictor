@@ -2484,13 +2484,6 @@
         "Harky",
         "SiuLoong"
     ],
-    "Invictus Gaming": [
-        "TheShy",
-        "Wei",
-        "Rookie",
-        "JiaQi",
-        "Meiko"
-    ],
     "Hanwha Life Esports": [
         "Zeus",
         "Kanavi",
@@ -2519,33 +2512,12 @@
         "Smash",
         "Career"
     ],
-    "Movistar KOI": [
-        "Myrwn",
-        "Elyoya",
-        "Jojopyun",
-        "Supa",
-        "Alvaro"
-    ],
     "Gen.G": [
         "Kiin",
         "Canyon",
         "Chovy",
         "Ruler",
         "Duro"
-    ],
-    "LYON": [
-        "Dhokla",
-        "Inspired",
-        "Saint",
-        "Berserker",
-        "Isles"
-    ],
-    "T1": [
-        "Doran",
-        "Oner",
-        "Faker",
-        "Peyz",
-        "Keria"
     ],
     "CTBC Flying Oyster": [
         "Rest",
@@ -2595,5 +2567,33 @@
         "Shanks",
         "Hope",
         "Kael"
+    ],
+    "T1": [
+        "Doran",
+        "Oner",
+        "Faker",
+        "Peyz",
+        "Keria"
+    ],
+    "Movistar KOI": [
+        "Myrwn",
+        "Elyoya",
+        "Jojopyun",
+        "Supa",
+        "Alvaro"
+    ],
+    "LYON": [
+        "Dhokla",
+        "Inspired",
+        "Saint",
+        "Berserker",
+        "Isles"
+    ],
+    "Invictus Gaming": [
+        "TheShy",
+        "Wei",
+        "Rookie",
+        "JiaQi",
+        "Meiko"
     ]
 }
