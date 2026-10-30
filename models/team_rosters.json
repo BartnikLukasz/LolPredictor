@@ -2491,13 +2491,6 @@
         "Gumayusi",
         "Delight"
     ],
-    "Top Esports": [
-        "369",
-        "Tian",
-        "Creme",
-        "JackeyLove",
-        "Zhuo"
-    ],
     "G2 Esports": [
         "BrokenBlade",
         "SkewMond",
@@ -2518,27 +2511,6 @@
         "Chovy",
         "Ruler",
         "Duro"
-    ],
-    "CTBC Flying Oyster": [
-        "Rest",
-        "Shad0w",
-        "Pout",
-        "Doggo",
-        "Kino"
-    ],
-    "Bilibili Gaming": [
-        "Bin",
-        "Xun",
-        "Knight",
-        "Viper",
-        "ON"
-    ],
-    "Karmine Corp": [
-        "Canna",
-        "Yike",
-        "kyeahoo",
-        "Caliste",
-        "Busio"
     ],
     "Team Secret Whales": [
         "Pun",
@@ -2595,5 +2567,33 @@
         "Rookie",
         "JiaQi",
         "Meiko"
+    ],
+    "CTBC Flying Oyster": [
+        "Rest",
+        "Shad0w",
+        "Pout",
+        "Doggo",
+        "Kino"
+    ],
+    "Karmine Corp": [
+        "Canna",
+        "Yike",
+        "kyeahoo",
+        "Caliste",
+        "Busio"
+    ],
+    "Top Esports": [
+        "369",
+        "Tian",
+        "Creme",
+        "JackeyLove",
+        "Zhuo"
+    ],
+    "Bilibili Gaming": [
+        "Bin",
+        "Xun",
+        "Knight",
+        "Viper",
+        "ON"
     ]
 }
