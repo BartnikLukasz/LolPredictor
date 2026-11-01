@@ -2519,20 +2519,6 @@
         "Peyz",
         "Keria"
     ],
-    "Movistar KOI": [
-        "Myrwn",
-        "Elyoya",
-        "Jojopyun",
-        "Supa",
-        "Alvaro"
-    ],
-    "LYON": [
-        "Dhokla",
-        "Inspired",
-        "Saint",
-        "Berserker",
-        "Isles"
-    ],
     "Invictus Gaming": [
         "TheShy",
         "Wei",
@@ -2547,26 +2533,12 @@
         "Doggo",
         "Kino"
     ],
-    "Karmine Corp": [
-        "Canna",
-        "Yike",
-        "kyeahoo",
-        "Caliste",
-        "Busio"
-    ],
     "Top Esports": [
         "369",
         "Tian",
         "Creme",
         "JackeyLove",
         "Zhuo"
-    ],
-    "Bilibili Gaming": [
-        "Bin",
-        "Xun",
-        "Knight",
-        "Viper",
-        "ON"
     ],
     "Team Liquid": [
         "Morgan",
@@ -2575,6 +2547,34 @@
         "Yeon",
         "CoreJJ"
     ],
+    "G2 Esports": [
+        "BrokenBlade",
+        "SkewMond",
+        "Caps",
+        "Hans Sama",
+        "Labrov"
+    ],
+    "Karmine Corp": [
+        "Canna",
+        "Yike",
+        "kyeahoo",
+        "Caliste",
+        "Busio"
+    ],
+    "Movistar KOI": [
+        "Myrwn",
+        "Elyoya",
+        "Jojopyun",
+        "Supa",
+        "Alvaro"
+    ],
+    "LYON": [
+        "Dhokla",
+        "Inspired",
+        "Saint",
+        "Berserker",
+        "Isles"
+    ],
     "L\u00d8S": [
         "Zest",
         "Curse",
@@ -2582,18 +2582,18 @@
         "Duduhh",
         "Ackerman"
     ],
+    "Bilibili Gaming": [
+        "Bin",
+        "Xun",
+        "Knight",
+        "Viper",
+        "ON"
+    ],
     "Hanwha Life Esports": [
         "Zeus",
         "Kanavi",
         "Zeka",
         "Gumayusi",
         "Delight"
-    ],
-    "G2 Esports": [
-        "BrokenBlade",
-        "SkewMond",
-        "Caps",
-        "Hans Sama",
-        "Labrov"
     ]
 }
