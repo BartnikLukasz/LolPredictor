@@ -2491,13 +2491,6 @@
         "Smash",
         "Career"
     ],
-    "Gen.G": [
-        "Kiin",
-        "Canyon",
-        "Chovy",
-        "Ruler",
-        "Duro"
-    ],
     "Team Secret Whales": [
         "Pun",
         "Hizto",
@@ -2554,13 +2547,6 @@
         "Supa",
         "Alvaro"
     ],
-    "LYON": [
-        "Dhokla",
-        "Inspired",
-        "Saint",
-        "Berserker",
-        "Isles"
-    ],
     "L\u00d8S": [
         "Zest",
         "Curse",
@@ -2595,5 +2581,19 @@
         "Creme",
         "JackeyLove",
         "Zhuo"
+    ],
+    "Gen.G": [
+        "Kiin",
+        "Canyon",
+        "Chovy",
+        "Ruler",
+        "Duro"
+    ],
+    "LYON": [
+        "Dhokla",
+        "Inspired",
+        "Saint",
+        "Berserker",
+        "Isles"
     ]
 }
