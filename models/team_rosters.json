@@ -2484,13 +2484,6 @@
         "Harky",
         "SiuLoong"
     ],
-    "Dplus Kia": [
-        "Siwoo",
-        "Lucid",
-        "ShowMaker",
-        "Smash",
-        "Career"
-    ],
     "Team Secret Whales": [
         "Pun",
         "Hizto",
@@ -2554,13 +2547,6 @@
         "Duduhh",
         "Ackerman"
     ],
-    "Bilibili Gaming": [
-        "Bin",
-        "Xun",
-        "Knight",
-        "Viper",
-        "ON"
-    ],
     "Hanwha Life Esports": [
         "Zeus",
         "Kanavi",
@@ -2595,5 +2581,19 @@
         "Saint",
         "Berserker",
         "Isles"
+    ],
+    "Dplus Kia": [
+        "Siwoo",
+        "Lucid",
+        "ShowMaker",
+        "Smash",
+        "Career"
+    ],
+    "Bilibili Gaming": [
+        "Bin",
+        "Xun",
+        "Knight",
+        "Viper",
+        "ON"
     ]
 }
