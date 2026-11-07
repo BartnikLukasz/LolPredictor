@@ -2498,13 +2498,6 @@
         "Hope",
         "Kael"
     ],
-    "T1": [
-        "Doran",
-        "Oner",
-        "Faker",
-        "Peyz",
-        "Keria"
-    ],
     "CTBC Flying Oyster": [
         "Rest",
         "Shad0w",
@@ -2525,13 +2518,6 @@
         "Caps",
         "Hans Sama",
         "Labrov"
-    ],
-    "Karmine Corp": [
-        "Canna",
-        "Yike",
-        "kyeahoo",
-        "Caliste",
-        "Busio"
     ],
     "Movistar KOI": [
         "Myrwn",
@@ -2595,5 +2581,19 @@
         "Knight",
         "Viper",
         "ON"
+    ],
+    "Karmine Corp": [
+        "Canna",
+        "Yike",
+        "kyeahoo",
+        "Caliste",
+        "Busio"
+    ],
+    "T1": [
+        "Doran",
+        "Oner",
+        "Faker",
+        "Peyz",
+        "Keria"
     ]
 }
