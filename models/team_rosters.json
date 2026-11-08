@@ -2540,26 +2540,12 @@
         "Gumayusi",
         "Delight"
     ],
-    "Invictus Gaming": [
-        "TheShy",
-        "Wei",
-        "Rookie",
-        "JiaQi",
-        "Meiko"
-    ],
     "Top Esports": [
         "369",
         "Tian",
         "Creme",
         "JackeyLove",
         "Zhuo"
-    ],
-    "Gen.G": [
-        "Kiin",
-        "Canyon",
-        "Chovy",
-        "Ruler",
-        "Duro"
     ],
     "LYON": [
         "Dhokla",
@@ -2595,5 +2581,19 @@
         "Faker",
         "Peyz",
         "Keria"
+    ],
+    "Invictus Gaming": [
+        "TheShy",
+        "Wei",
+        "Rookie",
+        "JiaQi",
+        "Meiko"
+    ],
+    "Gen.G": [
+        "Kiin",
+        "Canyon",
+        "Chovy",
+        "Ruler",
+        "Duro"
     ]
 }
