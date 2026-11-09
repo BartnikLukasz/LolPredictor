@@ -2561,26 +2561,12 @@
         "Smash",
         "Career"
     ],
-    "Bilibili Gaming": [
-        "Bin",
-        "Xun",
-        "Knight",
-        "Viper",
-        "ON"
-    ],
     "Karmine Corp": [
         "Canna",
         "Yike",
         "kyeahoo",
         "Caliste",
         "Busio"
-    ],
-    "T1": [
-        "Doran",
-        "Oner",
-        "Faker",
-        "Peyz",
-        "Keria"
     ],
     "Invictus Gaming": [
         "TheShy",
@@ -2595,5 +2581,19 @@
         "Chovy",
         "Ruler",
         "Duro"
+    ],
+    "T1": [
+        "Doran",
+        "Oner",
+        "Faker",
+        "Peyz",
+        "Keria"
+    ],
+    "Bilibili Gaming": [
+        "Bin",
+        "Xun",
+        "Knight",
+        "Viper",
+        "ON"
     ]
 }
