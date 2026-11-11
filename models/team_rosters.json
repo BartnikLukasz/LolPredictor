@@ -2372,13 +2372,6 @@
         "Mobility",
         "Breezy"
     ],
-    "Saigon Warriors": [
-        "Nern",
-        "j1n5",
-        "AisyL",
-        "Aomine",
-        "Elio"
-    ],
     "MVK Esports Academy": [
         "Steller",
         "Umi",
@@ -2595,5 +2588,19 @@
         "Knight",
         "Viper",
         "ON"
+    ],
+    "Saigon Warriors": [
+        "Nern",
+        "j1n5",
+        "AisyL",
+        "Aomine",
+        "Elio"
+    ],
+    "Team Gromp": [
+        "zorenous",
+        "Poltron",
+        "Halo",
+        "Praedyth",
+        "Bulldawg"
     ]
 }
