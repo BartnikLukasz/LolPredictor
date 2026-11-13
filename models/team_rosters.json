@@ -2127,20 +2127,6 @@
         "Feng",
         "ShiauC"
     ],
-    "Ground Zero Gaming": [
-        "1Jiang",
-        "Husha",
-        "Uniboy",
-        "Betty",
-        "Kaiwing"
-    ],
-    "DetonatioN FocusMe": [
-        "Momo",
-        "Citrus",
-        "Fisher",
-        "Kakkun",
-        "Woody"
-    ],
     "LNG Esports": [
         "sheer",
         "Weiwei",
@@ -2603,12 +2589,19 @@
         "Praedyth",
         "Bulldawg"
     ],
-    "Saigon Warriors": [
-        "Nern",
-        "j1n5",
-        "AisyL",
-        "Aomine",
-        "Elio"
+    "Ground Zero Gaming": [
+        "1Jiang",
+        "Husha",
+        "Uniboy",
+        "Betty",
+        "Kaiwing"
+    ],
+    "Frank Esports": [
+        "YSKM",
+        "Holo",
+        "Pretender",
+        "MnM",
+        "kingpo54"
     ],
     "Nothin'Here": [
         "Excellentless",
@@ -2616,5 +2609,19 @@
         "Itae",
         "Blondie",
         "YuyuuUsaki"
+    ],
+    "DetonatioN FocusMe": [
+        "Momo",
+        "Citrus",
+        "Fisher",
+        "Kakkun",
+        "Woody"
+    ],
+    "Saigon Warriors": [
+        "Nern",
+        "j1n5",
+        "AisyL",
+        "Aomine",
+        "Elio"
     ]
 }
