@@ -2554,26 +2554,12 @@
         "JiaQi",
         "Meiko"
     ],
-    "Gen.G": [
-        "Kiin",
-        "Canyon",
-        "Chovy",
-        "Ruler",
-        "Duro"
-    ],
     "T1": [
         "Doran",
         "Oner",
         "Faker",
         "Peyz",
         "Keria"
-    ],
-    "Bilibili Gaming": [
-        "Bin",
-        "Xun",
-        "Knight",
-        "Viper",
-        "ON"
     ],
     "FENNEL": [
         "kkkkkkkkk",
@@ -2623,5 +2609,19 @@
         "AisyL",
         "Aomine",
         "Elio"
+    ],
+    "Bilibili Gaming": [
+        "Bin",
+        "Xun",
+        "Knight",
+        "Viper",
+        "ON"
+    ],
+    "Gen.G": [
+        "Kiin",
+        "Canyon",
+        "Chovy",
+        "Ruler",
+        "Duro"
     ]
 }
