@@ -1,6 +1,6 @@
 {
   "model": "catboost",
-  "created_at": "2026-11-25T17:48:11",
+  "created_at": "2026-11-26T17:31:34",
   "feature_profile": "full",
   "use_raw_champions": false,
   "feature_cols": [
@@ -137,7 +137,7 @@
     "n": 343,
     "accuracy_ci95": 0.052071505271238216,
     "vs_elo": {
-      "mean": -0.008524155614323873,
+      "mean": -0.008524155614323872,
       "lo": -0.02564892949162108,
       "hi": 0.008141129399551753
     },
